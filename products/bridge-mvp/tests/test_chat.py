@@ -718,7 +718,11 @@ def test_message_count_limit_returns_429(demo_mode):
 def test_chat_router_is_registered():
     """main.py 应注册 chat_router（路由表包含 /api/conversations 路径）。"""
     from main import app as _app
-    paths = [route.path for route in _app.routes]
+    # FastAPI 0.159 起，include_router() 的子路由被封装进 `_IncludedRouter` 对象，
+    # 这些对象既不在 app.routes 顶层暴露 .path，也没有公开的 .routes；
+    # 直接 `[route.path for route in app.routes]` 会抛 AttributeError。
+    # 改用公开的 OpenAPI 规格取路径：跨版本稳定，且只收录真正可调用的路由。
+    paths = list(_app.openapi().get("paths", {}))
     conversation_paths = [p for p in paths if "/conversations" in p]
     assert len(conversation_paths) >= 3, \
         f"应至少注册 3 条 conversations 路由（create/list/messages/ask/delete），实际: {conversation_paths}"
