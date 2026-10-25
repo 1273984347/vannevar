@@ -12,7 +12,7 @@ httpx==0.28.1  # AI 增强模块（可选，未配置 BRIDGE_AI_* 环境变量�
 passlib==1.7.4
 bcrypt==4.0.1
 python-jose[cryptography]==3.3.0
-email-validator==2.1.0
+email-validator==2.3.0
 
 # 阶段2.2 Agent 定时扫描（P1-10 修复：补充缺失依赖）
 apscheduler==3.10.4
