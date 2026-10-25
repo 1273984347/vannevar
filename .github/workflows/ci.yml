@@ -1,0 +1,230 @@
+# Vannevar CI —— 三个产品的持续集成门禁
+#
+# 产品：
+#   - products/focus-mvp   Chrome MV3 扩展（原生 JS，零依赖）
+#   - products/muse-mvp    Chrome MV3 扩展（原生 JS，零依赖）
+#   - products/bridge-mvp  FastAPI + SQLAlchemy + SQLite 服务（Python）
+#
+# 所有步骤均使用仓库内相对路径，不依赖任何本地绝对路径。
+
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+# 只读权限：CI 不需要写回仓库。
+permissions:
+  contents: read
+
+# 同一分支的旧运行自动取消，避免推送频繁时排队堆积。
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------- Bridge
+  bridge-test:
+    name: Bridge · pytest (Python 3.12)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: products/bridge-mvp
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          # requirements.txt 为运行时依赖，requirements-dev.txt 为测试依赖（pytest），
+          # 两者都是缓存键的一部分。
+          cache-dependency-path: |
+            products/bridge-mvp/requirements.txt
+            products/bridge-mvp/requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # requirements.txt 不含 pytest（V6 起已拆分到 requirements-dev.txt），
+          # 因此必须同时安装两个文件。
+          python -m pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run pytest (skip e2e)
+        # 排除 tests/e2e 的原因：e2e 用例需要 Playwright + Chromium 浏览器
+        # （约 150MB 额外下载），在每次 push 上跑成本过高、稳定性差；
+        # 该目录当前仅 1 个用例（tests/e2e/test_bridge_e2e.py::test_bridge_e2e），
+        # 建议由发布前的本地 e2e 流程覆盖。
+        #
+        # 本地实测基线（2026-10-25，Windows / Python 3.12.10，耗时约 112 秒）：
+        #   430 passed / 9 skipped / 0 failed
+        # 9 个 skipped 全部有据：7 个来自 tests/test_performance.py（需 --run-slow），
+        # 2 个为标注「V26 自指测试」的待重构用例。
+        # 其中 tests/test_backup_recovery.py 是数据库恢复流程的回归测试（7 项），
+        # 锁定「恢复后必须通过完整性检查」「必须清除 WAL 侧车」「坏备份不得覆盖好库」
+        # 四个不变量——改动 backup.py 时必须让它保持全绿。
+        run: python -m pytest tests/ -q --ignore=tests/e2e
+
+  # ------------------------------------------------------------ Extensions
+  extension-tests:
+    name: Extensions · Node unit tests (Focus + Muse)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Focus · test_crypto.mjs
+        # 本地实测基线：16 通过 / 0 失败
+        working-directory: products/focus-mvp
+        run: node tests/test_crypto.mjs
+
+      - name: Focus · test_sync_crypto.mjs
+        # 本地实测基线：11 通过 / 0 失败
+        # 必须带 --import ./tests/loader.mjs：loader 把 sync.js 的 '../db.js'/'../auth.js'
+        # 重定向到 tests/mocks/，绕开 lib/sql-wasm.js 的 UMD 挂载（Node 无浏览器全局 self）。
+        working-directory: products/focus-mvp
+        run: node --import ./tests/loader.mjs tests/test_sync_crypto.mjs
+
+      - name: Muse · test_media_session.mjs
+        # 本地实测基线：18 通过 / 0 失败
+        # 必须带 --import ./tests/loader.mjs：loader 把 core/muse.js 的 './db.js'
+        # 重定向到 tests/mocks/db.js，绕开 lib/sql-wasm.js 的 UMD 挂载。
+        # 不带 loader 运行会是 7/18 通过、11 失败（ReferenceError: self is not defined），
+        # 那是运行方式不对，不是缺陷——测试文件头部注释给出的用法即为带 loader。
+        working-directory: products/muse-mvp
+        run: node --import ./tests/loader.mjs tests/test_media_session.mjs
+
+  # ----------------------------------------------------------- JS 语法检查
+  js-syntax:
+    name: JavaScript · node --check (three products)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: node --check every .js file
+        shell: bash
+        # 覆盖三个产品下全部 .js 文件，排除第三方 vendored 文件
+        # （products/*/lib/sql-wasm.js）与 node_modules。
+        # 本地实测（Git Bash / Node v24.14.0）：checked 57 files, 0 failed。
+        #
+        # ESM 文件用 `node --input-type=module --check`（从 stdin 读），避免依赖
+        # Node 的 ESM 自动探测行为；其余文件走 `node --check`。
+        run: |
+          set -uo pipefail
+          total=0
+          failed=0
+          while IFS= read -r -d '' f; do
+            total=$((total + 1))
+            if grep -qE '^[[:space:]]*(import([[:space:]]|\{)|export[[:space:]])' "$f"; then
+              if ! node --input-type=module --check < "$f"; then
+                echo "::error file=$f::ESM 语法错误"
+                failed=$((failed + 1))
+              fi
+            elif ! node --check "$f"; then
+              echo "::error file=$f::语法错误"
+              failed=$((failed + 1))
+            fi
+          done < <(find products/focus-mvp products/muse-mvp products/bridge-mvp -type f -name '*.js' \
+                     -not -path '*/node_modules/*' -not -path '*/lib/sql-wasm.js' -print0)
+          echo "checked $total js files, $failed failed"
+          test "$failed" -eq 0
+
+  # ------------------------------------------------------------ 链接检查
+  link-check:
+    name: Docs · markdown relative links
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check relative links in markdown
+        # 检查仓库源码树中 markdown 的相对链接是否指向真实文件。
+        # 跳过 .git / node_modules / __pycache__ / .pytest_cache / dist / dogfood-output
+        # 等运行时目录，以及 archive/（过程资产迁往独立 archive 仓，主仓不保留）。
+        # 本地实测（2026-10-25）：15 条相对链接、0 断链 → ALL LINKS OK
+        # （markdown 文件总数随并行施工会变，故此处只固定「断链数」这一判据。）
+        #
+        # 说明：这是「源码树」版链接检查。scripts/check_links.py 是「最终总包 zip」版，
+        # 依赖打包产物（仓库不保留 zip），故不在每次 push 跑；详见文件末尾说明。
+        run: |
+          python3 - <<'PY'
+          import re, pathlib, sys
+          LINK_RE = re.compile(r'\[([^\]]+)\]\(([^)]+)\)')
+          SKIP = {'.git', 'node_modules', '__pycache__', '.pytest_cache', 'dist', 'archive', 'dogfood-output'}
+          root = pathlib.Path('.')
+          files = [p for p in root.rglob('*.md') if not (set(p.relative_to(root).parts) & SKIP)]
+          broken = []
+          checked = 0
+          for md in files:
+              content = md.read_text(encoding='utf-8', errors='replace')
+              for label, link in LINK_RE.findall(content):
+                  if link.startswith(('http://', 'https://', 'mailto:', '#')):
+                      continue
+                  path_part = link.split('#')[0].split('?')[0]
+                  if not path_part:
+                      continue
+                  checked += 1
+                  if not (md.parent / path_part).resolve().exists():
+                      broken.append((md, link))
+          print(f'checked {checked} links in {len(files)} markdown files')
+          if broken:
+              print(f'BROKEN: {len(broken)}')
+              for md, link in broken[:30]:
+                  print(f'  {md}: {link}')
+              sys.exit(1)
+          print('ALL LINKS OK')
+          PY
+
+  # ------------------------------------------------------------ Docker 构建
+  docker-build:
+    name: Docker · bridge-mvp image build (no push)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: "Build image (push: false)"
+        # 只验证 products/bridge-mvp/Dockerfile 能构建成功，不推送任何镜像。
+        # Dockerfile 为多阶段构建（builder 编译 bcrypt/libffi → runtime 精简镜像），
+        # 构建需要拉取 python:3.12.10-slim 基础镜像并访问 apt/pip 源。
+        uses: docker/build-push-action@v6
+        with:
+          context: products/bridge-mvp
+          file: products/bridge-mvp/Dockerfile
+          push: false
+          load: true
+          tags: vannevar/bridge-mvp:ci
+
+# ---------------------------------------------------------------------------
+# 关于 scripts/check_links.py（总包版链接检查）
+#
+# 该脚本校验的是「最终总包 zip」内部 markdown 的相对链接，而不是仓库源码树：
+#   - 默认 zip 路径为仓库上一级目录的 Vannevar-submission.zip，可用命令行参数指定；
+#   - 仓库不保留 zip（AC-04：大文件不入库，zip 已迁往 archive 仓），因此在 CI 中
+#     直接运行只会得到 "ERROR: ... not found" 并以退出码 1 结束；
+#   - 它检查的是打包产物，对源码改动没有实时反馈价值，每次 push 重建 50MB+ 总包
+#     成本过高。
+# 因此 CI 改为在 link-check job 中内联「源码树」版链接检查（等价判定逻辑，
+# 作用于仓库内 markdown），结果为 ALL LINKS OK 即可放行。
+# 若将来要把「总包版」检查也纳入流水线，应作为发布前环节接入：
+# 先执行打包脚本生成 zip，再运行 python scripts/check_links.py <zip 路径>。
+# ---------------------------------------------------------------------------

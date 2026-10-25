@@ -1,0 +1,13 @@
+# Issue 模板配置 —— 允许自由格式 Issue，并给出贡献 / 安全入口
+#
+# 注意：下面两条链接使用占位仓库坐标 `vannevar/vannevar`。
+# 仓库正式发布（确定 GitHub owner/repo 名）前，请把 url 中的
+# `vannevar/vannevar` 整体替换为真实的 `OWNER/REPO`。
+blank_issues_enabled: true
+contact_links:
+  - name: 贡献指南 / Contributing Guide
+    url: https://github.com/vannevar/vannevar/blob/main/CONTRIBUTING.md
+    about: 提交代码前请先阅读贡献指南（分支命名、提交规范、PR 流程）。
+  - name: 安全策略 / Security Policy
+    url: https://github.com/vannevar/vannevar/blob/main/SECURITY.md
+    about: 如需报告安全漏洞或敏感信息泄露问题，请按安全策略私下上报，勿直接开公开 Issue。
