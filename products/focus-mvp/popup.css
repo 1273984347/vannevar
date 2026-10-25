@@ -17,9 +17,9 @@
   --v-card-stripe: linear-gradient(90deg, #1e293b, #3b82f6, #334155);
 
   /* 语义色 */
-  --v-success: #10b981;
+  --v-success: #13a978;
   --v-success-bg: #ecfdf5;
-  --v-warning: #f59e0b;
+  --v-warning: #d08406;
   --v-warning-bg: #fffbeb;
   --v-danger: #ef4444;
   --v-danger-bg: #fef2f2;
@@ -35,7 +35,7 @@
   --v-border-soft: rgba(15, 23, 42, 0.06);
   --v-text: #1e293b;             /* slate-800 */
   --v-text-secondary: #64748b;   /* slate-500 */
-  --v-text-muted: #94a3b8;       /* slate-400 */
+  --v-text-muted: #637897;       /* slate-400 */
 
   /* 圆角 — 升级更柔和 */
   --v-radius-sm: 8px;

@@ -9,7 +9,7 @@
   /* 品牌主色 — orange + amber 暖橙色系 */
   --v-primary: #c2410c;          /* orange-700 */
   --v-primary-dark: #9a3412;     /* orange-800 */
-  --v-primary-light: #f97316;    /* orange-500 */
+  --v-primary-light: #ea6a12;    /* orange-500 */
   --v-accent: #b45309;           /* amber-700 */
   /* 渐变升级：135deg 立体感，混合 orange-700 + amber-700 */
   --v-gradient: linear-gradient(135deg, #c2410c, #b45309);
@@ -21,9 +21,9 @@
   --v-bg-gradient: radial-gradient(circle at 50% 0%, #fffbeb, #fff7ed);
 
   /* 语义色 */
-  --v-success: #10b981;
+  --v-success: #11a474;
   --v-success-bg: #ecfdf5;
-  --v-warning: #f59e0b;
+  --v-warning: #cb7f00;
   --v-warning-bg: #fffbeb;
   --v-danger: #ef4444;
   --v-danger-bg: #fef2f2;
