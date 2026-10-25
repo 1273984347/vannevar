@@ -3,7 +3,7 @@
 fastapi==0.136.1
 uvicorn[standard]==0.46.0
 sqlalchemy==2.0.50
-pydantic==2.12.5
+pydantic==2.14.1
 jinja2==3.1.6
 qrcode[pil]==8.2
 httpx==0.28.1  # AI 增强模块（可选，未配置 BRIDGE_AI_* 环境变量时不加载）
