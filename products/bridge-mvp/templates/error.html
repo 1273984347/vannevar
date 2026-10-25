@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} · Vannevar Bridge{% endblock %}
+
+{% block content %}
+<main id="main-content" class="error-page" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--v-bg-radial), var(--v-bg);">
+  <section class="error-card" style="width:100%;max-width:420px;text-align:center;background:var(--v-surface);border-radius:20px;padding:40px 28px;box-shadow:var(--v-shadow-lg);position:relative;overflow:hidden;">
+    <div class="error-icon" style="width:80px;height:80px;margin:0 auto 20px;border-radius:50%;background:linear-gradient(135deg, var(--v-success-bg) 0%, var(--v-bg) 100%);display:flex;align-items:center;justify-content:center;color:var(--v-primary);" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+    </div>
+    <h1 style="font-size:22px;font-weight:700;color:var(--v-text);margin:0 0 8px;">{{ title }}</h1>
+    <p style="font-size:14px;line-height:1.6;color:var(--v-text-secondary);margin:0 0 24px;">{{ message }}</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <a href="/" class="primary-btn" style="text-decoration:none;">返回首页</a>
+      <a href="/landing" class="secondary-btn" style="text-decoration:none;">了解 Bridge</a>
+    </div>
+    {% if code == 404 %}
+    <p style="margin-top:20px;font-size:12px;color:var(--v-text-muted);" aria-hidden="true">错误代码：404</p>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}

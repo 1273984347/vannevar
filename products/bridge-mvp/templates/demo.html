@@ -1,0 +1,580 @@
+{% extends "base.html" %}
+
+{% block title %}Bridge · 演示数据管理{% endblock %}
+
+{% block head %}
+<style>
+  .demo-wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 3rem;
+  }
+  .demo-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .demo-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .demo-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--v-text-secondary);
+    text-decoration: none;
+    font-size: 0.88rem;
+    padding: 0.4rem 0.65rem;
+    border-radius: var(--v-radius-sm);
+    transition: color var(--v-transition-fast), background-color var(--v-transition-fast);
+  }
+  .demo-back-link:hover {
+    color: var(--v-text);
+    background: var(--v-bg);
+  }
+  .demo-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--v-text);
+  }
+  .demo-subtitle {
+    color: var(--v-text-secondary);
+    font-size: 0.88rem;
+    margin: 0.25rem 0 0;
+  }
+
+  /* 状态徽章 */
+  .demo-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    background: var(--v-success-bg);
+    color: var(--v-primary);
+    border: 1px solid var(--v-primary);
+  }
+  .demo-status.is-empty {
+    background: var(--v-bg);
+    color: var(--v-text-muted);
+    border-color: var(--v-border);
+  }
+  .demo-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--v-primary);
+  }
+  .demo-status.is-empty .demo-status-dot {
+    background: var(--v-text-muted);
+  }
+
+  /* 数据概览网格 */
+  .demo-card {
+    background: var(--v-surface);
+    border: 1px solid var(--v-border);
+    border-radius: var(--v-radius-md);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .demo-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 1rem;
+    color: var(--v-text);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .demo-card-title svg {
+    width: 18px;
+    height: 18px;
+    color: var(--v-primary);
+  }
+
+  .demo-counts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.85rem;
+  }
+  .demo-count-item {
+    background: var(--v-bg);
+    border: 1px solid var(--v-border);
+    border-radius: var(--v-radius-sm);
+    padding: 0.85rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .demo-count-label {
+    font-size: 0.75rem;
+    color: var(--v-text-muted);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+  .demo-count-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--v-text);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+  }
+  .demo-count-value.is-zero {
+    color: var(--v-text-muted);
+  }
+  .demo-count-hint {
+    font-size: 0.7rem;
+    color: var(--v-text-muted);
+    margin-top: 0.1rem;
+  }
+
+  /* 操作区 */
+  .demo-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .demo-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.6rem 1.1rem;
+    border-radius: var(--v-radius-sm);
+    font-size: 0.88rem;
+    font-weight: 500;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background-color var(--v-transition-fast), border-color var(--v-transition-fast), transform 0.1s;
+    text-decoration: none;
+  }
+  .demo-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .demo-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+  .demo-btn--primary {
+    background: var(--v-gradient);
+    color: #fff;
+  }
+  .demo-btn--primary:not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+  .demo-btn--danger {
+    background: var(--v-surface);
+    color: var(--v-danger, #dc2626);
+    border-color: var(--v-danger, #dc2626);
+  }
+  .demo-btn--danger:not(:disabled):hover {
+    background: var(--v-danger, #dc2626);
+    color: #fff;
+  }
+  .demo-btn--secondary {
+    background: var(--v-surface);
+    color: var(--v-text-secondary);
+    border-color: var(--v-border);
+  }
+  .demo-btn--secondary:not(:disabled):hover {
+    background: var(--v-bg);
+    color: var(--v-text);
+  }
+
+  /* 数据集说明 */
+  .demo-spec {
+    background: var(--v-bg);
+    border-radius: var(--v-radius-sm);
+    padding: 1rem 1.1rem;
+    font-size: 0.82rem;
+    color: var(--v-text-secondary);
+    line-height: 1.7;
+  }
+  .demo-guide {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(168, 85, 247, 0.04));
+    border: 1px solid var(--v-border);
+    border-left: 3px solid var(--v-primary);
+    border-radius: var(--v-radius-sm);
+    padding: 1rem 1.1rem;
+    margin-bottom: 1.25rem;
+  }
+  .demo-guide-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--v-text);
+    margin: 0 0 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .demo-guide-title svg {
+    width: 16px;
+    height: 16px;
+    color: var(--v-primary);
+  }
+  .demo-guide ol {
+    margin: 0;
+    padding-left: 1.4rem;
+    color: var(--v-text-secondary);
+    font-size: 0.82rem;
+    line-height: 1.8;
+  }
+  .demo-guide ol li::marker {
+    color: var(--v-primary);
+    font-weight: 600;
+  }
+  .demo-guide code {
+    background: var(--v-surface);
+    padding: 0.05rem 0.35rem;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    color: var(--v-primary);
+    border: 1px solid var(--v-border);
+  }
+  .demo-spec ul {
+    margin: 0.5rem 0 0;
+    padding-left: 1.2rem;
+  }
+  .demo-spec li {
+    margin: 0.15rem 0;
+  }
+  .demo-spec code {
+    background: var(--v-surface);
+    padding: 0.05rem 0.35rem;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    color: var(--v-primary);
+    border: 1px solid var(--v-border);
+  }
+
+  /* 快速链接 */
+  .demo-quicklinks {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+
+  /* 加载状态 */
+  .demo-loading {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--v-text-muted);
+    font-size: 0.82rem;
+  }
+  .demo-loading-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--v-border);
+    border-top-color: var(--v-primary);
+    border-radius: 50%;
+    animation: demo-spin 0.8s linear infinite;
+  }
+  @keyframes demo-spin {
+    to { transform: rotate(360deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .demo-loading-spinner { animation: none; }
+    .demo-btn--primary:not(:disabled):hover { transform: none; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<main id="main-content" class="demo-wrap">
+  <div class="demo-topbar">
+    <div>
+      <a href="/" class="demo-back-link" aria-label="返回管理后台">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/>
+        </svg>
+        返回管理后台
+      </a>
+      <h1 class="demo-title">演示数据管理</h1>
+      <p class="demo-subtitle">Phase 5 · 一键加载完整演示数据集，覆盖仪表盘所有图表与色阶</p>
+    </div>
+    <span class="demo-status {% if not is_seeded %}is-empty{% endif %}" role="status" aria-live="polite">
+      <span class="demo-status-dot" aria-hidden="true"></span>
+      {% if is_seeded %}演示数据已就绪{% else %}演示数据未加载{% endif %}
+    </span>
+  </div>
+
+  <!-- 操作流程指引（R1a-C #2 修复） -->
+  <section class="demo-guide" aria-labelledby="demo-guide-title">
+    <h2 class="demo-guide-title" id="demo-guide-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      演示操作流程
+    </h2>
+    <ol>
+      <li><strong>首次进入：</strong>点击下方「<strong>加载演示数据</strong>」按钮，一键播种 3 个项目 / 24 个任务 / 12 条留言等完整数据集</li>
+      <li><strong>查看效果：</strong>点击「<strong>查看仪表盘</strong>」链接，进入 <code>/admin/stats</code> 查看 5 条折线图 + 30 天热力图 + Agent 建议环形图</li>
+      <li><strong>演示前重置：</strong>若数据被改动，先点「<strong>清空所有数据</strong>」再点「加载演示数据」即可恢复初始状态</li>
+      <li><strong>返回管理后台：</strong>点击左上角「返回管理后台」链接或顶部「<strong>管理后台首页</strong>」按钮</li>
+    </ol>
+  </section>
+
+  <!-- 数据概览 -->
+  <section class="demo-card" aria-labelledby="demo-overview-title">
+    <h2 class="demo-card-title" id="demo-overview-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>
+      </svg>
+      当前数据概览
+    </h2>
+    <div class="demo-counts">
+      <div class="demo-count-item">
+        <span class="demo-count-label">项目</span>
+        <span class="demo-count-value {% if counts.projects == 0 %}is-zero{% endif %}" id="count-projects">{{ counts.projects }}</span>
+        <span class="demo-count-hint">预期 3</span>
+      </div>
+      <div class="demo-count-item">
+        <span class="demo-count-label">任务</span>
+        <span class="demo-count-value {% if counts.tasks == 0 %}is-zero{% endif %}" id="count-tasks">{{ counts.tasks }}</span>
+        <span class="demo-count-hint">预期 24</span>
+      </div>
+      <div class="demo-count-item">
+        <span class="demo-count-label">留言</span>
+        <span class="demo-count-value {% if counts.messages == 0 %}is-zero{% endif %}" id="count-messages">{{ counts.messages }}</span>
+        <span class="demo-count-hint">预期 12</span>
+      </div>
+      <div class="demo-count-item">
+        <span class="demo-count-label">交接摘要</span>
+        <span class="demo-count-value {% if counts.handoffs == 0 %}is-zero{% endif %}" id="count-handoffs">{{ counts.handoffs }}</span>
+        <span class="demo-count-hint">预期 3</span>
+      </div>
+      <div class="demo-count-item">
+        <span class="demo-count-label">Focus 快照</span>
+        <span class="demo-count-value {% if counts.snapshots == 0 %}is-zero{% endif %}" id="count-snapshots">{{ counts.snapshots }}</span>
+        <span class="demo-count-hint">预期 10</span>
+      </div>
+      <div class="demo-count-item">
+        <span class="demo-count-label">Muse 灵感</span>
+        <span class="demo-count-value {% if counts.inspirations == 0 %}is-zero{% endif %}" id="count-inspirations">{{ counts.inspirations }}</span>
+        <span class="demo-count-hint">预期 10</span>
+      </div>
+      <div class="demo-count-item">
+        <span class="demo-count-label">Agent 建议</span>
+        <span class="demo-count-value {% if counts.suggestions == 0 %}is-zero{% endif %}" id="count-suggestions">{{ counts.suggestions }}</span>
+        <span class="demo-count-hint">预期 8</span>
+      </div>
+      <div class="demo-count-item">
+        <span class="demo-count-label">SyncItem</span>
+        <span class="demo-count-value {% if counts.sync_items == 0 %}is-zero{% endif %}" id="count-sync_items">{{ counts.sync_items }}</span>
+        <span class="demo-count-hint">预期 8</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 操作区 -->
+  <section class="demo-card" aria-labelledby="demo-actions-title">
+    <h2 class="demo-card-title" id="demo-actions-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 5v14"/><path d="M5 12h14"/>
+      </svg>
+      数据操作
+    </h2>
+    <div class="demo-actions">
+      <button type="button" class="demo-btn demo-btn--primary" id="btn-load" {% if is_seeded %}disabled{% endif %}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        {% if is_seeded %}已加载演示数据{% else %}加载演示数据{% endif %}
+      </button>
+      <button type="button" class="demo-btn demo-btn--danger" id="btn-reset" {% if counts.projects == 0 and counts.tasks == 0 %}disabled{% endif %}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+        </svg>
+        清空所有数据
+      </button>
+      <span class="demo-loading" id="loading-indicator" role="status" aria-live="polite" hidden>
+        <span class="demo-loading-spinner" aria-hidden="true"></span>
+        处理中...
+      </span>
+    </div>
+
+    <div class="demo-spec" style="margin-top: 1.1rem;">
+      <strong>数据集说明：</strong>加载后将创建以下演示数据（覆盖 30 天热力图全部 5 级色阶）：
+      <ul>
+        <li>3 个项目（<code>active</code> × 2 + <code>done</code> × 1，创建时间分布 D12-D29）</li>
+        <li>24 个任务（todo / in_progress / done 三种状态分布）</li>
+        <li>12 条留言（含 1 条 <code>moderation_flagged</code> + 1 条 <code>is_deleted</code>）</li>
+        <li>3 份交接摘要（<code>draft</code> / <code>confirmed</code> D2 / <code>confirmed</code> D20）</li>
+        <li>10 个 Focus 快照 + 10 个 Muse 灵感（ms 时间戳，覆盖 D0-D12）</li>
+        <li>8 个 Agent 建议（4 种 type × 2 种 status：<code>stale_warning</code> / <code>overdue_task</code> / <code>handoff_gap</code> / <code>daily_summary</code>）</li>
+        <li>8 个 SyncItem（5 focus + 3 muse）</li>
+      </ul>
+    </div>
+
+    <div class="demo-quicklinks">
+      <a href="/demo/story" class="demo-btn demo-btn--primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        </svg>
+        故事模式 · 30 天回放
+      </a>
+      <a href="/admin/stats" class="demo-btn demo-btn--secondary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 3v18h18"/><path d="M7 12l4-3 4 2 5-6"/>
+        </svg>
+        查看仪表盘
+      </a>
+      <a href="/" class="demo-btn demo-btn--secondary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        管理后台首页
+      </a>
+    </div>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  var btnLoad = document.getElementById('btn-load');
+  var btnReset = document.getElementById('btn-reset');
+  var loadingIndicator = document.getElementById('loading-indicator');
+
+  // require_admin 的 CSRF 防护：双重提交 Cookie — X-CSRF-Token 头需与 Cookie 值一致
+  // Cookie 名 bridge_csrf（auth.py CSRF_COOKIE_NAME），从 cookie 读取后注入到请求头
+  function _getCsrfToken() {
+    var match = document.cookie.match(/(?:^|;\s*)bridge_csrf=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
+  }
+
+  function setLoading(isLoading) {
+    loadingIndicator.hidden = !isLoading;
+    btnLoad.disabled = isLoading;
+    btnReset.disabled = isLoading;
+  }
+
+  function callApi(url, method, body) {
+    setLoading(true);
+    var fetchOpts = {
+      method: method || 'POST',
+      headers: {
+        // require_admin 的 CSRF 防护要求固定值 'BridgeAdmin'
+        'X-Requested-With': 'BridgeAdmin',
+        // 双重提交 Cookie：X-CSRF-Token 头需与 bridge_csrf Cookie 值一致
+        'X-CSRF-Token': _getCsrfToken(),
+        'Accept': 'application/json'
+      },
+      credentials: 'same-origin'
+    };
+    if (body !== undefined) {
+      fetchOpts.headers['Content-Type'] = 'application/json';
+      fetchOpts.body = JSON.stringify(body);
+    }
+    fetch(url, fetchOpts).then(function(resp) {
+      // R1a-C #3 修复：先读 text 再 try JSON.parse，区分 JSON 解析错误与网络错误
+      return resp.text().then(function(text) {
+        var data = null;
+        var parseError = null;
+        if (text) {
+          try {
+            data = JSON.parse(text);
+          } catch (e) {
+            parseError = e;
+          }
+        }
+        return { ok: resp.ok, status: resp.status, data: data, parseError: parseError, rawText: text };
+      });
+    }).then(function(result) {
+      var data = result.data || {};
+      // R1a-C #3 修复：JSON 解析失败但 HTTP 200 → 服务端返回 HTML（如 502 网关错误页），明确提示
+      if (result.parseError && !result.ok) {
+        var errMsg = '服务端返回非 JSON 响应（HTTP ' + result.status + '）';
+        if (result.status >= 500) {
+          errMsg = '服务端错误（HTTP ' + result.status + '），请检查 Bridge 后端日志';
+        } else if (result.status === 401) {
+          errMsg = '认证失败，请重新登录管理后台';
+        } else if (result.status === 403) {
+          errMsg = 'CSRF 校验失败或缺少请求头，请刷新页面后重试';
+        }
+        if (window.showToast) { window.showToast(errMsg, 'error'); }
+        setLoading(false);
+        return;
+      }
+      if (result.ok && (data.seeded || data.reset)) {
+        var msg = data.seeded
+          ? '演示数据加载完成（' + (data.counts ? Object.keys(data.counts).length : 0) + ' 类数据）'
+          : '所有数据已清空';
+        if (window.showToast) {
+          window.showToast(msg, 'success');
+        }
+        // 延迟刷新以便 toast 显示
+        setTimeout(function() { window.location.reload(); }, 800);
+      } else if (result.ok && data.skipped) {
+        if (window.showToast) {
+          window.showToast('演示数据已加载，无需重复操作', 'info');
+        }
+        setTimeout(function() { window.location.reload(); }, 800);
+      } else if (result.ok && data.needs_reset) {
+        // R1b P2-3：数据库已有非 demo 数据，需先 reset
+        if (window.showToast) {
+          window.showToast('数据库已有数据，请先点「清空所有数据」再加载', 'warning');
+        }
+        setLoading(false);
+      } else {
+        var errDetail = data.detail;
+        if (typeof errDetail === 'object' && errDetail !== null) {
+          errDetail = errDetail.message || JSON.stringify(errDetail);
+        }
+        var errMsg2 = errDetail || ('操作失败（HTTP ' + result.status + '）');
+        if (window.showToast) {
+          window.showToast(errMsg2, 'error');
+        }
+        setLoading(false);
+      }
+    }).catch(function(err) {
+      // R1a-C #3 修复：catch 仅处理真正的网络错误（fetch 失败），JSON 解析错误已在上面处理
+      if (window.showToast) {
+        window.showToast('网络错误：' + err.message + '（请检查网络连接）', 'error');
+      }
+      setLoading(false);
+    });
+  }
+
+  btnLoad.addEventListener('click', function() {
+    callApi('/demo/load', 'POST');
+  });
+
+  btnReset.addEventListener('click', function() {
+    if (!window.showModal) {
+      // 防御性兜底（base.html 已注入 showModal）
+      if (!window.confirm('确定清空所有数据吗？此操作不可撤销。')) return;
+      // R1b P2-4：服务端要求 confirm=True，防 CSRF 误触发
+      callApi('/demo/reset', 'POST', { confirm: true });
+      return;
+    }
+    window.showModal({
+      title: '清空所有数据',
+      body: '将删除所有项目、任务、留言、交接摘要、快照、灵感、Agent 建议与 SyncItem。此操作不可撤销，建议仅在演示前重置时使用。',
+      confirmText: '确认清空',
+      cancelText: '取消',
+      danger: true,
+      onConfirm: function() {
+        // R1b P2-4：服务端要求 confirm=True，防 CSRF 误触发
+        callApi('/demo/reset', 'POST', { confirm: true });
+        return true;
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,788 @@
+/* NameThatUI 方向 C：数据可视化语义色令牌
+   P2-6/7 修复（p7-2 DRL）：原局部 :root + @media 冲突已清理——
+   - --v-series-* 移至 style.css 全局 :root（story.html 不加载 stats.css，原局部定义导致 var() 失效）
+   - --v-heat-* / --v-warning-dark / --v-danger-dark 删除（死令牌，0 引用）
+   - --v-success-bg 删除（与 style.css 冗余）
+   - 深色模式重定义统一由 style.css :root[data-theme="dark"] 处理 */
+
+/* 统计仪表盘页面专用样式 — 复用 style.css 设计令牌 */
+.stats-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.stat-kpi {
+  background: var(--v-surface);
+  border: 1px solid var(--v-border);
+  border-radius: var(--v-radius);
+  padding: 1.25rem;
+  box-shadow: var(--v-shadow-sm);
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow var(--v-transition), border-color var(--v-transition), transform var(--v-transition);
+}
+.stat-kpi:hover {
+  /* hover: 微抬升 + 品牌色发光阴影 */
+  box-shadow: var(--v-shadow-brand), var(--v-shadow-md);
+  border-color: var(--v-primary-light);
+  transform: translateY(-2px);
+}
+/* KPI 卡片顶部 3px 翠绿渐变装饰线 */
+.stat-kpi::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; right: 0;
+  height: 3px;
+  background: var(--v-gradient-rail);
+}
+.stat-kpi .kpi-label {
+  font-size: 0.82rem;
+  color: var(--v-text-secondary);
+  margin: 0 0 0.4rem;
+  font-weight: 500;
+}
+.stat-kpi .kpi-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--v-text);
+  margin: 0;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.stat-kpi .kpi-icon {
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  width: 28px;
+  height: 28px;
+  color: var(--v-text-muted);
+  opacity: 0.35;
+}
+.stat-kpi .kpi-sub {
+  font-size: 0.72rem;
+  color: var(--v-text-muted);
+  margin: 0.35rem 0 0;
+  font-variant-numeric: tabular-nums;
+}
+/* NameThatUI 第三层：口径说明 — 一句话讲清指标计算方式 */
+.stat-kpi .kpi-hint {
+  font-size: 0.68rem;
+  color: var(--v-text-muted);
+  margin: 0.15rem 0 0;
+  line-height: 1.3;
+}
+
+.stats-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+.chart-card {
+  background: var(--v-surface);
+  border: 1px solid var(--v-border);
+  border-radius: var(--v-radius);
+  padding: 1.25rem;
+  box-shadow: var(--v-shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+/* chart-card 顶部 3px 翠绿渐变装饰线 */
+.chart-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; right: 0;
+  height: 3px;
+  background: var(--v-gradient-rail);
+}
+.chart-card h3 {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--v-text);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.chart-card h3 svg { width: 16px; height: 16px; color: var(--v-primary); }
+
+.trend-chart { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.trend-chart svg { display: block; min-width: 700px; }
+
+.donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.donut-svg { flex-shrink: 0; }
+.donut-center {
+  text-align: center;
+}
+.donut-center .donut-total {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--v-text);
+  line-height: 1;
+}
+.donut-center .donut-label {
+  font-size: 0.72rem;
+  color: var(--v-text-muted);
+  margin-top: 0.2rem;
+}
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--v-text);
+}
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.legend-count {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--v-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.7rem;
+}
+.bar-row:last-child { margin-bottom: 0; }
+.bar-label {
+  width: 72px;
+  font-size: 0.85rem;
+  color: var(--v-text-secondary);
+  flex-shrink: 0;
+}
+.bar-track {
+  flex: 1;
+  height: 22px;
+  background: var(--v-bg);
+  border-radius: var(--v-radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--v-border);
+}
+.bar-fill {
+  height: 100%;
+  border-radius: var(--v-radius-sm);
+  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  min-width: 2px;
+}
+.bar-value {
+  font-size: 0.82rem;
+  color: var(--v-text);
+  font-weight: 600;
+  min-width: 28px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.contrib-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.contrib-table th,
+.contrib-table td {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--v-border);
+  font-size: 0.88rem;
+}
+.contrib-table th {
+  font-weight: 600;
+  color: var(--v-text-secondary);
+  background: var(--v-bg);
+  font-size: 0.8rem;
+  text-transform: none;
+}
+.contrib-table tr:last-child td { border-bottom: none; }
+.contrib-table tr:hover td { background: var(--v-bg); }
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: var(--v-bg);
+  color: var(--v-text-secondary);
+  border: 1px solid var(--v-border);
+}
+.rank-badge.rank-1 {
+  background: linear-gradient(to right, #fbbf24, #f59e0b);
+  color: #78350f;
+  border-color: transparent;
+}
+.rank-badge.rank-2 {
+  background: linear-gradient(to right, #cbd5e1, #94a3b8);
+  color: #475569;
+  border-color: transparent;
+}
+.rank-badge.rank-3 {
+  background: linear-gradient(to right, #d97706, #b45309);
+  color: #78350f;
+  border-color: transparent;
+}
+.owner-name {
+  font-weight: 500;
+  color: var(--v-text);
+}
+.task-count-cell {
+  font-weight: 600;
+  color: var(--v-primary);
+  font-variant-numeric: tabular-nums;
+}
+.num-cell {
+  font-variant-numeric: tabular-nums;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Phase 4.3: 多折线对比图 + 分组条形图样式 */
+.multi-line-chart { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.multi-line-chart svg { display: block; min-width: 700px; }
+.line-path { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.line-dot { stroke: var(--v-surface); stroke-width: 1.5; }
+
+/* P1-DOG-I 修复：stats.html SVG 图表 dark mode 适配
+   - 引用 style.css :root --v-chart-* 令牌，dark mode 下自动切换提亮变体
+   - .chart-line-N 用于 polyline/circle stroke（折线/圆环/奖牌外圈）
+   - .chart-dot-N 用于数据点 circle（fill + stroke）
+   - .chart-line-N-fill 用于 path fill-only（缎带/星）
+   - .chart-line-N-bg 用于 legend swatch background-color */
+.chart-grid-line { stroke: var(--v-chart-grid); }
+.chart-axis-text { fill: var(--v-chart-axis-text); }
+.chart-area { fill: var(--v-chart-area); }
+.chart-label { fill: var(--v-chart-label-text); }
+.chart-line-1 { stroke: var(--v-chart-line-1); }
+.chart-line-2 { stroke: var(--v-chart-line-2); }
+.chart-line-3 { stroke: var(--v-chart-line-3); }
+.chart-line-4 { stroke: var(--v-chart-line-4); }
+.chart-line-5 { stroke: var(--v-chart-line-5); }
+.chart-line-6 { stroke: var(--v-chart-line-6); }
+.chart-dot-1 { fill: var(--v-chart-line-1); stroke: var(--v-chart-dot-stroke); }
+.chart-dot-2 { fill: var(--v-chart-line-2); stroke: var(--v-chart-dot-stroke); }
+.chart-dot-3 { fill: var(--v-chart-line-3); stroke: var(--v-chart-dot-stroke); }
+.chart-dot-4 { fill: var(--v-chart-line-4); stroke: var(--v-chart-dot-stroke); }
+.chart-dot-5 { fill: var(--v-chart-line-5); stroke: var(--v-chart-dot-stroke); }
+.chart-dot-6 { fill: var(--v-chart-line-6); stroke: var(--v-chart-dot-stroke); }
+.chart-line-2-fill { fill: var(--v-chart-line-2); }
+.chart-line-3-fill { fill: var(--v-chart-line-3); }
+.chart-line-2-bg { background-color: var(--v-chart-line-2); }
+.chart-line-3-bg { background-color: var(--v-chart-line-3); }
+.chart-line-4-bg { background-color: var(--v-chart-line-4); }
+.chart-line-5-bg { background-color: var(--v-chart-line-5); }
+.chart-line-6-bg { background-color: var(--v-chart-line-6); }
+.line-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  margin-top: 0.75rem;
+  justify-content: center;
+}
+.line-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--v-text-secondary);
+}
+.line-legend-swatch {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.grouped-bar-chart {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+.grouped-bar-group {
+  display: grid;
+  grid-template-columns: 80px 1fr 36px;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+.grouped-bar-group:last-child { margin-bottom: 0; }
+.grouped-bar-label {
+  font-size: 0.85rem;
+  color: var(--v-text-secondary);
+}
+.grouped-bar-stack {
+  display: flex;
+  height: 24px;
+  border-radius: var(--v-radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--v-border);
+  background: var(--v-bg);
+}
+.grouped-bar-segment {
+  height: 100%;
+  min-width: 2px;
+  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.grouped-bar-value {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--v-text);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Phase 4.3: 志愿者活跃度热力图（GitHub 风格） */
+.heatmap-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.5rem;
+}
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(30, 14px);
+  grid-auto-rows: 14px;
+  gap: 3px;
+  min-width: 480px; /* 30 × (14+3) − 3 = 477，留余量保证横向不挤压 */
+}
+.heatmap-cell {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--v-bg);
+  border: 1px solid var(--v-border);
+  transition: transform 0.15s ease;
+}
+.heatmap-cell:hover {
+  transform: scale(1.35);
+  z-index: 1;
+}
+/* P1-4 修复（p7-2 DRL）：原内联硬编码改用 var(--v-heat-*)，深色模式自动适配 */
+.heatmap-cell.h-1 { background: var(--v-heat-1); border-color: var(--v-heat-1-border); }
+.heatmap-cell.h-2 { background: var(--v-heat-2); border-color: var(--v-heat-2-border); }
+.heatmap-cell.h-3 { background: var(--v-heat-3); border-color: var(--v-heat-3-border); }
+.heatmap-cell.h-4 { background: var(--v-heat-4); border-color: var(--v-heat-4-border); }
+.heatmap-cell.today {
+  outline: 2px solid var(--v-primary);
+  outline-offset: 1px;
+}
+.heatmap-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  color: var(--v-text-muted);
+  min-width: 480px;
+  font-variant-numeric: tabular-nums;
+}
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  font-size: 0.78rem;
+  color: var(--v-text-secondary);
+}
+.heatmap-legend-cells {
+  display: flex;
+  gap: 3px;
+}
+.heatmap-legend-cell {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid var(--v-border);
+}
+.heatmap-legend-peak {
+  margin-left: 1rem;
+  color: var(--v-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* NameThatUI 同族对比分组标题：让用户一眼看出图表家族归属 */
+.chart-group-title {
+  margin: 1.75rem 0 0.85rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--v-border);
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+.chart-group-title:first-of-type { margin-top: 0; }
+.chart-group-title .group-tag {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--v-primary);
+  background: rgba(4, 120, 87, 0.1);
+  padding: 0.18rem 0.55rem;
+  border-radius: var(--v-radius-sm);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.chart-group-title .group-name {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--v-text);
+  margin: 0;
+}
+.chart-group-title .group-desc {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--v-text-muted);
+  margin-left: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .chart-card { animation: none !important; }
+  .bar-fill { transition: none !important; }
+  .grouped-bar-segment { transition: none !important; }
+  .heatmap-cell { transition: none !important; }
+}
+/* NameThatUI 跨文件命名一致性（#267）：.stats-empty → .v-empty，复用全局 .v-empty-* + .primary-btn
+   局部 .stats-empty .empty-title/.empty-desc/.empty-cta 定义已删除，避免与全局 .v-empty-* 重复 */
+.stats-empty .v-empty-cta {
+  margin-top: 0.9rem;
+}
+.stats-empty .v-empty-cta:hover { background: var(--v-primary-dark); }
+
+/* Phase 6.K1: 桑基图（志愿者 × 项目流向） */
+.sankey-chart {
+  overflow-x: auto;
+  padding: 0.5rem 0;
+}
+.sankey-flow {
+  fill: none;
+  stroke: var(--v-chart-line-2);
+  stroke-opacity: 0.35;
+  transition: stroke-opacity 0.2s ease;
+}
+.sankey-flow:hover {
+  stroke-opacity: 0.65;
+  stroke: var(--v-chart-line-1);
+}
+.sankey-node {
+  stroke-width: 1;
+  stroke: var(--v-chart-dot-stroke);
+}
+.sankey-vol { fill: var(--v-chart-line-1); }
+.sankey-proj { fill: var(--v-chart-line-3); }
+.sankey-label {
+  fill: var(--v-chart-label-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+.sankey-count {
+  fill: var(--v-chart-axis-text);
+  font-size: 10px;
+}
+.sankey-axis {
+  fill: var(--v-chart-axis-text);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+/* 桑基图洞察提示 */
+.chart-insight {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.85rem;
+  background: rgba(16, 185, 129, 0.08);
+  border-left: 3px solid var(--v-primary);
+  border-radius: 4px;
+  color: var(--v-text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.chart-insight svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--v-primary);
+}
+.chart-insight strong { color: var(--v-primary); font-weight: 700; }
+
+/* Phase 6.K2: 雷达图（项目健康度 5 维评分） */
+.radar-chart-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-start;
+  justify-content: center;
+}
+.radar-chart-wrap > svg {
+  flex: 0 1 480px;
+}
+.radar-grid {
+  stroke: var(--v-chart-grid);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  fill: none;
+}
+.radar-axis {
+  stroke: var(--v-chart-grid);
+  stroke-width: 1;
+}
+.radar-polygon {
+  fill-opacity: 0.18;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  transition: fill-opacity 0.2s ease;
+}
+.radar-polygon:hover { fill-opacity: 0.35; }
+/* 3 个项目分别使用 chart-line-1/3/5（emerald 渐变色阶） */
+.radar-proj-1 { fill: var(--v-chart-line-1); stroke: var(--v-chart-line-1); }
+.radar-proj-2 { fill: var(--v-chart-line-3); stroke: var(--v-chart-line-3); }
+.radar-proj-3 { fill: var(--v-chart-line-5); stroke: var(--v-chart-line-5); }
+.radar-proj-1-bg { background-color: var(--v-chart-line-1); }
+.radar-proj-2-bg { background-color: var(--v-chart-line-3); }
+.radar-proj-3-bg { background-color: var(--v-chart-line-5); }
+.radar-axis-label {
+  fill: var(--v-chart-label-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+.radar-tick {
+  fill: var(--v-chart-axis-text);
+  font-size: 9px;
+}
+.radar-legend {
+  flex: 1 1 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+}
+.radar-legend-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--v-bg-elevated, rgba(0, 0, 0, 0.02));
+  border-radius: 6px;
+  border-left: 3px solid var(--v-chart-grid);
+}
+.radar-legend-swatch {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  margin-top: 4px;
+}
+.radar-legend-content { flex: 1; min-width: 0; }
+.radar-legend-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--v-text);
+  margin-bottom: 0.25rem;
+}
+.radar-legend-scores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 11px;
+  color: var(--v-text-secondary, #6b7280);
+}
+.radar-legend-scores strong {
+  color: var(--v-primary);
+  font-weight: 700;
+}
+
+/* Phase 6.K3: 项目协作网络图 */
+.network-chart-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-start;
+  justify-content: center;
+}
+.network-chart-wrap > svg {
+  flex: 0 1 480px;
+}
+.network-edge {
+  stroke: var(--v-chart-line-3);
+  stroke-opacity: 0.5;
+  transition: stroke-opacity 0.2s ease;
+}
+.network-edge:hover { stroke-opacity: 0.85; }
+.network-node {
+  fill: var(--v-chart-line-1);
+  fill-opacity: 0.75;
+  stroke: var(--v-chart-dot-stroke);
+  stroke-width: 1.5;
+  transition: fill-opacity 0.2s ease;
+}
+.network-node:hover { fill-opacity: 0.95; }
+.network-node-label {
+  fill: var(--v-chart-label-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+.network-node-count {
+  fill: var(--v-chart-axis-text);
+  font-size: 10px;
+}
+.network-edge-label {
+  fill: var(--v-chart-line-3);
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--v-bg);
+}
+.network-legend {
+  flex: 1 1 240px;
+  padding-top: 0.5rem;
+}
+.network-legend h4 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--v-text);
+  margin: 0 0 0.6rem;
+}
+.network-legend-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: var(--v-bg-elevated, rgba(0, 0, 0, 0.02));
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  font-size: 12px;
+}
+.network-legend-name {
+  font-weight: 700;
+  color: var(--v-primary);
+}
+.network-legend-projects {
+  color: var(--v-text);
+  flex: 1;
+}
+.network-legend-count {
+  color: var(--v-text-secondary, #6b7280);
+  font-size: 11px;
+}
+
+/* ============================================================
+ * Phase 6.3 移动端响应式适配（DRL P0 修复）
+ * 调研发现：stats.css 原本 0 个宽度断点，全部依赖 auto-fit/overflow-x
+ * 此处补充 768px（平板/手机横屏）+ 480px（手机竖屏）两层断点
+ * 重点解决：KPI 字号过大 / chart-card padding 偏大 / grouped-bar 固定列挤压
+ * ============================================================ */
+@media (max-width: 768px) {
+  /* KPI 卡片：4 列 → 2 列 */
+  .stats-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  /* KPI 数字字号缩小（2rem → 1.5rem），避免 360px 下视觉过重 */
+  .stat-kpi .kpi-value {
+    font-size: 1.5rem;
+  }
+  .stat-kpi {
+    padding: 1rem;
+  }
+  /* 图表卡片 padding 收紧 */
+  .chart-card {
+    padding: 1rem;
+  }
+  /* 图表网格：auto-fit minmax(300px) → 1 列 */
+  .stats-charts {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  /* grouped-bar 80px+1fr+36px 在窄屏挤压，改为 64px+1fr+32px */
+  .grouped-bar-group {
+    grid-template-columns: 64px 1fr 32px;
+    gap: 0.5rem;
+  }
+  /* 网络图：480px SVG 缩到 1 列 */
+  .network-chart-wrap > svg {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+  /* 雷达图 legend 单列 */
+  .radar-legend {
+    flex: 1 1 100%;
+  }
+  /* chart-group-title 描述行换行 */
+  .chart-group-title .group-desc {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  /* 极窄屏 KPI 单列 */
+  .stats-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+  /* KPI 数字进一步缩小 */
+  .stat-kpi .kpi-value {
+    font-size: 1.35rem;
+  }
+  .stat-kpi .kpi-label {
+    font-size: 0.78rem;
+  }
+  /* grouped-bar 进一步紧凑：56px+1fr+28px */
+  .grouped-bar-group {
+    grid-template-columns: 56px 1fr 28px;
+    gap: 0.4rem;
+  }
+  .grouped-bar-label {
+    font-size: 0.78rem;
+  }
+  .grouped-bar-value {
+    font-size: 0.75rem;
+  }
+  /* chart-card padding 进一步收紧 */
+  .chart-card {
+    padding: 0.85rem;
+  }
+  .chart-card h3 {
+    font-size: 0.95rem;
+  }
+  /* 热力图单元格缩小（14px → 12px），减少横向滚动距离 */
+  .heatmap-grid {
+    grid-template-columns: repeat(30, 12px);
+    grid-auto-rows: 12px;
+    min-width: 420px;
+  }
+  .heatmap-cell {
+    width: 12px;
+    height: 12px;
+  }
+  .heatmap-axis {
+    min-width: 420px;
+    font-size: 0.68rem;
+  }
+}

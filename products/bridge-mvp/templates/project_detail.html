@@ -1,0 +1,2902 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} · Bridge{% endblock %}
+
+{% block head %}
+<!-- Phase 6.6.1 视觉重设计:案卷纸视觉语言(覆盖 style.css 令牌) -->
+<link rel="stylesheet" href="/static/archive-paper.css">
+<style>
+/* NameThatUI Guides 决策前置：在页面顶部告诉用户如何使用本页面核心功能 */
+.v-guides {
+  background: var(--v-surface);
+  border: 1px solid var(--v-border);
+  border-radius: var(--v-radius);
+  padding: 1.25rem 1.4rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--v-shadow-sm);
+}
+.v-guides::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; right: 0;
+  height: 3px;
+  background: var(--v-gradient-rail);
+}
+.v-guides h2 {
+  margin: 0 0 0.85rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--v-text);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.v-guides h2 svg { width: 16px; height: 16px; color: var(--v-primary); }
+.v-guides-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.85rem;
+}
+.v-guide-card {
+  background: var(--v-bg);
+  border: 1px solid var(--v-border);
+  border-radius: var(--v-radius-sm);
+  padding: 0.85rem 0.95rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: border-color var(--v-transition-fast), transform var(--v-transition-fast);
+}
+.v-guide-card:hover {
+  border-color: var(--v-primary-light);
+  transform: translateY(-1px);
+}
+.v-guide-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--v-text);
+}
+.v-guide-card-head svg { width: 14px; height: 14px; color: var(--v-primary); flex-shrink: 0; }
+.v-guide-card-tag {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--v-primary);
+  background: rgba(4, 120, 87, 0.1);
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  margin-left: auto;
+}
+.v-guide-card-steps {
+  margin: 0;
+  padding-left: 1.05rem;
+  font-size: 0.76rem;
+  line-height: 1.55;
+  color: var(--v-text-secondary);
+}
+.v-guide-card-steps li { margin-bottom: 0.2rem; }
+.v-guide-card-steps li::marker { color: var(--v-primary); }
+.v-guide-card-compare {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  font-size: 0.74rem;
+}
+.v-guide-card-compare-item {
+  flex: 1;
+  min-width: 80px;
+  background: var(--v-surface);
+  border: 1px solid var(--v-border);
+  border-radius: var(--v-radius-sm);
+  padding: 0.4rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.v-guide-card-compare-item .compare-name {
+  font-weight: 600;
+  color: var(--v-text);
+  font-size: 0.76rem;
+}
+.v-guide-card-compare-item .compare-desc {
+  font-size: 0.7rem;
+  color: var(--v-text-muted);
+  line-height: 1.35;
+}
+
+/* NameThatUI 同族对比：actions 按钮分组，让用户一眼看出操作家族归属 */
+.action-groups {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.action-group {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  padding: 0.2rem;
+  background: var(--v-bg);
+  border: 1px solid var(--v-border);
+  border-radius: var(--v-radius);
+}
+.action-group .secondary-btn,
+.action-group .danger-btn {
+  border-radius: var(--v-radius-sm);
+  box-shadow: none;
+}
+.action-group-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--v-text-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-right: 0.25rem;
+  padding-left: 0.35rem;
+}
+.action-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--v-border);
+  margin: 0 0.15rem;
+}
+
+/* NameThatUI 子空态 CTA 已提取到全局 style.css .v-empty-cta（与 index.html 同族） */
+
+/* Phase 7.4 (新功能): 通知按钮 active 状态 — 已开启时用 primary 色高亮 */
+.notify-btn.is-active {
+  border-color: var(--v-primary);
+  color: var(--v-primary);
+  background: var(--v-success-bg);
+}
+.notify-btn:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+@media (max-width: 640px) {
+  .notify-btn .notify-btn-text { display: none; }
+  .notify-btn { padding: 0.55rem 0.7rem; }
+}
+
+/* ============================================================
+   Phase 6.4 多角色视角切换器（admin / owner / volunteer）
+   - 纯前端 UI 演示：不修改后端鉴权，不破坏demo 演示 路径
+   - 默认 admin 视角，保证 dogfood-qc.js 测试不回归
+   - 视角状态通过 URL query (?view=) + sessionStorage 双重持久化
+   ============================================================ */
+.view-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  background: var(--v-bg);
+  border: 1px solid var(--v-border);
+  border-radius: var(--v-radius);
+}
+.view-switcher-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--v-text-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-right: 0.3rem;
+  padding-left: 0.4rem;
+  white-space: nowrap;
+}
+.view-switch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: var(--v-radius-sm);
+  background: transparent;
+  color: var(--v-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--v-transition-fast);
+  white-space: nowrap;
+}
+.view-switch-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.view-switch-btn:hover {
+  background: var(--v-surface);
+  color: var(--v-text);
+  border-color: var(--v-border);
+}
+.view-switch-btn.is-active {
+  background: var(--v-surface);
+  color: var(--v-primary);
+  border-color: var(--v-primary-light);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(4, 120, 87, 0.08);
+}
+.view-switch-btn:focus-visible {
+  outline: 2px solid var(--v-primary);
+  outline-offset: 1px;
+}
+
+/* 视角说明 badge — 在视角切换器右侧显示当前视角一句话说明 */
+.view-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  background: rgba(4, 120, 87, 0.08);
+  border: 1px solid rgba(4, 120, 87, 0.18);
+  border-radius: 999px;
+  color: var(--v-primary);
+  font-size: 0.74rem;
+  font-weight: 500;
+  margin-left: 0.4rem;
+}
+.view-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--v-primary);
+  flex-shrink: 0;
+}
+
+/* —— volunteer 视角：只读任务看板 + 留言，隐藏 admin/owner 专属模块 —— */
+[data-view="volunteer"] .v-guides,
+[data-view="volunteer"] #contextCard,
+[data-view="volunteer"] #aiAssistantCard,
+[data-view="volunteer"] #createTaskForm,
+[data-view="volunteer"] .tc-drag,
+[data-view="volunteer"] .tc-controls .edit-task-btn,
+[data-view="volunteer"] .tc-controls .delete-task-btn,
+[data-view="volunteer"] .action-group:has(#deleteProjectBtn),
+[data-view="volunteer"] #editProjectBtn,
+[data-view="volunteer"] #importProjectBtn,
+[data-view="volunteer"] #exportProjectBtn,
+[data-view="volunteer"] #createHandoffForm,
+[data-view="volunteer"] #autoGenerateHandoffBtn,
+[data-view="volunteer"] #aiStatusBadge {
+  display: none !important;
+}
+/* volunteer 视角：empty-state anchor 指向已隐藏的 AI 按钮，需一并隐藏避免死链 */
+[data-view="volunteer"] .v-empty-cta {
+  display: none !important;
+}
+/* volunteer 视角：任务状态切换只读 */
+[data-view="volunteer"] .status-select {
+  pointer-events: none;
+  opacity: 0.65;
+  background-color: var(--v-bg);
+}
+/* volunteer 视角：交接区只读（保留时间线可见，隐藏创建表单 + AI 按钮）
+   注：timeline 内 .tl-card 本身为只读展示，无 delete/edit-handoff-btn 类按钮（CSS 选择器漂移曾误用 #handoffList + .delete-handoff-btn，已清理） */
+/* volunteer 视角：留言区只允许查看 + 发自己的留言（保留 createMessageForm）
+   注：留言列表实际 class 为 .bubble（与 JS L1869 #messageList li.bubble 对齐），曾误用 .message-item 已修正 */
+[data-view="volunteer"] .bubble .delete-message-btn,
+[data-view="volunteer"] .bubble .edit-message-btn {
+  display: none !important;
+}
+/* volunteer 视角：项目操作组只保留二维码（现场扫码） */
+[data-view="volunteer"] .action-group:has(#deleteProjectBtn) .action-group-label,
+[data-view="volunteer"] .action-group:has(#deleteProjectBtn) #deleteProjectBtn {
+  display: none !important;
+}
+
+/* —— owner 视角：项目管理（隐藏删除项目按钮，保留其他全部） —— */
+[data-view="owner"] #deleteProjectBtn {
+  display: none !important;
+}
+[data-view="owner"] .action-group:has(#deleteProjectBtn) .action-group-label {
+  /* owner 视角下"项目"分组标签只剩"编辑"一个动作，隐藏分组标签避免视觉冗余 */
+  visibility: hidden;
+}
+
+/* volunteer 视角：项目头部的 v-badge 状态标签保留（志愿者也需看到项目状态） */
+/* volunteer 视角：ph-meta（创建时间）保留 */
+
+/* —— 移动端适配：极窄屏下视角切换器缩为图标 + 隐藏说明 badge ——
+   注意：view-switch-btn 是 segmented control 的 primary action button，
+   必须满足 Apple HIG / Material 44px 触控目标规范（与 Phase 6.3 一致） */
+@media (max-width: 768px) {
+  .view-switcher-label { display: none; }
+  .view-switch-btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.5rem;
+    justify-content: center;
+  }
+  .view-switch-btn span { display: none; }
+  .view-badge { display: none; }
+}
+/* 480px 极窄屏：view-switcher 占满整行，避免 3 个 44px 按钮与其他 topbar-actions 元素挤压 */
+@media (max-width: 480px) {
+  /* 覆盖 style.css L430 .topbar-actions flex-shrink: 0，允许极窄屏收缩避免溢出 */
+  .topbar .topbar-actions {
+    flex-shrink: 1;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .view-switcher {
+    flex: 1 1 100%;
+    width: 100%;
+    padding: 0.15rem;
+    gap: 0.15rem;
+    justify-content: space-between;
+    order: 99; /* 视角切换器放最后，让 sync/notify/返回 先排列 */
+  }
+  .view-switch-btn {
+    padding: 0.4rem 0.45rem;
+    min-width: 44px;
+    flex: 1 1 0;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="brand">
+    <span class="v-logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 6 L12 18 L20 6"/>
+      </svg>
+    </span>
+    <div class="brand-text">
+      <div class="app-title">{{ project.name }}</div>
+      <p>管理后台 · 项目详情</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <span id="syncIndicator" class="sync-indicator is-reconnecting" role="status" aria-live="polite" aria-label="实时同步状态">
+      <span class="sync-dot" aria-hidden="true"></span>
+      <span class="sync-text">连接中…</span>
+    </span>
+    <!-- Phase 6.4 多角色视角切换器（纯前端 UI 演示） — 三档 segmented control
+         admin 全功能 / owner 项目管理（无删除）/ volunteer 只读视图
+         视角状态通过 URL query (?view=) + sessionStorage 双重持久化 -->
+    <div class="view-switcher" role="radiogroup" aria-label="角色视角切换" id="viewSwitcher">
+      <span class="view-switcher-label">视角</span>
+      <button type="button" class="view-switch-btn is-active" role="radio" aria-checked="true" data-view="admin" aria-label="管理员视角（全功能）">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>管理员</span>
+      </button>
+      <button type="button" class="view-switch-btn" role="radio" aria-checked="false" data-view="owner" aria-label="项目负责人视角（无删除项目）">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>负责人</span>
+      </button>
+      <button type="button" class="view-switch-btn" role="radio" aria-checked="false" data-view="volunteer" aria-label="志愿者视角（只读 + 留言）">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <span>志愿者</span>
+      </button>
+      <span class="view-badge" id="viewBadge" aria-live="polite">
+        <span class="view-badge-dot" aria-hidden="true"></span>
+        <span id="viewBadgeText">全功能视角</span>
+      </span>
+    </div>
+    <!-- Phase 7.4 (新功能): 开启通知按钮 — 用户主动点击触发 Notification.requestPermission()
+         避免页面加载就请求权限（侵入性高）；切到其他标签页时仍可接收 Agent 建议系统通知 -->
+    <button type="button" id="notifyBtn" class="secondary-btn notify-btn" aria-pressed="false" aria-label="开启系统通知" title="开启后切到其他标签页时仍可接收 Agent 建议通知" onclick="_requestNotificationPermission()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span class="notify-btn-text">开启通知</span>
+    </button>
+    <a href="/" class="secondary-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      返回列表
+    </a>
+  </div>
+</header>
+
+<main class="container" id="main-content" data-view="admin">
+  <section class="project-header" aria-labelledby="projectTitle">
+    <p class="ph-meta">创建于 <time class="utc-time" data-utc="{{ project.created_at.strftime('%Y-%m-%dT%H:%M:%S') }}Z">{{ project.created_at.strftime('%Y-%m-%d %H:%M') }}</time> · 最近更新 <time id="projectUpdatedAt" class="utc-time" data-utc="{{ project.updated_at.strftime('%Y-%m-%dT%H:%M:%S') }}Z">{{ project.updated_at.strftime('%Y-%m-%d %H:%M') }}</time></p>
+    <h1 id="projectTitle">{{ project.name }}</h1>
+    <p class="ph-desc" id="projectDesc">{{ project.description or '暂无简介' }}</p>
+    <div class="template-picker" role="radiogroup" aria-label="交接模板">
+      {% for tpl in templates %}
+      <label class="tpl-card{{ ' is-selected' if tpl.id == project.template_id else '' }}" data-template-id="{{ tpl.id }}">
+        <input type="radio" name="projectTemplate" value="{{ tpl.id }}"{{ ' checked' if tpl.id == project.template_id else '' }} aria-label="{{ tpl.name }}">
+        <span class="tpl-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{{ tpl.icon|safe }}</svg>
+        </span>
+        <span class="tpl-body">
+          <span class="tpl-name">{{ tpl.name }}</span>
+          <span class="tpl-desc">{{ tpl.description }}</span>
+        </span>
+      </label>
+      {% endfor %}
+    </div>
+    <div class="actions action-groups">
+      <span class="v-badge v-badge--{{ 'todo' if project.status == 'active' else ('archived' if project.status == 'archived' else 'done') }}" id="projectStatusBadge" data-status="{{ project.status }}">{{ status_labels.get(project.status, project.status) }}</span>
+      {# NameThatUI 同族对比：分享类操作（二维码 + 导出 + 导入）物理聚合 #}
+      <div class="action-group" role="group" aria-label="分享与导入导出">
+        <span class="action-group-label">分享</span>
+        <a class="secondary-btn" href="/qr/{{ project.qr_token }}" target="_blank" rel="noopener">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><line x1="14" y1="14" x2="14" y2="14.01"/><line x1="20" y1="14" x2="20" y2="14.01"/><line x1="17" y1="17" x2="17" y2="17.01"/><line x1="14" y1="20" x2="14" y2="20.01"/><line x1="20" y1="20" x2="20" y2="20.01"/></svg>
+          二维码
+        </a>
+        <button id="exportProjectBtn" type="button" class="secondary-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          导出
+        </button>
+        <button id="importProjectBtn" type="button" class="secondary-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          导入
+        </button>
+        <input id="importProjectFile" type="file" accept="application/json,.json" class="visually-hidden" aria-label="选择要导入的项目 JSON 文件">
+      </div>
+      {# NameThatUI 同族对比：项目类操作（编辑 + 删除）物理聚合 #}
+      <div class="action-group" role="group" aria-label="项目编辑操作">
+        <span class="action-group-label">项目</span>
+        <button id="editProjectBtn" type="button" class="secondary-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          编辑
+        </button>
+        <button id="deleteProjectBtn" type="button" class="danger-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
+          删除
+        </button>
+      </div>
+    </div>
+  </section>
+
+  {# NameThatUI Guides 决策前置：首屏看到"如何使用本页面"，再往下看具体功能 #}
+  <section class="v-guides" aria-labelledby="guidesTitle">
+    <h2 id="guidesTitle">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      使用指南
+      <span class="v-guide-card-tag" style="margin-left: auto;">Guides</span>
+    </h2>
+    <div class="v-guides-grid">
+      <div class="v-guide-card">
+        <div class="v-guide-card-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          任务交接
+          <span class="v-guide-card-tag">3 步</span>
+        </div>
+        <ol class="v-guide-card-steps">
+          <li>添加任务并指派负责人</li>
+          <li>拖拽卡片切换状态（待办 → 进行中 → 已完成）</li>
+          <li>点击「自动生成交接」由 AI 汇总进展</li>
+        </ol>
+      </div>
+      <div class="v-guide-card">
+        <div class="v-guide-card-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          项目分享
+          <span class="v-guide-card-tag">3 选</span>
+        </div>
+        <div class="v-guide-card-compare">
+          <div class="v-guide-card-compare-item">
+            <span class="compare-name">二维码</span>
+            <span class="compare-desc">现场扫码进入志愿者视图，适合线下交接</span>
+          </div>
+          <div class="v-guide-card-compare-item">
+            <span class="compare-name">导出</span>
+            <span class="compare-desc">下载 JSON 全量档案，适合归档/迁移</span>
+          </div>
+          <div class="v-guide-card-compare-item">
+            <span class="compare-name">导入</span>
+            <span class="compare-desc">从 JSON 重建项目，适合跨实例恢复</span>
+          </div>
+        </div>
+      </div>
+      <div class="v-guide-card">
+        <div class="v-guide-card-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          关联上下文
+          <span class="v-guide-card-tag">2 源</span>
+        </div>
+        <div class="v-guide-card-compare">
+          <div class="v-guide-card-compare-item">
+            <span class="compare-name">Focus 快照</span>
+            <span class="compare-desc">扩展推送的标签页快照，保留页面状态</span>
+          </div>
+          <div class="v-guide-card-compare-item">
+            <span class="compare-name">Muse 灵感</span>
+            <span class="compare-desc">扩展推送的灵感片段，附媒体元数据</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h2>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        任务看板
+      </h2>
+    </div>
+    <form id="createTaskForm" class="inline-form" aria-label="添加任务">
+      <input name="title" type="text" required maxlength="200" placeholder="任务标题" aria-label="任务标题">
+      <input name="description" type="text" maxlength="2000" placeholder="任务描述（可选）" aria-label="任务描述">
+      <input name="owner_name" type="text" maxlength="60" placeholder="负责人" aria-label="负责人">
+      <button type="submit" class="primary-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        添加任务
+      </button>
+    </form>
+
+    <div class="kanban-tabs" role="tablist" aria-label="任务看板视图切换" hidden>
+      <button class="kanban-tab is-active" role="tab" aria-selected="true" tabindex="0" data-status="todo">
+        待办 <span class="kanban-tab-count" data-count="todo">0</span>
+      </button>
+      <button class="kanban-tab" role="tab" aria-selected="false" tabindex="-1" data-status="in_progress">
+        进行中 <span class="kanban-tab-count" data-count="in_progress">0</span>
+      </button>
+      <button class="kanban-tab" role="tab" aria-selected="false" tabindex="-1" data-status="done">
+        已完成 <span class="kanban-tab-count" data-count="done">0</span>
+      </button>
+    </div>
+    <div id="taskList" class="kanban" aria-label="任务看板" aria-live="polite">
+      <div class="kanban-col" data-status="todo">
+        <div class="kanban-col-header">
+          <span class="kanban-col-title"><span class="dot"></span>待办</span>
+          <span class="kanban-count" data-count="todo">0</span>
+        </div>
+        <ul class="kanban-cards" data-status="todo" aria-label="待办任务">
+          {% for t in project.tasks if t.status == 'todo' %}
+          <li class="task-card" id="task-{{ t.id }}" data-task-id="{{ t.id }}" data-status="todo" draggable="true">
+            <div class="tc-head">
+              <span class="tc-title">{{ t.title }}</span>
+              <span class="tc-drag" tabindex="0" role="button" aria-label="移动任务（拖拽或按 Enter 切换到下一状态）">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+              </span>
+            </div>
+            {% if t.description %}<div class="tc-desc">{{ t.description[:80] }}{% if t.description|length > 80 %}…{% endif %}</div>{% endif %}
+            <div class="tc-meta">
+              <span class="tc-owner">
+                <span class="avatar">{{ (t.owner_name[:1] if t.owner_name else '?') }}</span>
+                {{ t.owner_name or '未分配' }}
+              </span>
+              <div class="tc-controls">
+                <select class="status-select" aria-label="更改「{{ t.title }}」的任务状态（等同于拖拽到另一列）">
+                  <option value="todo" selected>待办</option>
+                  <option value="in_progress">进行中</option>
+                  <option value="done">已完成</option>
+                </select>
+                <button type="button" class="edit-task-btn text-btn">编辑</button>
+                <button type="button" class="delete-task-btn text-btn">删除</button>
+              </div>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="kanban-col" data-status="in_progress">
+        <div class="kanban-col-header">
+          <span class="kanban-col-title"><span class="dot"></span>进行中</span>
+          <span class="kanban-count" data-count="in_progress">0</span>
+        </div>
+        <ul class="kanban-cards" data-status="in_progress" aria-label="进行中任务">
+          {% for t in project.tasks if t.status == 'in_progress' %}
+          {% set _stale_days = (now - t.updated_at).days if t.updated_at else 0 %}
+          <li class="task-card" id="task-{{ t.id }}" data-task-id="{{ t.id }}" data-status="in_progress" draggable="true">
+            <div class="tc-head">
+              <span class="tc-title">{{ t.title }}</span>
+              <span class="tc-drag" tabindex="0" role="button" aria-label="移动任务（拖拽或按 Enter 切换到下一状态）">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+              </span>
+            </div>
+            {% if t.description %}<div class="tc-desc">{{ t.description[:80] }}{% if t.description|length > 80 %}…{% endif %}</div>{% endif %}
+            {% if _stale_days > 3 %}<div class="tc-stale"><span class="stale-badge">已 {{ _stale_days }} 天未更新</span></div>{% endif %}
+            <div class="tc-meta">
+              <span class="tc-owner">
+                <span class="avatar">{{ (t.owner_name[:1] if t.owner_name else '?') }}</span>
+                {{ t.owner_name or '未分配' }}
+              </span>
+              <div class="tc-controls">
+                <select class="status-select" aria-label="更改「{{ t.title }}」的任务状态（等同于拖拽到另一列）">
+                  <option value="todo">待办</option>
+                  <option value="in_progress" selected>进行中</option>
+                  <option value="done">已完成</option>
+                </select>
+                <button type="button" class="edit-task-btn text-btn">编辑</button>
+                <button type="button" class="delete-task-btn text-btn">删除</button>
+              </div>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="kanban-col" data-status="done">
+        <div class="kanban-col-header">
+          <span class="kanban-col-title"><span class="dot"></span>已完成</span>
+          <span class="kanban-count" data-count="done">0</span>
+        </div>
+        <ul class="kanban-cards" data-status="done" aria-label="已完成任务">
+          {% for t in project.tasks if t.status == 'done' %}
+          <li class="task-card" id="task-{{ t.id }}" data-task-id="{{ t.id }}" data-status="done" draggable="true">
+            <div class="tc-head">
+              <span class="tc-title">{{ t.title }}</span>
+              <span class="tc-drag" tabindex="0" role="button" aria-label="移动任务（拖拽或按 Enter 切换到下一状态）">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+              </span>
+            </div>
+            {% if t.description %}<div class="tc-desc">{{ t.description[:80] }}{% if t.description|length > 80 %}…{% endif %}</div>{% endif %}
+            <div class="tc-meta">
+              <span class="tc-owner">
+                <span class="avatar">{{ (t.owner_name[:1] if t.owner_name else '?') }}</span>
+                {{ t.owner_name or '未分配' }}
+              </span>
+              <div class="tc-controls">
+                <select class="status-select" aria-label="更改「{{ t.title }}」的任务状态（等同于拖拽到另一列）">
+                  <option value="todo">待办</option>
+                  <option value="in_progress">进行中</option>
+                  <option value="done" selected>已完成</option>
+                </select>
+                <button type="button" class="edit-task-btn text-btn">编辑</button>
+                <button type="button" class="delete-task-btn text-btn">删除</button>
+              </div>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+      接力交接
+      {% if project.handoffs %}<span class="count-pill">{{ project.handoffs | length }}</span>{% endif %}
+      <span id="aiStatusBadge" class="ai-status-badge ai-status-badge--loading" role="status" aria-live="polite" title="">
+        <span class="ai-status-dot" aria-hidden="true"></span>
+        <span class="ai-status-text">检测中…</span>
+      </span>
+    </h2>
+    <div class="inline-form" style="margin-bottom:0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+      <button id="autoGenerateHandoffBtn" type="button" class="secondary-btn" aria-label="基于项目任务和留言自动生成交接草稿">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/></svg>
+        自动生成交接
+      </button>
+      <span id="aiConfigHint" class="ai-config-hint" hidden>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <span>未配置 AI，将使用规则引擎。配置环境变量 <code>BRIDGE_AI_*</code> 后可获得 AI 增强交接摘要。</span>
+      </span>
+    </div>
+    <form id="createHandoffForm" class="form" aria-label="记录交接">
+      <div class="field">
+        <label for="outgoing_volunteer">交接人（老志愿者）</label>
+        <input id="outgoing_volunteer" name="outgoing_volunteer" type="text" maxlength="60" placeholder="姓名" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="incoming_volunteer">接棒人（新志愿者）</label>
+        <input id="incoming_volunteer" name="incoming_volunteer" type="text" maxlength="60" placeholder="姓名" autocomplete="off">
+      </div>
+      <div class="field" id="templateFieldsHint" data-template-id="{{ project.template_id }}">
+        <span id="tpl-fields-label">当前模板字段提示</span>
+        <ul class="tpl-field-hint" aria-labelledby="tpl-fields-label">
+          {% for tpl in templates if tpl.id == project.template_id %}
+            {% for f in tpl.fields %}
+            <li>{{ f }}</li>
+            {% endfor %}
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="field">
+        <span id="import-card-label">导入上下文卡片</span>
+        <div class="import-card-row" role="group" aria-labelledby="import-card-label">
+          <button id="importHandoffCardBtn" type="button" class="secondary-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            选择 .vcf 文件
+          </button>
+          <input id="importHandoffCardFile" type="file" accept=".vcf,application/json" class="visually-hidden" aria-label="选择要导入的 Context Card 文件">
+          <span class="import-card-hint">支持 Focus 快照 / Muse 灵感 / Bridge 交接，解析后填入摘要</span>
+        </div>
+      </div>
+      <div class="field">
+        <label for="summary">交接摘要</label>
+        <textarea id="summary" name="summary" rows="3" required maxlength="2000" placeholder="{% for tpl in templates if tpl.id == project.template_id %}{{ tpl.fields | join('、') }}…{% endfor %}"></textarea>
+      </div>
+      <button type="submit" class="primary-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+        记录交接
+      </button>
+    </form>
+    {% if project.handoffs %}
+    <ul class="timeline" id="handoffTimeline" aria-label="交接记录时间线" aria-live="polite">
+      {% for h in project.handoffs %}
+      <li>
+        <div class="tl-card">
+          <div class="tl-head">
+            <span class="tl-people">{{ h.outgoing_volunteer or '?' }} → {{ h.incoming_volunteer or '?' }}
+              {% if h.status == 'confirmed' %}<span class="v-badge v-badge--done" style="margin-left:0.5rem;font-size:0.7rem;">已确认</span>{% else %}<span class="v-badge v-badge--todo" style="margin-left:0.5rem;font-size:0.7rem;">草稿</span>{% endif %}
+            </span>
+            <time class="tl-time utc-time" datetime="{{ h.created_at.strftime('%Y-%m-%dT%H:%M') }}" data-utc="{{ h.created_at.strftime('%Y-%m-%dT%H:%M:%S') }}Z">{{ h.created_at.strftime('%Y-%m-%d %H:%M') }}</time>
+          </div>
+          <p class="tl-summary">{{ h.summary }}</p>
+          {% if h.summary and not h.summary.startswith('【自动生成于') %}
+          <div class="ai-disclaimer">
+            <span class="ai-disclaimer-icon" aria-hidden="true">⚠️</span>
+            <span class="ai-disclaimer-text">此摘要由 AI 生成，仅供参考，请务必核对原始任务和留言。</span>
+          </div>
+          {% endif %}
+          {% if h.status == 'confirmed' and h.confirmed_by %}<p class="tl-confirmed" style="margin:0.4rem 0 0;font-size:0.78rem;color:var(--v-text-secondary);">已由 {{ h.confirmed_by }} 于 <time class="utc-time" data-utc="{{ h.confirmed_at.strftime('%Y-%m-%dT%H:%M:%S') }}Z">{{ h.confirmed_at.strftime('%Y-%m-%d %H:%M') }}</time> 确认接收</p>{% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="v-empty" id="handoffEmpty">
+      <svg class="v-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <div class="v-empty-title">暂无交接记录</div>
+      <div class="v-empty-desc">老志愿者离场时记录交接摘要，帮助新人快速接手</div>
+      <a href="#autoGenerateHandoffBtn" class="v-empty-cta secondary-btn" aria-label="自动生成交接草稿">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/></svg>
+        生成交接
+      </a>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      协作留言
+      {% if project.messages %}<span class="count-pill">{{ project.messages | length }}</span>{% endif %}
+    </h2>
+    <form id="createMessageForm" class="form" aria-label="发送留言">
+      <div class="field">
+        <label for="msgAuthor">留言人</label>
+        <input id="msgAuthor" name="author" type="text" maxlength="60" value="管理员" placeholder="昵称" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="msgTask">关联任务（可选）</label>
+        <select id="msgTask" name="task_id" aria-label="关联任务">
+          <option value="">不关联任务</option>
+          {% for t in project.tasks %}
+          <option value="{{ t.id }}">{{ t.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="msgContent">内容</label>
+        <textarea id="msgContent" name="content" rows="2" required maxlength="2000" placeholder="关联到整个项目的留言…"></textarea>
+      </div>
+      <button type="submit" class="primary-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        发送留言
+      </button>
+    </form>
+    {% if project.messages %}
+    <ul class="bubble-list" id="messageList" aria-label="留言列表" aria-live="polite">
+      {% for m in project.messages %}
+      <li class="bubble{% if m.is_deleted %} is-deleted{% endif %}" data-message-id="{{ m.id }}" data-moderation-flagged="{{ 'true' if m.moderation_flagged else 'false' }}" data-is-deleted="{{ 'true' if m.is_deleted else 'false' }}">
+        <span class="b-avatar" aria-hidden="true">{{ m.author[:1] if m.author else '?' }}</span>
+        <div class="b-body">
+          <div class="b-meta">
+            <span class="b-author">{{ m.author }}</span>
+            <time class="b-time utc-time" datetime="{{ m.created_at.strftime('%Y-%m-%dT%H:%M') }}" data-utc="{{ m.created_at.strftime('%Y-%m-%dT%H:%M:%S') }}Z">{{ m.created_at.strftime('%Y-%m-%d %H:%M') }}</time>
+            {% if m.moderation_flagged %}<span class="moderation-flag" title="{{ m.moderation_warning or '内容审核标记' }}" aria-label="内容审核标记">⚠️ 审核</span>{% endif %}
+            {% if m.is_deleted %}<span class="deleted-mark" aria-label="已删除">已删除</span>{% endif %}
+          </div>
+          {% if m.task %}<a class="b-task-tag" href="#task-{{ m.task.id }}" title="跳转到关联任务">#{{ m.task.title }}</a>{% endif %}
+          <span class="b-content">{{ m.content }}</span>
+          {% if not m.is_deleted %}<button type="button" class="delete-message-btn text-btn" data-message-id="{{ m.id }}" aria-label="软删除此留言">删除</button>{% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="v-empty" id="messageEmpty">
+      <svg class="v-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <div class="v-empty-title">暂无留言</div>
+      <div class="v-empty-desc">发起第一条讨论，让团队沟通留痕</div>
+      <a href="#msgContent" class="v-empty-cta secondary-btn" aria-label="发起留言">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        发起留言
+      </a>
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- Phase 4.1: 关联上下文（Focus 快照 + Muse 灵感） -->
+  <section class="card" id="contextCard" aria-labelledby="contextTitle">
+    <h2 id="contextTitle">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      关联上下文
+      <span class="count-pill" id="contextCountPill" hidden>0</span>
+    </h2>
+    <div class="kanban-tabs" role="tablist" aria-label="关联上下文切换" style="margin-bottom:0.75rem;">
+      <button class="kanban-tab is-active" role="tab" aria-selected="true" tabindex="0" data-ctx-tab="snapshots">
+        Focus 快照 <span class="kanban-tab-count" data-ctx-count="snapshots">0</span>
+      </button>
+      <button class="kanban-tab" role="tab" aria-selected="false" tabindex="-1" data-ctx-tab="inspirations">
+        Muse 灵感 <span class="kanban-tab-count" data-ctx-count="inspirations">0</span>
+      </button>
+    </div>
+    <div id="contextList" aria-live="polite">
+      <div class="v-empty">
+        <svg class="v-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        <div class="v-empty-title">暂无关联上下文</div>
+        <div class="v-empty-desc">在 Focus / Muse 扩展弹出页中点击「推送到 Bridge」即可把上下文归档到此项目</div>
+        <a href="#guidesTitle" class="v-empty-cta secondary-btn" aria-label="查看使用指南">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          查看指南
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Phase 6.J: AI 助手对话化（多轮对话 + SSE 流式回答） -->
+  <section class="card" id="aiAssistantCard" aria-labelledby="aiAssistantTitle">
+    <h2 id="aiAssistantTitle">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/></svg>
+      AI 助手
+      <span class="count-pill" id="chatMsgCount" hidden>0</span>
+      <button id="newChatBtn" type="button" class="secondary-btn chat-new-btn" aria-label="开始新会话" title="清空当前对话并开始新会话">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        新会话
+      </button>
+    </h2>
+    <div class="ai-chat-wrap">
+      <div id="aiChatMessages" class="ai-chat-messages" role="log" aria-live="polite" aria-label="AI 对话历史" hidden></div>
+      <div class="v-empty ai-chat-empty" id="aiChatEmpty">
+        <svg class="v-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <div class="v-empty-title">向 AI 助手提问</div>
+        <div class="v-empty-desc">基于项目任务、交接、留言上下文回答问题。例如：「项目当前有哪些风险？」「下一步应该优先做什么？」</div>
+      </div>
+      <form id="aiChatForm" class="ai-chat-form" aria-label="向 AI 助手提问">
+        <label for="aiChatInput" class="visually-hidden">问题输入</label>
+        <textarea id="aiChatInput" name="question" rows="2" required maxlength="2000" placeholder="向 AI 助手提问，例如：项目当前状态如何？" autocomplete="off"></textarea>
+        <button type="submit" class="primary-btn" id="aiChatSendBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          发送
+        </button>
+      </form>
+    </div>
+  </section>
+</main>
+
+<script>
+const projectId = {{ project.id }};
+
+// ============================================================
+// Phase 6.4 多角色视角切换（admin / owner / volunteer）
+// 纯前端 UI 演示 — 不修改后端鉴权，不破坏demo 演示 路径
+// 优先执行避免首屏闪烁：从 URL query → sessionStorage → 默认 admin
+// ============================================================
+(function _initViewSwitcher() {
+  const VALID_VIEWS = ['admin', 'owner', 'volunteer'];
+  const VIEW_LABELS = {
+    admin: '全功能视角',
+    owner: '项目管理视角（无删除）',
+    volunteer: '只读视角（仅留言）',
+  };
+  const mainEl = document.getElementById('main-content');
+  const switcher = document.getElementById('viewSwitcher');
+  const badgeText = document.getElementById('viewBadgeText');
+  if (!mainEl || !switcher) return;
+
+  function _resolveView() {
+    // 优先级：URL query > sessionStorage > 默认 admin
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('view');
+    if (q && VALID_VIEWS.includes(q)) return q;
+    try {
+      const s = sessionStorage.getItem('bridge_view');
+      if (s && VALID_VIEWS.includes(s)) return s;
+    } catch (_) {}
+    return 'admin';
+  }
+
+  function _switchView(view) {
+    // @param {string} view - 合法值见 VALID_VIEWS = ['admin', 'owner', 'volunteer']，非法值兜底为 'admin'
+    if (!VALID_VIEWS.includes(view)) view = 'admin';
+    mainEl.setAttribute('data-view', view);
+    // 更新按钮状态
+    switcher.querySelectorAll('.view-switch-btn').forEach(btn => {
+      const isActive = btn.dataset.view === view;
+      btn.classList.toggle('is-active', isActive);
+      btn.setAttribute('aria-checked', isActive ? 'true' : 'false');
+    });
+    // 更新说明 badge
+    if (badgeText) badgeText.textContent = VIEW_LABELS[view];
+    // 持久化到 sessionStorage（同一标签页内有效，跨标签页隔离避免污染演示路径）
+    // 失效条件：1) 标签页关闭后清除 2) 隐私模式可能抛 SecurityError（已 try/catch 兜底）3) 用户手动清除浏览器数据
+    try { sessionStorage.setItem('bridge_view', view); } catch (_) {}
+    // 同步 URL query：admin 视角删参保持 URL 干净，其他视角 set 参数支持刷新恢复 + 分享链接
+    const url = new URL(window.location.href);
+    if (view === 'admin') {
+      url.searchParams.delete('view');
+    } else {
+      url.searchParams.set('view', view);
+    }
+    window.history.replaceState({}, '', url.toString());
+  }
+
+  // 暴露给外部（仅调试用，dogfood-qc.js 实际通过 .view-switch-btn 按钮点击触发）
+  window._switchView = _switchView;
+
+  // 绑定点击事件
+  switcher.addEventListener('click', (e) => {
+    const btn = e.target.closest('.view-switch-btn');
+    if (!btn) return;
+    _switchView(btn.dataset.view);
+  });
+
+  // 键盘导航：radiogroup 内 左/右 切换
+  switcher.addEventListener('keydown', (e) => {
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+    const btns = Array.from(switcher.querySelectorAll('.view-switch-btn'));
+    const curIdx = btns.findIndex(b => b.classList.contains('is-active'));
+    const dir = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1 : -1;
+    const nextIdx = (curIdx + dir + btns.length) % btns.length;
+    btns[nextIdx].focus();
+    _switchView(btns[nextIdx].dataset.view);
+    e.preventDefault();
+  });
+
+  // 初始化：从 URL query / sessionStorage 恢复
+  _switchView(_resolveView());
+})();
+
+// 模板数据：用于切换模板时动态更新字段提示与摘要 placeholder
+const TEMPLATES = {
+  {% for tpl in templates %}
+  {{ tpl.id }}: {
+    id: "{{ tpl.id }}",
+    name: "{{ tpl.name }}",
+    description: "{{ tpl.description }}",
+    fields: [{% for f in tpl.fields %}"{{ f }}"{% if not loop.last %}, {% endif %}{% endfor %}],
+  }{% if not loop.last %},{% endif %}
+  {% endfor %}
+};
+
+// 模板选择器：切换时 PATCH 到 /api/projects/{id}，并更新字段提示和摘要 placeholder
+(function setupTemplatePicker() {
+  const picker = document.querySelector('.template-picker');
+  if (!picker) return;
+  const hintBox = document.getElementById('templateFieldsHint');
+  const summaryEl = document.getElementById('summary');
+
+  function applyTemplateUI(templateId) {
+    const tpl = TEMPLATES[templateId] || TEMPLATES.volunteer;
+    // 更新选中态
+    picker.querySelectorAll('.tpl-card').forEach(card => {
+      card.classList.toggle('is-selected', card.dataset.templateId === templateId);
+      const radio = card.querySelector('input[type="radio"]');
+      if (radio) radio.checked = (card.dataset.templateId === templateId);
+    });
+    // 更新字段提示
+    if (hintBox) {
+      hintBox.dataset.templateId = templateId;
+      const ul = hintBox.querySelector('.tpl-field-hint');
+      if (ul) {
+        ul.innerHTML = '';
+        (tpl.fields || []).forEach(f => {
+          const li = document.createElement('li');
+          li.textContent = f;
+          ul.appendChild(li);
+        });
+      }
+    }
+    // 更新摘要 placeholder
+    if (summaryEl) {
+      summaryEl.placeholder = (tpl.fields || []).join('、') + '…';
+    }
+  }
+
+  picker.addEventListener('change', async (e) => {
+    const target = e.target;
+    if (target.name !== 'projectTemplate') return;
+    const newTplId = target.value;
+    const result = await patchJson('/api/projects/' + projectId, { template_id: newTplId });
+    if (result.ok) {
+      applyTemplateUI(newTplId);
+      window.showToast('交接模板已切换为「' + (TEMPLATES[newTplId] ? TEMPLATES[newTplId].name : newTplId) + '」', 'success');
+    } else {
+      window.showToast('模板切换失败：' + (result.data.detail || '未知错误'), 'error');
+      // 失败时回退到当前 checked 状态
+      const current = picker.querySelector('input[name="projectTemplate"]:checked');
+      if (current) applyTemplateUI(current.value);
+    }
+  });
+})();
+
+// 安全加固：不再向前端注入 Basic Auth 凭据。
+// 管理后台页面本身已由 require_admin 保护，浏览器会缓存 Basic Auth 会话，
+// 同源的 fetch 请求会自动携带缓存的凭据，无需手动设置 Authorization 头。
+// M1: CSRF 防护仍通过 X-Requested-With 头实现（fetch 可自定义该头）。
+// B-SEC-02: 从 Cookie 读取 CSRF token，回传到 X-CSRF-Token 头（双重提交 Cookie 模式）
+function _getCsrfToken() {
+  const match = document.cookie.match(/(?:^|;\s*)bridge_csrf=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : '';
+}
+const CSRF_HEADER = { 'X-Requested-With': 'BridgeAdmin', 'X-CSRF-Token': _getCsrfToken() };
+
+// B-PERF-03: 带超时的 fetch，避免网络异常时请求挂起导致 UI 卡死
+function fetchWithTimeout(url, options, timeout) {
+  timeout = timeout || 10000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  return fetch(url, Object.assign({}, options, { signal: controller.signal }))
+    .then(function(res) { clearTimeout(timer); return res; })
+    .catch(function(err) { clearTimeout(timer); throw err; });
+}
+
+async function postJson(url, body) {
+  const res = await fetchWithTimeout(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...CSRF_HEADER },
+    body: JSON.stringify(body)
+  });
+  return { ok: res.ok, status: res.status, data: await res.json().catch(() => ({})) };
+}
+
+async function patchJson(url, body) {
+  const res = await fetchWithTimeout(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...CSRF_HEADER },
+    body: JSON.stringify(body)
+  });
+  return { ok: res.ok, status: res.status, data: await res.json().catch(() => ({})) };
+}
+
+async function deleteResource(url) {
+  const res = await fetchWithTimeout(url, { method: 'DELETE', headers: { ...CSRF_HEADER } });
+  return res.ok;
+}
+
+// 焦点陷阱：modal 打开时 Tab/Shift+Tab 在 modal 内循环
+function _trapModalFocus(maskEl, modalEl) {
+  maskEl.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+    const focusable = modalEl.querySelectorAll('button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
+}
+
+// P0-AI: 页面加载时检测 AI 配置状态，更新徽章和配置提示
+// 未配置 AI 时显示规则引擎提示，帮助用户/用户理解降级行为
+async function initAIStatus() {
+  const badge = document.getElementById('aiStatusBadge');
+  const hint = document.getElementById('aiConfigHint');
+  if (!badge) return;
+  try {
+    const res = await fetchWithTimeout('/api/ai-status', { headers: { 'X-Requested-With': 'BridgeAdmin' } }, 5000);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const enabled = data && data.ai_enabled === true;
+    const demoMode = data && data.demo_mode === true;
+    badge.classList.remove('ai-status-badge--loading');
+    badge.classList.add(enabled ? 'ai-status-badge--on' : 'ai-status-badge--off');
+    const dot = badge.querySelector('.ai-status-dot');
+    const text = badge.querySelector('.ai-status-text');
+    if (enabled) {
+      text.textContent = demoMode ? '✨ AI 演示模式' : 'AI 已启用';
+      badge.title = demoMode ? '演示模式已开启，使用预设结果展示 AI 增强效果' : 'AI 增强已启用，自动生成交接将调用 LLM';
+      if (hint) hint.hidden = true;
+    } else {
+      text.textContent = 'AI 未启用';
+      badge.title = '使用本地规则引擎生成交接摘要';
+      if (hint) hint.hidden = false;
+    }
+  } catch (e) {
+    // 静默降级：检测失败时隐藏徽章，不阻断核心功能
+    badge.classList.remove('ai-status-badge--loading');
+    badge.classList.add('ai-status-badge--off');
+    const text = badge.querySelector('.ai-status-text');
+    if (text) text.textContent = 'AI 状态未知';
+    badge.title = '无法检测 AI 配置状态，默认使用规则引擎';
+    if (hint) hint.hidden = false;
+  }
+}
+initAIStatus();
+
+// ---------- 看板：计数与空状态 ----------
+function recountAll() {
+  ['todo', 'in_progress', 'done'].forEach(status => {
+    const col = document.querySelector('.kanban-col[data-status="' + status + '"]');
+    if (!col) return;
+    const cards = col.querySelector('.kanban-cards');
+    const count = cards.querySelectorAll('li.task-card').length;
+    const counter = col.querySelector('.kanban-count');
+    if (counter) counter.textContent = count;
+    // 空状态处理
+    let empty = cards.querySelector('.kanban-empty');
+    if (count === 0) {
+      if (!empty) {
+        empty = document.createElement('p');
+        empty.className = 'kanban-empty';
+        empty.textContent = '暂无任务';
+        cards.appendChild(empty);
+      }
+    } else if (empty) {
+      empty.remove();
+    }
+  });
+  updateKanbanTabCounts();
+}
+
+// 移动端看板 tab 计数同步：与列内 .task-card 数量保持一致
+function updateKanbanTabCounts() {
+  document.querySelectorAll('.kanban-tab-count').forEach(el => {
+    const status = el.dataset.count;
+    const col = document.querySelector('.kanban-col[data-status="' + status + '"]');
+    if (col) {
+      const count = col.querySelectorAll('.task-card').length;
+      el.textContent = count;
+    }
+  });
+}
+
+// 把任务 li 移动到对应状态的列
+function moveTaskToColumn(taskLi, newStatus) {
+  const targetUl = document.querySelector('.kanban-cards[data-status="' + newStatus + '"]');
+  if (!targetUl) return;
+  taskLi.setAttribute('data-status', newStatus);
+  // 同步 select
+  const sel = taskLi.querySelector('.status-select');
+  if (sel) sel.value = newStatus;
+  targetUl.appendChild(taskLi);
+  recountAll();
+}
+
+// 构造新任务 li
+function buildTaskLi(task) {
+  const li = document.createElement('li');
+  li.className = 'task-card';
+  li.setAttribute('id', 'task-' + String(task.id));
+  li.setAttribute('data-task-id', String(task.id));
+  li.setAttribute('data-status', task.status || 'todo');
+  li.setAttribute('draggable', 'true');
+
+  const owner = task.owner_name || '';
+  const initial = owner ? owner.charAt(0) : '?';
+
+  li.innerHTML =
+    '<div class="tc-head">' +
+      '<span class="tc-title"></span>' +
+      '<span class="tc-drag" tabindex="0" role="button" aria-label="移动任务（拖拽或按 Enter 切换到下一状态）">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>' +
+      '</span>' +
+    '</div>' +
+    '<div class="tc-meta">' +
+      '<span class="tc-owner">' +
+        '<span class="avatar"></span>' +
+        '<span class="owner-text"></span>' +
+      '</span>' +
+      '<div class="tc-controls">' +
+        '<select class="status-select" aria-label="任务状态">' +
+          '<option value="todo">待办</option>' +
+          '<option value="in_progress">进行中</option>' +
+          '<option value="done">已完成</option>' +
+        '</select>' +
+        '<button type="button" class="edit-task-btn text-btn">编辑</button>' +
+        '<button type="button" class="delete-task-btn text-btn">删除</button>' +
+      '</div>' +
+    '</div>';
+
+  // 安全填充：textContent 防 XSS
+  li.querySelector('.tc-title').textContent = task.title || '';
+  li.querySelector('.avatar').textContent = initial;
+  li.querySelector('.owner-text').textContent = owner || '未分配';
+  // P0: 描述摘要
+  updateTaskDescription(li, task.description || '');
+  // 停滞提醒：进行中且超过 3 天未更新时显示橙色标记
+  _updateStaleBadge(li, task);
+
+  // 设置 select 当前值
+  const sel = li.querySelector('.status-select');
+  sel.setAttribute('aria-label', '更改「' + (task.title || '') + '」的任务状态（等同于拖拽到另一列）');
+  sel.value = task.status || 'todo';
+  // 选中对应 option
+  Array.prototype.forEach.call(sel.options, function(opt) {
+    opt.selected = (opt.value === (task.status || 'todo'));
+  });
+
+  // 绑定事件
+  bindTaskEvents(li);
+  return li;
+}
+
+// P0: 更新任务描述摘要
+function updateTaskDescription(li, desc) {
+  let descEl = li.querySelector('.tc-desc');
+  if (desc) {
+    if (!descEl) {
+      descEl = document.createElement('div');
+      descEl.className = 'tc-desc';
+      const head = li.querySelector('.tc-head');
+      if (head && head.nextSibling) {
+        head.parentNode.insertBefore(descEl, head.nextSibling);
+      } else {
+        li.appendChild(descEl);
+      }
+    }
+    descEl.textContent = desc.length > 80 ? desc.substring(0, 80) + '…' : desc;
+  } else if (descEl) {
+    descEl.remove();
+  }
+}
+
+// 停滞提醒：进行中且 updated_at 超过 3 天时显示橙色标记
+function _updateStaleBadge(li, task) {
+  let staleEl = li.querySelector('.tc-stale');
+  if (task.status !== 'in_progress' || !task.updated_at) {
+    if (staleEl) staleEl.remove();
+    return;
+  }
+  const updated = new Date(task.updated_at);
+  const now = new Date();
+  const days = Math.floor((now - updated) / 86400000);
+  if (days <= 3) {
+    if (staleEl) staleEl.remove();
+    return;
+  }
+  if (!staleEl) {
+    staleEl = document.createElement('div');
+    staleEl.className = 'tc-stale';
+    const badge = document.createElement('span');
+    badge.className = 'stale-badge';
+    staleEl.appendChild(badge);
+    const descEl = li.querySelector('.tc-desc');
+    if (descEl) {
+      descEl.parentNode.insertBefore(staleEl, descEl.nextSibling);
+    } else {
+      const head = li.querySelector('.tc-head');
+      if (head && head.nextSibling) {
+        head.parentNode.insertBefore(staleEl, head.nextSibling);
+      } else {
+        li.appendChild(staleEl);
+      }
+    }
+  }
+  staleEl.querySelector('.stale-badge').textContent = '已 ' + days + ' 天未更新';
+}
+
+// P0: 打开编辑任务 modal
+function openEditTaskModal(taskLi) {
+  const taskId = taskLi.dataset.taskId;
+  const titleEl = taskLi.querySelector('.tc-title');
+  const descEl = taskLi.querySelector('.tc-desc');
+  const ownerEl = taskLi.querySelector('.owner-text');
+  const currentTitle = titleEl ? titleEl.textContent : '';
+  const currentDesc = descEl ? descEl.textContent : '';
+  const currentOwnerText = ownerEl ? ownerEl.textContent : '';
+  const currentOwner = currentOwnerText === '未分配' ? '' : currentOwnerText;
+
+  const mask = document.createElement('div');
+  mask.className = 'modal-mask';
+  mask.setAttribute('role', 'dialog');
+  mask.setAttribute('aria-modal', 'true');
+  mask.setAttribute('aria-labelledby', 'editTaskTitle');
+  mask.setAttribute('aria-describedby', 'editTaskDesc');
+
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML =
+    '<h3 id="editTaskTitle">编辑任务</h3>' +
+    '<p id="editTaskDesc" style="margin:0 0 0.75rem;font-size:0.9rem;color:var(--v-text-secondary);">修改任务标题、描述或负责人，保存后立即生效。</p>' +
+    '<div class="field"><label for="editTaskTitleInput">标题</label><input id="editTaskTitleInput" type="text" maxlength="200"></div>' +
+    '<div class="field"><label for="editTaskDescInput">描述</label><textarea id="editTaskDescInput" rows="3" maxlength="2000"></textarea></div>' +
+    '<div class="field"><label for="editTaskOwnerInput">负责人</label><input id="editTaskOwnerInput" type="text" maxlength="60"></div>' +
+    '<div class="modal-actions">' +
+      '<button type="button" class="secondary-btn" data-act="cancel">取消</button>' +
+      '<button type="button" class="primary-btn" data-act="save">保存</button>' +
+    '</div>';
+  mask.appendChild(modal);
+  document.body.appendChild(mask);
+  _trapModalFocus(mask, modal);
+
+  modal.querySelector('#editTaskTitleInput').value = currentTitle;
+  modal.querySelector('#editTaskDescInput').value = currentDesc;
+  modal.querySelector('#editTaskOwnerInput').value = currentOwner;
+
+  const close = () => { if (mask.parentNode) mask.parentNode.removeChild(mask); };
+  mask.addEventListener('click', e => { if (e.target === mask) close(); });
+  modal.querySelector('[data-act="cancel"]').addEventListener('click', close);
+  modal.querySelector('[data-act="save"]').addEventListener('click', async () => {
+    const newTitle = modal.querySelector('#editTaskTitleInput').value.trim();
+    const newDesc = modal.querySelector('#editTaskDescInput').value.trim();
+    const newOwner = modal.querySelector('#editTaskOwnerInput').value.trim();
+    if (!newTitle) {
+      window.showToast('任务标题不能为空', 'error');
+      return;
+    }
+    const saveBtn = modal.querySelector('[data-act="save"]');
+    saveBtn.disabled = true;
+    saveBtn.textContent = '保存中…';
+    const result = await patchJson('/api/tasks/' + taskId, {
+      title: newTitle,
+      description: newDesc,
+      owner_name: newOwner
+    });
+    if (result.ok) {
+      if (titleEl) titleEl.textContent = result.data.title;
+      updateTaskDescription(taskLi, result.data.description || '');
+      if (ownerEl) ownerEl.textContent = result.data.owner_name || '未分配';
+      const avatar = taskLi.querySelector('.avatar');
+      if (avatar) avatar.textContent = (result.data.owner_name || '?').charAt(0);
+      // B-P2-2: 编辑后后端 onupdate=_now() 已刷新 updated_at，需重新评估停滞标记
+      _updateStaleBadge(taskLi, result.data);
+      window.showToast('任务已更新', 'success');
+      close();
+    } else {
+      window.showToast('保存失败：' + (result.data.detail || '未知错误'), 'error');
+      saveBtn.disabled = false;
+      saveBtn.textContent = '保存';
+    }
+  });
+  // B-LOW-1: 仅在精确指针设备（桌面）自动聚焦，移动端避免键盘弹起遮挡
+  setTimeout(() => { if (matchMedia('(pointer: fine)').matches) modal.querySelector('#editTaskTitleInput').focus(); }, 50);
+  const escHandler = e => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', escHandler); } };
+  document.addEventListener('keydown', escHandler);
+}
+
+const STATUS_ORDER = ['todo', 'in_progress', 'done'];
+
+async function commitTaskStatus(li, newStatus) {
+  const taskId = li.dataset.taskId;
+  const prevStatus = li.dataset.status;
+  if (newStatus === prevStatus) return;
+  const sel = li.querySelector('.status-select');
+  if (sel) {
+    sel.disabled = true;
+    sel.setAttribute('aria-busy', 'true');
+  }
+  const spinner = document.createElement('span');
+  spinner.className = 'tc-spinner';
+  // P1-2 修复（p7-2 DRL）：原 aria-hidden="true" 改为 role="status" + aria-label，让屏幕阅读器感知"加载中"
+  spinner.setAttribute('role', 'status');
+  spinner.setAttribute('aria-label', '任务状态更新中');
+  const spinnerParent = sel ? (sel.parentElement || sel) : li.querySelector('.tc-controls') || li;
+  spinnerParent.appendChild(spinner);
+  const result = await patchJson('/api/tasks/' + taskId, { status: newStatus });
+  spinner.remove();
+  if (sel) {
+    sel.disabled = false;
+    sel.removeAttribute('aria-busy');
+  }
+  if (result.ok) {
+    moveTaskToColumn(li, newStatus);
+    // 状态变更后 updated_at 已刷新，同步更新停滞标记
+    _updateStaleBadge(li, result.data);
+    window.showToast('任务状态已更新', 'success');
+  } else {
+    window.showToast('更新状态失败：' + (result.data.detail || '未知错误'), 'error');
+    if (sel) sel.value = prevStatus;
+  }
+}
+
+function bindTaskEvents(li) {
+  const sel = li.querySelector('.status-select');
+  if (sel) {
+    sel.addEventListener('change', () => commitTaskStatus(li, sel.value));
+  }
+
+  // B3: 拖拽移动任务
+  li.addEventListener('dragstart', (e) => {
+    e.dataTransfer.setData('text/plain', li.dataset.taskId);
+    e.dataTransfer.effectAllowed = 'move';
+    li.classList.add('is-dragging');
+  });
+  li.addEventListener('dragend', () => {
+    li.classList.remove('is-dragging');
+    document.querySelectorAll('.kanban-cards').forEach(ul => ul.classList.remove('is-drag-over'));
+  });
+
+  // B3: 拖拽手柄键盘支持（Enter/Space 循环状态）
+  const dragHandle = li.querySelector('.tc-drag');
+  if (dragHandle) {
+    dragHandle.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      const current = li.dataset.status || 'todo';
+      const idx = STATUS_ORDER.indexOf(current);
+      const next = STATUS_ORDER[(idx + 1) % STATUS_ORDER.length];
+      commitTaskStatus(li, next);
+    });
+  }
+
+  // P0: 编辑任务按钮
+  const editBtn = li.querySelector('.edit-task-btn');
+  if (editBtn) {
+    editBtn.addEventListener('click', () => openEditTaskModal(li));
+  }
+  const delBtn = li.querySelector('.delete-task-btn');
+  if (delBtn) {
+    delBtn.addEventListener('click', async () => {
+      const taskId = li.dataset.taskId;
+      const titleEl = li.querySelector('.tc-title');
+      const title = titleEl ? titleEl.textContent : '该任务';
+      window.showModal({
+        title: '删除任务',
+        body: '确定要删除任务「' + title + '」吗？此操作不可撤销。',
+        confirmText: '删除',
+        cancelText: '取消',
+        danger: true,
+        onConfirm: async function() {
+          const ok = await deleteResource('/api/tasks/' + taskId);
+          if (ok) {
+            li.remove();
+            recountAll();
+            window.showToast('任务已删除', 'success');
+            return true;
+          } else {
+            window.showToast('删除失败', 'error');
+            return false;
+          }
+        }
+      });
+    });
+  }
+}
+
+// 初始化已有任务的事件绑定
+document.querySelectorAll('#taskList li.task-card').forEach(bindTaskEvents);
+recountAll();
+
+// B-P2-6: 页面加载时把 UTC 时间显示转换为浏览器本地时区。
+// 后端存储用 naive UTC，模板 strftime 直接展示会早 8 小时（中国用户）。
+// 此处只改显示，不改存储和停滞天数计算（计算仍用 UTC now - UTC updated_at）。
+(function convertUtcTimesToLocal() {
+  const pad = n => String(n).padStart(2, '0');
+  document.querySelectorAll('.utc-time').forEach(el => {
+    const utcStr = el.getAttribute('data-utc');
+    if (!utcStr) return;
+    const dt = new Date(utcStr);
+    if (isNaN(dt.getTime())) return;
+    const localStr = dt.getFullYear() + '-' + pad(dt.getMonth()+1) + '-' + pad(dt.getDate()) + ' ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+    el.textContent = localStr;
+    if (el.tagName === 'TIME' && el.hasAttribute('datetime')) {
+      el.setAttribute('datetime', utcStr);
+    }
+  });
+})();
+
+// 移动端看板 tab 切换
+document.querySelectorAll('.kanban-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const status = tab.dataset.status;
+    // 切换 tab 激活态
+    document.querySelectorAll('.kanban-tab').forEach(t => {
+      t.classList.toggle('is-active', t === tab);
+      t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
+    });
+    // 切换列显示
+    document.querySelectorAll('.kanban-col').forEach(col => {
+      col.classList.toggle('is-active', col.dataset.status === status);
+    });
+  });
+});
+
+// 移动端默认显示第一列（待办）
+const firstKanbanCol = document.querySelector('.kanban-col');
+if (firstKanbanCol) firstKanbanCol.classList.add('is-active');
+
+// B3: 看板列作为拖放目标
+document.querySelectorAll('.kanban-cards').forEach(ul => {
+  ul.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    ul.classList.add('is-drag-over');
+  });
+  ul.addEventListener('dragleave', () => {
+    ul.classList.remove('is-drag-over');
+  });
+  ul.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    ul.classList.remove('is-drag-over');
+    const taskId = e.dataTransfer.getData('text/plain');
+    const li = document.querySelector('.task-card[data-task-id="' + taskId + '"]');
+    if (!li) return;
+    const newStatus = ul.dataset.status;
+    await commitTaskStatus(li, newStatus);
+  });
+});
+
+// 创建任务
+document.getElementById('createTaskForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const orig = submitBtn.innerHTML;
+  submitBtn.disabled = true;
+  submitBtn.textContent = '添加中…';
+  const result = await postJson('/api/projects/' + projectId + '/tasks', {
+    title: form.title.value.trim(),
+    description: form.description.value.trim(),
+    owner_name: form.owner_name.value.trim()
+  });
+  submitBtn.disabled = false;
+  submitBtn.innerHTML = orig;
+  if (result.ok) {
+    // 动态插入到待办列
+    const li = buildTaskLi(result.data);
+    const todoUl = document.querySelector('.kanban-cards[data-status="todo"]');
+    todoUl.appendChild(li);
+    recountAll();
+    // 清空输入
+    form.title.value = '';
+    form.description.value = '';
+    form.owner_name.value = '';
+    window.showToast('任务已添加', 'success');
+  } else {
+    const msg = '添加任务失败：' + (result.data.detail || '未知错误');
+    window.showToast(msg, 'error');
+  }
+});
+
+// 创建交接
+// P0: 构造交接时间线卡片（create handoff 与 auto-generate 共用）
+// P0-AI: 规则引擎生成的摘要以「【自动生成于 …】」开头，AI 生成的为自然语言，
+// 据此在卡片上标注来源（AI / 规则），帮助用户判断摘要质地。
+function buildHandoffLi(h) {
+  const pad = n => String(n).padStart(2, '0');
+  const fmtDt = (iso) => {
+    if (!iso) return '';
+    const dt = new Date(iso);
+    return dt.getFullYear() + '-' + pad(dt.getMonth()+1) + '-' + pad(dt.getDate()) + ' ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+  };
+  const li = document.createElement('li');
+  const card = document.createElement('div');
+  card.className = 'tl-card';
+  const head = document.createElement('div');
+  head.className = 'tl-head';
+  const people = document.createElement('span');
+  people.className = 'tl-people';
+  people.textContent = (h.outgoing_volunteer || '?') + ' → ' + (h.incoming_volunteer || '?');
+  const badge = document.createElement('span');
+  badge.className = 'v-badge v-badge--' + (h.status === 'confirmed' ? 'done' : 'todo');
+  badge.style.marginLeft = '0.5rem';
+  badge.style.fontSize = '0.7rem';
+  badge.textContent = h.status === 'confirmed' ? '已确认' : '草稿';
+  people.appendChild(badge);
+  // P0-AI: 标注摘要来源——AI 生成 vs 规则引擎
+  const summaryText = h.summary || '';
+  const isRuleEngine = /^【自动生成于\s/.test(summaryText);
+  const sourceTag = document.createElement('span');
+  sourceTag.className = 'handoff-source-tag handoff-source-tag--' + (isRuleEngine ? 'rule' : 'ai');
+  sourceTag.title = isRuleEngine ? '由本地规则引擎基于任务/留言结构化生成' : '由 AI 基于项目上下文生成（可配置）';
+  sourceTag.setAttribute('aria-label', isRuleEngine ? '规则引擎生成' : 'AI 生成');
+  sourceTag.textContent = isRuleEngine ? '⚙️ 规则引擎' : '✨ AI 生成';
+  people.appendChild(sourceTag);
+  const time = document.createElement('time');
+  time.className = 'tl-time';
+  time.setAttribute('datetime', fmtDt(h.created_at));
+  time.textContent = fmtDt(h.created_at);
+  head.appendChild(people);
+  head.appendChild(time);
+  const summary = document.createElement('p');
+  summary.className = 'tl-summary';
+  summary.textContent = summaryText;
+  card.appendChild(head);
+  card.appendChild(summary);
+  // P0-AI: AI 生成的摘要加免责提示，避免志愿者误判任务状态
+  if (!isRuleEngine) {
+    const disclaimer = document.createElement('div');
+    disclaimer.className = 'ai-disclaimer';
+    const icon = document.createElement('span');
+    icon.className = 'ai-disclaimer-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '⚠️';
+    const text = document.createElement('span');
+    text.className = 'ai-disclaimer-text';
+    text.textContent = '此摘要由 AI 生成，仅供参考，请务必核对原始任务和留言。';
+    disclaimer.appendChild(icon);
+    disclaimer.appendChild(text);
+    card.appendChild(disclaimer);
+  }
+  if (h.status === 'confirmed' && h.confirmed_by) {
+    const conf = document.createElement('p');
+    conf.className = 'tl-confirmed';
+    conf.style.cssText = 'margin:0.4rem 0 0;font-size:0.78rem;color:var(--v-text-secondary);';
+    conf.textContent = '已由 ' + h.confirmed_by + ' 于 ' + fmtDt(h.confirmed_at) + ' 确认接收';
+    card.appendChild(conf);
+  }
+  li.appendChild(card);
+  return li;
+}
+
+function ensureHandoffTimeline(form) {
+  let ul = document.getElementById('handoffTimeline');
+  let emptyEl = document.getElementById('handoffEmpty');
+  if (emptyEl) emptyEl.remove();
+  if (!ul) {
+    ul = document.createElement('ul');
+    ul.className = 'timeline';
+    ul.id = 'handoffTimeline';
+    form.parentNode.insertBefore(ul, form.nextSibling);
+  }
+  return ul;
+}
+
+// 自动生成交接
+document.getElementById('autoGenerateHandoffBtn').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = '生成中…';
+  const form = document.getElementById('createHandoffForm');
+  const result = await postJson('/api/projects/' + projectId + '/handoffs/auto-generate', {
+    outgoing_volunteer: form.outgoing_volunteer.value.trim(),
+    incoming_volunteer: form.incoming_volunteer.value.trim()
+  });
+  btn.disabled = false;
+  btn.innerHTML = orig;
+  if (result.ok) {
+    const ul = ensureHandoffTimeline(form);
+    ul.appendChild(buildHandoffLi(result.data));
+    window.showToast('已自动生成交接草稿', 'success');
+  } else {
+    window.showToast('自动生成失败：' + (result.data.detail || '未知错误'), 'error');
+  }
+});
+
+// 创建交接
+document.getElementById('createHandoffForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const orig = submitBtn.innerHTML;
+  submitBtn.disabled = true;
+  submitBtn.textContent = '记录中…';
+  const result = await postJson('/api/projects/' + projectId + '/handoffs', {
+    outgoing_volunteer: form.outgoing_volunteer.value.trim(),
+    incoming_volunteer: form.incoming_volunteer.value.trim(),
+    summary: form.summary.value.trim()
+  });
+  submitBtn.disabled = false;
+  submitBtn.innerHTML = orig;
+  if (result.ok) {
+    // 动态插入到时间线
+    const ul = ensureHandoffTimeline(form);
+    ul.appendChild(buildHandoffLi(result.data));
+    // 清空表单
+    form.outgoing_volunteer.value = '';
+    form.incoming_volunteer.value = '';
+    form.summary.value = '';
+    window.showToast('交接记录已保存', 'success');
+  } else {
+    const msg = '记录交接失败：' + (result.data.detail || '未知错误');
+    window.showToast(msg, 'error');
+  }
+});
+
+// 导入 Context Card：读取 .vcf 文件，POST 到 import-card 端点，把背景信息填入 summary
+(function setupImportHandoffCard() {
+  const btn = document.getElementById('importHandoffCardBtn');
+  const fileInput = document.getElementById('importHandoffCardFile');
+  if (!btn || !fileInput) return;
+  btn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    const summaryEl = document.getElementById('summary');
+    const origBtn = btn.innerHTML;
+    btn.disabled = true;
+    btn.textContent = '导入中…';
+    try {
+      const text = await file.text();
+      const res = await fetchWithTimeout('/api/projects/' + projectId + '/handoffs/import-card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...CSRF_HEADER },
+        body: text
+      }, 10000);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data && data.ok) {
+        const bg = data.background || '';
+        if (summaryEl) {
+          // 已有内容则追加，避免覆盖手写摘要
+          const existing = summaryEl.value.trim();
+          summaryEl.value = existing ? (existing + '\n\n' + bg) : bg;
+        }
+        const typeLabel = data.type === 'focus-snapshot' ? 'Focus 快照'
+          : data.type === 'muse-inspiration' ? 'Muse 灵感'
+          : data.type === 'bridge-handoff' ? 'Bridge 交接'
+          : (data.type || '卡片');
+        window.showToast('已导入 ' + typeLabel + '，背景信息已填入摘要', 'success');
+      } else {
+        window.showToast('导入失败：' + (data.detail || '未知错误'), 'error');
+      }
+    } catch (err) {
+      window.showToast('导入失败：' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = origBtn;
+      fileInput.value = '';
+    }
+  });
+})();
+
+// 创建留言
+document.getElementById('createMessageForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const orig = submitBtn.innerHTML;
+  submitBtn.disabled = true;
+  submitBtn.textContent = '发送中…';
+  const taskVal = form.task_id ? form.task_id.value : '';
+  const result = await postJson('/api/projects/' + projectId + '/messages', {
+    author: form.author.value.trim() || '管理员',
+    content: form.content.value.trim(),
+    task_id: taskVal ? parseInt(taskVal, 10) : null
+  });
+  submitBtn.disabled = false;
+  submitBtn.innerHTML = orig;
+  if (result.ok) {
+    // 动态插入聊天气泡
+    const m = result.data;
+    let ul = document.getElementById('messageList');
+    let emptyEl = document.getElementById('messageEmpty');
+    if (emptyEl) emptyEl.remove();
+    if (!ul) {
+      ul = document.createElement('ul');
+      ul.className = 'bubble-list';
+      ul.id = 'messageList';
+      form.parentNode.insertBefore(ul, form.nextSibling);
+    }
+    ul.appendChild(buildMessageLi(m));
+    // 清空内容
+    form.content.value = '';
+    if (form.task_id) form.task_id.value = '';
+    window.showToast('留言已发送', 'success');
+    // 内容审核：命中敏感词时额外提示（不阻止提交）
+    if (m.moderation_flagged && m.moderation_warning) {
+      window.showToast(m.moderation_warning, 'info');
+    }
+  } else {
+    const msg = '发送留言失败：' + (result.data.detail || '未知错误');
+    window.showToast(msg, 'error');
+  }
+});
+
+// 构造留言 li（创建留言与 SSE 刷新共用）
+function buildMessageLi(m) {
+  const li = document.createElement('li');
+  li.className = 'bubble' + (m.is_deleted ? ' is-deleted' : '');
+  li.setAttribute('data-message-id', String(m.id));
+  li.setAttribute('data-moderation-flagged', m.moderation_flagged ? 'true' : 'false');
+  li.setAttribute('data-is-deleted', m.is_deleted ? 'true' : 'false');
+  const avatar = document.createElement('span');
+  avatar.className = 'b-avatar';
+  avatar.setAttribute('aria-hidden', 'true');
+  avatar.textContent = (m.author || '?').charAt(0);
+  const body = document.createElement('div');
+  body.className = 'b-body';
+  const meta = document.createElement('div');
+  meta.className = 'b-meta';
+  const author = document.createElement('span');
+  author.className = 'b-author';
+  author.textContent = m.author || '';
+  const time = document.createElement('time');
+  time.className = 'b-time';
+  const dt = new Date(m.created_at);
+  const pad = n => String(n).padStart(2, '0');
+  time.setAttribute('datetime', dt.toISOString());
+  time.textContent = dt.getFullYear() + '-' + pad(dt.getMonth()+1) + '-' + pad(dt.getDate()) + ' ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+  meta.appendChild(author);
+  meta.appendChild(time);
+  // 内容审核命中标记
+  if (m.moderation_flagged) {
+    const flag = document.createElement('span');
+    flag.className = 'moderation-flag';
+    flag.title = m.moderation_warning || '内容审核标记';
+    flag.setAttribute('aria-label', '内容审核标记');
+    flag.textContent = '⚠️ 审核';
+    meta.appendChild(flag);
+  }
+  // 软删除标记
+  if (m.is_deleted) {
+    const del = document.createElement('span');
+    del.className = 'deleted-mark';
+    del.setAttribute('aria-label', '已删除');
+    del.textContent = '已删除';
+    meta.appendChild(del);
+  }
+  body.appendChild(meta);
+  if (m.task) {
+    const tag = document.createElement('a');
+    tag.className = 'b-task-tag';
+    tag.setAttribute('href', '#task-' + m.task.id);
+    tag.setAttribute('title', '跳转到关联任务');
+    tag.textContent = '#' + (m.task.title || '');
+    body.appendChild(tag);
+  }
+  const content = document.createElement('span');
+  content.className = 'b-content';
+  content.textContent = m.content || '';
+  body.appendChild(content);
+  // 软删除按钮（管理员视图，且未被删除时显示）
+  if (!m.is_deleted) {
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'delete-message-btn text-btn';
+    delBtn.setAttribute('data-message-id', String(m.id));
+    delBtn.setAttribute('aria-label', '软删除此留言');
+    delBtn.textContent = '删除';
+    delBtn.addEventListener('click', () => handleSoftDeleteMessage(m.id, li));
+    body.appendChild(delBtn);
+  }
+  li.appendChild(avatar);
+  li.appendChild(body);
+  return li;
+}
+
+// 管理员软删除留言
+function handleSoftDeleteMessage(messageId, li) {
+  window.showModal({
+    title: '删除留言',
+    body: '确定要删除这条留言吗？此为软删除，志愿者端将不再显示，但数据保留以便审计。',
+    confirmText: '删除',
+    cancelText: '取消',
+    danger: true,
+    onConfirm: async function() {
+      const ok = await deleteResource('/api/projects/' + projectId + '/messages/' + messageId);
+      if (ok) {
+        // 标记为已删除样式，不真正移除 DOM
+        li.classList.add('is-deleted');
+        li.setAttribute('data-is-deleted', 'true');
+        const meta = li.querySelector('.b-meta');
+        if (meta && !meta.querySelector('.deleted-mark')) {
+          const del = document.createElement('span');
+          del.className = 'deleted-mark';
+          del.setAttribute('aria-label', '已删除');
+          del.textContent = '已删除';
+          meta.appendChild(del);
+        }
+        // 移除删除按钮
+        const delBtn = li.querySelector('.delete-message-btn');
+        if (delBtn) delBtn.remove();
+        window.showToast('留言已删除', 'success');
+        return true;
+      } else {
+        window.showToast('删除失败', 'error');
+        return false;
+      }
+    }
+  });
+}
+
+// 绑定初始留言的软删除按钮
+document.querySelectorAll('#messageList li.bubble .delete-message-btn').forEach(btn => {
+  const li = btn.closest('li.bubble');
+  const messageId = btn.dataset.messageId;
+  if (li && messageId) {
+    btn.addEventListener('click', () => handleSoftDeleteMessage(messageId, li));
+  }
+});
+
+// 删除项目 — 用 modal 替代 confirm
+document.getElementById('deleteProjectBtn').addEventListener('click', () => {
+  window.showModal({
+    title: '删除项目',
+    body: '确定删除整个项目档案？所有任务、交接记录、留言都将被永久移除，此操作不可恢复。',
+    confirmText: '确认删除',
+    cancelText: '取消',
+    danger: true,
+    onConfirm: async function() {
+      const ok = await deleteResource('/api/projects/' + projectId);
+      if (ok) {
+        window.showToast('项目已删除', 'success');
+        setTimeout(() => { window.location.href = '/'; }, 400);
+        return true;
+      } else {
+        window.showToast('删除失败', 'error');
+        return false;
+      }
+    }
+  });
+});
+
+// 编辑项目 — modal 表单
+document.getElementById('editProjectBtn').addEventListener('click', () => {
+  const titleEl = document.getElementById('projectTitle');
+  const descEl = document.getElementById('projectDesc');
+  const badgeEl = document.getElementById('projectStatusBadge');
+  const currentName = titleEl.textContent;
+  const currentDesc = descEl.textContent === '暂无简介' ? '' : descEl.textContent;
+  const currentStatus = badgeEl ? badgeEl.dataset.status : 'active';
+  const STATUS_LABELS = { 'active': '进行中', 'archived': '已归档', 'done': '已完成' };
+  const STATUS_BADGE_CLASS = { 'active': 'todo', 'archived': 'archived', 'done': 'done' };
+
+  const mask = document.createElement('div');
+  mask.className = 'modal-mask';
+  mask.setAttribute('role', 'dialog');
+  mask.setAttribute('aria-modal', 'true');
+  mask.setAttribute('aria-labelledby', 'editTitle');
+  mask.setAttribute('aria-describedby', 'editProjectDesc');
+
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML =
+    '<h3 id="editTitle">编辑项目</h3>' +
+    '<p id="editProjectDesc" style="margin:0 0 0.75rem;font-size:0.9rem;color:var(--v-text-secondary);">修改项目名称、简介或状态，保存后立即生效。</p>' +
+    '<div class="field"><label for="editName">项目名称</label><input id="editName" type="text" maxlength="120"></div>' +
+    '<div class="field"><label for="editDesc">项目简介</label><textarea id="editDesc" rows="3"></textarea></div>' +
+    '<div class="field"><label for="editStatus">项目状态</label><select id="editStatus">' +
+      '<option value="active">进行中</option>' +
+      '<option value="archived">已归档</option>' +
+      '<option value="done">已完成</option>' +
+    '</select></div>' +
+    '<div class="modal-actions">' +
+      '<button type="button" class="secondary-btn" data-act="cancel">取消</button>' +
+      '<button type="button" class="primary-btn" data-act="save">保存</button>' +
+    '</div>';
+  mask.appendChild(modal);
+  document.body.appendChild(mask);
+  _trapModalFocus(mask, modal);
+
+  modal.querySelector('#editName').value = currentName;
+  modal.querySelector('#editDesc').value = currentDesc;
+  modal.querySelector('#editStatus').value = currentStatus;
+
+  const close = () => { if (mask.parentNode) mask.parentNode.removeChild(mask); };
+  mask.addEventListener('click', e => { if (e.target === mask) close(); });
+  modal.querySelector('[data-act="cancel"]').addEventListener('click', close);
+  modal.querySelector('[data-act="save"]').addEventListener('click', async () => {
+    const newName = modal.querySelector('#editName').value.trim();
+    const newDesc = modal.querySelector('#editDesc').value.trim();
+    const newStatus = modal.querySelector('#editStatus').value;
+    if (!newName) {
+      window.showToast('项目名称不能为空', 'error');
+      return;
+    }
+    const saveBtn = modal.querySelector('[data-act="save"]');
+    saveBtn.disabled = true;
+    saveBtn.textContent = '保存中…';
+    const result = await patchJson('/api/projects/' + projectId, {
+      name: newName,
+      description: newDesc,
+      status: newStatus
+    });
+    if (result.ok) {
+      titleEl.textContent = result.data.name;
+      descEl.textContent = result.data.description || '暂无简介';
+      // 顶栏标题同步
+      const topTitle = document.querySelector('.topbar .brand .app-title');
+      if (topTitle) topTitle.textContent = result.data.name;
+      // 更新状态徽章
+      if (badgeEl) {
+        badgeEl.className = 'v-badge v-badge--' + (STATUS_BADGE_CLASS[result.data.status] || 'todo');
+        badgeEl.dataset.status = result.data.status;
+        badgeEl.textContent = STATUS_LABELS[result.data.status] || result.data.status;
+      }
+      // 更新时间
+      const updatedEl = document.getElementById('projectUpdatedAt');
+      if (updatedEl && result.data.updated_at) {
+        const dt = new Date(result.data.updated_at);
+        const pad = n => String(n).padStart(2, '0');
+        updatedEl.textContent = dt.getFullYear() + '-' + pad(dt.getMonth()+1) + '-' + pad(dt.getDate()) + ' ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+      }
+      document.title = result.data.name + ' · Bridge';
+      window.showToast('项目信息已更新', 'success');
+      close();
+    } else {
+      window.showToast('保存失败：' + (result.data.detail || '未知错误'), 'error');
+      saveBtn.disabled = false;
+      saveBtn.textContent = '保存';
+    }
+  });
+  // B-LOW-1: 仅在精确指针设备（桌面）自动聚焦，移动端避免键盘弹起遮挡
+  setTimeout(() => { if (matchMedia('(pointer: fine)').matches) modal.querySelector('#editName').focus(); }, 50);
+  const escHandler = e => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', escHandler); } };
+  document.addEventListener('keydown', escHandler);
+});
+
+// P0: 导出项目 JSON
+document.getElementById('exportProjectBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('exportProjectBtn');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = '导出中…';
+  try {
+    const res = await fetch('/api/projects/' + projectId + '/export');
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      window.showToast('导出失败：' + (data.detail || '未知错误'), 'error');
+      return;
+    }
+    const data = await res.json();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'project_' + projectId + '_export.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    window.showToast('已导出项目 JSON', 'success');
+  } catch (err) {
+    window.showToast('导出失败：' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+});
+
+// P0: 导入项目 JSON
+document.getElementById('importProjectBtn').addEventListener('click', () => {
+  document.getElementById('importProjectFile').click();
+});
+
+document.getElementById('importProjectFile').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const payload = JSON.parse(text);
+    const res = await fetch('/api/projects/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...CSRF_HEADER },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      window.showToast('已导入项目，即将跳转', 'success');
+      setTimeout(() => { window.location.href = '/admin/projects/' + data.id; }, 500);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      window.showToast('导入失败：' + (data.detail || '未知错误'), 'error');
+    }
+  } catch (err) {
+    window.showToast('导入失败：' + err.message, 'error');
+  } finally {
+    e.target.value = '';
+  }
+});
+
+// P2-4: 表单未提交修改 beforeunload 提示
+function _trackFormDirty(formEl) {
+  let dirty = false;
+  formEl.addEventListener('input', () => { dirty = true; });
+  formEl.addEventListener('change', () => { dirty = true; });
+  formEl.addEventListener('submit', () => { dirty = false; });
+  window.addEventListener('beforeunload', (e) => {
+    if (dirty) { e.preventDefault(); e.returnValue = ''; }
+  });
+}
+['createTaskForm', 'createHandoffForm', 'createMessageForm'].forEach(fid => {
+  const f = document.getElementById(fid);
+  if (f) _trackFormDirty(f);
+});
+
+// ---------- 第三批升级：SSE 实时同步 ----------
+// 收到事件后局部刷新对应区域（任务列表/留言区/交接区），不影响表单输入
+let _syncES = null;
+let _syncReconnectTimer = null;
+
+function _setSyncState(state) {
+  const indicator = document.getElementById('syncIndicator');
+  if (!indicator) return;
+  indicator.classList.remove('is-live', 'is-reconnecting');
+  const text = indicator.querySelector('.sync-text');
+  if (state === 'live') {
+    indicator.classList.add('is-live');
+    if (text) text.textContent = '实时同步中';
+  } else if (state === 'reconnecting') {
+    indicator.classList.add('is-reconnecting');
+    if (text) text.textContent = '同步断开，重连中…';
+  }
+}
+
+// Phase 7.4 (新功能): Agent 建议处理 — 浏览器原生通知 + toast 降级
+// 标签页可见时用 showToast（避免系统通知打扰），不可见时用系统通知（确保用户感知）
+function _handleAgentSuggestion(title, body) {
+  // 始终显示页面内 toast（标签页可见时主要通道）
+  if (window.showToast) window.showToast(body, 'info');
+
+  // 标签页不可见 + 已授权时弹系统通知
+  if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+    try {
+      const notif = new Notification(title, {
+        body: body,
+        icon: '/static/manifest-icon-192.png',
+        badge: '/static/manifest-icon-192.png',
+        tag: 'bridge-agent-suggestion',  // 同 tag 覆盖旧通知，避免堆积
+        requireInteraction: false  // 5-7 秒后自动关闭（系统默认行为）
+      });
+      notif.onclick = function() {
+        window.focus();
+        this.close();
+      };
+    } catch (e) { /* 某些浏览器在 SW 中不支持 Notification 构造，静默忽略 */ }
+  }
+}
+
+// Phase 7.4 (新功能): 请求通知权限 — 由用户主动点击"开启通知"按钮触发
+// 避免页面加载就请求权限（侵入性高，demo 演示 体验差）
+function _requestNotificationPermission() {
+  if (!('Notification' in window)) {
+    window.showToast('当前浏览器不支持系统通知', 'info');
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    window.showToast('系统通知已开启', 'success');
+    _updateNotifyBtn();
+    return;
+  }
+  if (Notification.permission === 'denied') {
+    window.showToast('通知权限已被拒绝，请在浏览器设置中手动开启', 'info');
+    return;
+  }
+  Notification.requestPermission().then(function(result) {
+    if (result === 'granted') {
+      window.showToast('系统通知已开启，切到其他标签页时仍可接收 Agent 建议', 'success');
+    } else {
+      window.showToast('未开启通知权限，仅在本页可见时提示', 'info');
+    }
+    _updateNotifyBtn();
+  });
+}
+
+function _updateNotifyBtn() {
+  const btn = document.getElementById('notifyBtn');
+  if (!btn) return;
+  if (!('Notification' in window)) {
+    btn.style.display = 'none';
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    btn.textContent = '通知已开启';
+    btn.setAttribute('aria-pressed', 'true');
+    btn.classList.add('is-active');
+    btn.disabled = true;
+  } else if (Notification.permission === 'denied') {
+    btn.textContent = '通知被拒绝';
+    btn.disabled = true;
+  } else {
+    btn.textContent = '开启通知';
+    btn.setAttribute('aria-pressed', 'false');
+  }
+}
+
+function _buildMessageLi(m) {
+  // 复用 buildMessageLi，保持 SSE 刷新与创建留言一致的渲染（含审核/删除标记）
+  return buildMessageLi(m);
+}
+
+async function _fetchProject() {
+  const res = await fetch('/api/projects/' + projectId);
+  if (!res.ok) return null;
+  return await res.json();
+}
+
+async function _refreshTasks() {
+  const data = await _fetchProject();
+  if (!data) return;
+  ['todo', 'in_progress', 'done'].forEach(status => {
+    const ul = document.querySelector('.kanban-cards[data-status="' + status + '"]');
+    if (ul) ul.innerHTML = '';
+  });
+  data.tasks.forEach(t => {
+    const li = buildTaskLi(t);
+    const ul = document.querySelector('.kanban-cards[data-status="' + t.status + '"]');
+    if (ul) ul.appendChild(li);
+  });
+  recountAll();
+}
+
+async function _refreshMessages() {
+  const data = await _fetchProject();
+  if (!data) return;
+  let ul = document.getElementById('messageList');
+  let emptyEl = document.getElementById('messageEmpty');
+  if (data.messages.length === 0) {
+    if (ul) ul.innerHTML = '';
+    return;
+  }
+  if (emptyEl) emptyEl.remove();
+  if (!ul) {
+    ul = document.createElement('ul');
+    ul.className = 'bubble-list';
+    ul.id = 'messageList';
+    const form = document.getElementById('createMessageForm');
+    form.parentNode.insertBefore(ul, form.nextSibling);
+  }
+  ul.innerHTML = '';
+  data.messages.forEach(m => ul.appendChild(_buildMessageLi(m)));
+}
+
+async function _refreshHandoffs() {
+  const data = await _fetchProject();
+  if (!data) return;
+  let ul = document.getElementById('handoffTimeline');
+  let emptyEl = document.getElementById('handoffEmpty');
+  if (data.handoffs.length === 0) {
+    if (ul) ul.innerHTML = '';
+    return;
+  }
+  if (emptyEl) emptyEl.remove();
+  if (!ul) {
+    ul = document.createElement('ul');
+    ul.className = 'timeline';
+    ul.id = 'handoffTimeline';
+    const form = document.getElementById('createHandoffForm');
+    form.parentNode.insertBefore(ul, form.nextSibling);
+  }
+  ul.innerHTML = '';
+  data.handoffs.forEach(h => ul.appendChild(buildHandoffLi(h)));
+}
+
+function _connectSSE() {
+  if (_syncES) { try { _syncES.close(); } catch(e){} }
+  _setSyncState('reconnecting');
+  try {
+    _syncES = new EventSource('/api/projects/' + projectId + '/events');
+  } catch(e) {
+    _syncReconnectTimer = setTimeout(_connectSSE, 3000);
+    return;
+  }
+  _syncES.addEventListener('hello', () => _setSyncState('live'));
+  // P2-2: 监听 ping 心跳事件（可选，仅作为保活确认，无需处理）
+  _syncES.addEventListener('ping', () => {});
+  _syncES.addEventListener('task_updated', () => _refreshTasks());
+  _syncES.addEventListener('task_created', () => _refreshTasks());
+  _syncES.addEventListener('task_deleted', () => _refreshTasks());
+  _syncES.addEventListener('message_created', () => _refreshMessages());
+  _syncES.addEventListener('handoff_created', () => _refreshHandoffs());
+  _syncES.addEventListener('handoff_updated', () => _refreshHandoffs());
+  // P2-1: 项目被删除时跳转回列表页
+  _syncES.addEventListener('project_deleted', () => {
+    _setSyncState('reconnecting');
+    window.showToast('项目已被删除，即将返回列表', 'info');
+    setTimeout(() => { window.location.href = '/'; }, 600);
+  });
+  // Phase 7.4 (新功能): Agent 建议 SSE 事件 — 修复孤儿事件，触发浏览器原生通知
+  // 标签页可见时用 showToast 降级（避免重复打扰），不可见时用系统通知
+  _syncES.addEventListener('agent_suggestion', (e) => {
+    let data = {};
+    try { data = JSON.parse(e.data || '{}'); } catch (err) {}
+    const title = data.title || 'Bridge Agent 建议';
+    const body = data.body || data.message || data.suggestion || '有新的跟进建议，请查看';
+    _handleAgentSuggestion(title, body);
+  });
+  // Phase 7.4 (建议 3): Context Cards 实时 SSE 推送 — Focus/Muse 扩展推送时即时刷新 + toast
+  _syncES.addEventListener('context_snapshot_created', (e) => {
+    let data = {};
+    try { data = JSON.parse(e.data || '{}'); } catch (err) {}
+    _refreshContextCards('snapshots');
+    const title = data.title || '未命名上下文';
+    const tabCount = data.tab_count != null ? '（' + data.tab_count + ' 个标签页）' : '';
+    if (window.showToast) window.showToast('收到 Focus 快照：' + title + tabCount, 'success');
+  });
+  _syncES.addEventListener('context_inspiration_created', (e) => {
+    let data = {};
+    try { data = JSON.parse(e.data || '{}'); } catch (err) {}
+    _refreshContextCards('inspirations');
+    const title = data.title || '未命名灵感';
+    const mood = data.mood ? ' #' + data.mood : '';
+    if (window.showToast) window.showToast('收到 Muse 灵感：' + title + mood, 'success');
+  });
+  _syncES.addEventListener('context_snapshot_deleted', () => {
+    _refreshContextCards('snapshots');
+  });
+  _syncES.addEventListener('context_inspiration_deleted', () => {
+    _refreshContextCards('inspirations');
+  });
+  _syncES.addEventListener('error', () => {
+    _setSyncState('reconnecting');
+    try { _syncES.close(); } catch(e){}
+    _syncES = null;
+    if (_syncReconnectTimer) clearTimeout(_syncReconnectTimer);
+    _syncReconnectTimer = setTimeout(_connectSSE, 3000);
+  });
+}
+
+// Phase 7.3 (Lighthouse P0): SSE 延迟到 idle 时连接，避免与首屏渲染竞争网络/CPU 资源
+// requestIdleCallback 不支持时 fallback 到 setTimeout(0)，至少让出当前事件循环
+if ('requestIdleCallback' in window) {
+  window.requestIdleCallback(_connectSSE, { timeout: 2000 });
+} else {
+  setTimeout(_connectSSE, 0);
+}
+window.addEventListener('beforeunload', () => { if (_syncES) _syncES.close(); });
+
+// ---------- Phase 4.1: 关联上下文（Focus 快照 + Muse 灵感） ----------
+// 拉取项目关联的 Focus 快照与 Muse 灵感，支持 tab 切换 + 删除
+const _ctxState = {
+  tab: 'snapshots',
+  snapshots: [],
+  inspirations: [],
+};
+
+async function _fetchContextSnapshots() {
+  try {
+    const res = await fetchWithTimeout('/api/projects/' + projectId + '/context-snapshots', {
+      headers: { 'X-Requested-With': 'BridgeAdmin' }
+    }, 8000);
+    if (!res.ok) return [];
+    return await res.json();
+  } catch (e) { return []; }
+}
+
+async function _fetchContextInspirations() {
+  try {
+    const res = await fetchWithTimeout('/api/projects/' + projectId + '/context-inspirations', {
+      headers: { 'X-Requested-With': 'BridgeAdmin' }
+    }, 8000);
+    if (!res.ok) return [];
+    return await res.json();
+  } catch (e) { return []; }
+}
+
+function _fmtCtxTime(ms) {
+  if (!ms) return '';
+  const dt = new Date(Number(ms));
+  if (isNaN(dt.getTime())) return '';
+  const pad = n => String(n).padStart(2, '0');
+  return dt.getFullYear() + '-' + pad(dt.getMonth()+1) + '-' + pad(dt.getDate()) + ' ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+}
+
+function _escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function _buildSnapshotCard(snap) {
+  const card = document.createElement('div');
+  card.className = 'tl-card ctx-card ctx-card--snapshot';
+  card.dataset.snapshotId = String(snap.id);
+  const urls = Array.isArray(snap.urls) ? snap.urls.slice(0, 5) : [];
+  const moreUrls = Array.isArray(snap.urls) ? Math.max(0, snap.urls.length - 5) : 0;
+  card.innerHTML =
+    '<div class="tl-head">' +
+      '<span class="tl-people">' +
+        '<span class="ctx-source-tag ctx-source-tag--focus">Focus 快照</span> ' +
+        _escapeHtml(snap.title || '未命名上下文') +
+      '</span>' +
+      '<time class="tl-time">' + _escapeHtml(_fmtCtxTime(snap.created_at)) + '</time>' +
+    '</div>' +
+    (snap.summary ? '<p class="tl-summary">' + _escapeHtml(snap.summary) + '</p>' : '') +
+    (urls.length ?
+      '<ul class="ctx-url-list">' +
+        urls.map(u => '<li><a href="' + _escapeHtml(u) + '" target="_blank" rel="noopener" title="' + _escapeHtml(u) + '">' + _escapeHtml(u.length > 80 ? u.slice(0, 80) + '…' : u) + '</a></li>').join('') +
+        (moreUrls > 0 ? '<li class="ctx-url-more">…还有 ' + moreUrls + ' 条 URL</li>' : '') +
+      '</ul>' : '') +
+    '<div class="ctx-meta">' +
+      '<span class="ctx-tabs-count">标签数：' + Number(snap.tab_count || 0) + '</span>' +
+      '<span class="ctx-pushed-at">推送于 ' + _escapeHtml(_fmtCtxTime(snap.pushed_at)) + '</span>' +
+      '<button type="button" class="delete-ctx-btn text-btn" data-ctx-id="' + snap.id + '" data-ctx-kind="snapshot" aria-label="删除此关联快照">删除</button>' +
+    '</div>';
+  const delBtn = card.querySelector('.delete-ctx-btn');
+  delBtn.addEventListener('click', () => _confirmDeleteContext('snapshot', snap.id, card));
+  return card;
+}
+
+function _buildInspirationCard(insp) {
+  const card = document.createElement('div');
+  card.className = 'tl-card ctx-card ctx-card--inspiration';
+  card.dataset.inspirationId = String(insp.id);
+  card.innerHTML =
+    '<div class="tl-head">' +
+      '<span class="tl-people">' +
+        '<span class="ctx-source-tag ctx-source-tag--muse">Muse 灵感</span> ' +
+        _escapeHtml(insp.title || '未命名灵感') +
+        (insp.mood ? ' <span class="ctx-mood-tag">#' + _escapeHtml(insp.mood) + '</span>' : '') +
+      '</span>' +
+      '<time class="tl-time">' + _escapeHtml(_fmtCtxTime(insp.created_at)) + '</time>' +
+    '</div>' +
+    (insp.note ? '<p class="tl-summary">' + _escapeHtml(insp.note) + '</p>' : '') +
+    (insp.url ? '<p class="ctx-url-line"><a href="' + _escapeHtml(insp.url) + '" target="_blank" rel="noopener" title="' + _escapeHtml(insp.url) + '">' + _escapeHtml(insp.url.length > 80 ? insp.url.slice(0, 80) + '…' : insp.url) + '</a></p>' : '') +
+    '<div class="ctx-meta">' +
+      '<span class="ctx-pushed-at">推送于 ' + _escapeHtml(_fmtCtxTime(insp.pushed_at)) + '</span>' +
+      '<button type="button" class="delete-ctx-btn text-btn" data-ctx-id="' + insp.id + '" data-ctx-kind="inspiration" aria-label="删除此关联灵感">删除</button>' +
+    '</div>';
+  const delBtn = card.querySelector('.delete-ctx-btn');
+  delBtn.addEventListener('click', () => _confirmDeleteContext('inspiration', insp.id, card));
+  return card;
+}
+
+function _confirmDeleteContext(kind, id, cardEl) {
+  const label = kind === 'snapshot' ? 'Focus 快照' : 'Muse 灵感';
+  window.showModal({
+    title: '删除关联' + label,
+    body: '确定要从项目档案中移除此' + label + '吗？此操作不可撤销。',
+    confirmText: '删除',
+    cancelText: '取消',
+    danger: true,
+    onConfirm: async function() {
+      const url = '/api/projects/' + projectId + '/context-' + (kind === 'snapshot' ? 'snapshots' : 'inspirations') + '/' + id;
+      const ok = await deleteResource(url);
+      if (ok) {
+        cardEl.remove();
+        // 重新计算计数
+        if (kind === 'snapshot') {
+          _ctxState.snapshots = _ctxState.snapshots.filter(s => s.id !== id);
+        } else {
+          _ctxState.inspirations = _ctxState.inspirations.filter(i => i.id !== id);
+        }
+        _updateContextCounts();
+        _renderContextList();
+        window.showToast('已删除关联' + label, 'success');
+        return true;
+      } else {
+        window.showToast('删除失败', 'error');
+        return false;
+      }
+    }
+  });
+}
+
+function _updateContextCounts() {
+  const snapCount = _ctxState.snapshots.length;
+  const inspCount = _ctxState.inspirations.length;
+  const total = snapCount + inspCount;
+  document.querySelectorAll('.kanban-tab-count[data-ctx-count="snapshots"]').forEach(el => el.textContent = snapCount);
+  document.querySelectorAll('.kanban-tab-count[data-ctx-count="inspirations"]').forEach(el => el.textContent = inspCount);
+  const pill = document.getElementById('contextCountPill');
+  if (pill) {
+    pill.textContent = total;
+    pill.hidden = total === 0;
+  }
+}
+
+function _renderContextList() {
+  const list = document.getElementById('contextList');
+  if (!list) return;
+  const items = _ctxState.tab === 'snapshots' ? _ctxState.snapshots : _ctxState.inspirations;
+  list.innerHTML = '';
+  if (items.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'v-empty';
+    const isSnap = _ctxState.tab === 'snapshots';
+    empty.innerHTML =
+      '<svg class="v-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        (isSnap
+          ? '<rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>'
+          : '<path d="M2 12h20"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M12 2v10"/>') +
+      '</svg>' +
+      '<div class="v-empty-title">暂无' + (isSnap ? ' Focus 快照' : ' Muse 灵感') + '</div>' +
+      '<div class="v-empty-desc">在 ' + (isSnap ? 'Focus' : 'Muse') + ' 扩展弹出页中点击「推送到 Bridge」即可归档到此项目</div>';
+    list.appendChild(empty);
+    return;
+  }
+  items.forEach(item => {
+    list.appendChild(_ctxState.tab === 'snapshots' ? _buildSnapshotCard(item) : _buildInspirationCard(item));
+  });
+}
+
+function _switchContextTab(tab) {
+  _ctxState.tab = tab;
+  document.querySelectorAll('[data-ctx-tab]').forEach(btn => {
+    const active = btn.dataset.ctxTab === tab;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  _renderContextList();
+}
+
+async function _initContextSection() {
+  document.querySelectorAll('[data-ctx-tab]').forEach(btn => {
+    btn.addEventListener('click', () => _switchContextTab(btn.dataset.ctxTab));
+  });
+  const [snaps, insps] = await Promise.all([_fetchContextSnapshots(), _fetchContextInspirations()]);
+  _ctxState.snapshots = snaps;
+  _ctxState.inspirations = insps;
+  _updateContextCounts();
+  _renderContextList();
+}
+
+// Phase 7.4 (建议 3): SSE 推送时增量刷新对应 tab 的 Context Cards
+// 仅刷新对应类型（snapshots/inspirations），避免双倍请求；当前展示的 tab 立即重渲染
+async function _refreshContextCards(kind) {
+  try {
+    if (kind === 'snapshots') {
+      _ctxState.snapshots = await _fetchContextSnapshots();
+    } else {
+      _ctxState.inspirations = await _fetchContextInspirations();
+    }
+    _updateContextCounts();
+    // 若用户当前正在看的 tab 正是发生变更的 tab，立即重渲染
+    if (_ctxState.tab === kind) {
+      _renderContextList();
+    }
+  } catch (e) {
+    // 静默降级，下次手动切换 tab 时会重新拉取
+  }
+}
+
+_initContextSection();
+
+// Phase 7.4 (新功能): 初始化通知按钮状态（页面加载时同步显示当前权限）
+_updateNotifyBtn();
+
+// kanban-tabs 键盘左右切换 + Home/End 支持（a11y，符合 WAI-ARIA tablist 模式）
+// 应用于 2 处 .kanban-tabs：任务看板视图切换 + 关联上下文切换
+// 与现有 click 切换逻辑解耦：仅增强键盘导航与 roving tabindex，不替换 click 行为
+(function setupKanbanTabsKeyboard() {
+  document.querySelectorAll('.kanban-tabs').forEach(tablist => {
+    const tabs = Array.from(tablist.querySelectorAll('.kanban-tab'));
+    if (!tabs.length) return;
+    // roving tabindex：focus 时同步当前 tab 为 tabindex="0"，其余为 tabindex="-1"
+    tabs.forEach(tab => {
+      tab.addEventListener('focus', () => {
+        tabs.forEach(t => t.setAttribute('tabindex', t === tab ? '0' : '-1'));
+      });
+    });
+    // 键盘导航：ArrowLeft/Right 顺序循环、Home/End 跳首/末
+    tablist.addEventListener('keydown', (e) => {
+      if (e.key === 'Home') { e.preventDefault(); tabs[0].focus(); tabs[0].click(); return; }
+      if (e.key === 'End') { e.preventDefault(); tabs[tabs.length - 1].focus(); tabs[tabs.length - 1].click(); return; }
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const idx = tabs.indexOf(document.activeElement);
+      if (idx === -1) return;
+      const next = e.key === 'ArrowRight' ? (idx + 1) % tabs.length : (idx - 1 + tabs.length) % tabs.length;
+      tabs[next].focus();
+      tabs[next].click();
+    });
+  });
+})();
+
+// ---------- Phase 6.J: AI 助手对话化（多轮对话 + SSE 流式回答） ----------
+// 设计要点：
+// - 每项目自动维护一个活跃会话；用户进入页面时自动加载历史
+// - 「新会话」按钮软删除当前会话并清空 UI，下次提问时自动创建新会话
+// - SSE 流式回答通过 fetch + ReadableStream 解析（POST 请求无法用 EventSource）
+// - 三层降级由后端处理（demo 模式 / 无配置 / LLM 调用失败），前端只显示 is_fallback 标记
+const _chatState = {
+  conversationId: null,
+  messages: [],
+  isStreaming: false,
+};
+
+async function _initAiChat() {
+  // Phase 7.4 (建议 1): 绑定 chip 点击事件委托（一次性，事件冒泡到容器）
+  const chatContainer = document.getElementById('aiChatMessages');
+  if (chatContainer && !chatContainer._refChipBound) {
+    chatContainer.addEventListener('click', _handleChatRefChipClick);
+    chatContainer._refChipBound = true;
+  }
+  try {
+    const res = await fetchWithTimeout('/api/projects/' + projectId + '/conversations', {
+      headers: { 'X-Requested-With': 'BridgeAdmin' }
+    }, 5000);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.items && data.items.length > 0) {
+      // 取最近一个活跃会话（后端按 created_at 倒序返回）
+      _chatState.conversationId = data.items[0].id;
+      await _loadChatMessages();
+    }
+  } catch (e) {
+    // 静默降级：AI 助手初始化失败不阻断页面其他功能
+  }
+}
+
+async function _loadChatMessages() {
+  if (!_chatState.conversationId) return;
+  try {
+    const res = await fetchWithTimeout('/api/conversations/' + _chatState.conversationId + '/messages', {
+      headers: { 'X-Requested-With': 'BridgeAdmin' }
+    }, 5000);
+    if (!res.ok) return;
+    const data = await res.json();
+    _chatState.messages = data.items || [];
+    _renderChatMessages();
+  } catch (e) {
+    // 静默降级
+  }
+}
+
+function _renderChatMessages() {
+  const container = document.getElementById('aiChatMessages');
+  const empty = document.getElementById('aiChatEmpty');
+  if (!container) return;
+  container.innerHTML = '';
+  if (_chatState.messages.length === 0) {
+    if (empty) empty.hidden = false;
+    container.hidden = true;
+  } else {
+    if (empty) empty.hidden = true;
+    container.hidden = false;
+    _chatState.messages.forEach(m => container.appendChild(_buildChatBubble(m)));
+  }
+  const countPill = document.getElementById('chatMsgCount');
+  if (countPill) {
+    countPill.textContent = _chatState.messages.length;
+    countPill.hidden = _chatState.messages.length === 0;
+  }
+  // 滚动到底部，展示最新消息
+  container.scrollTop = container.scrollHeight;
+}
+
+function _buildChatBubble(m) {
+  const wrap = document.createElement('div');
+  wrap.className = 'chat-bubble chat-bubble--' + m.role;
+  if (m.is_fallback) wrap.classList.add('chat-bubble--fallback');
+  const avatar = document.createElement('span');
+  avatar.className = 'chat-avatar';
+  avatar.setAttribute('aria-hidden', 'true');
+  avatar.textContent = m.role === 'user' ? '我' : 'AI';
+  const body = document.createElement('div');
+  body.className = 'chat-body';
+  const meta = document.createElement('div');
+  meta.className = 'chat-meta';
+  const author = document.createElement('span');
+  author.className = 'chat-author';
+  author.textContent = m.role === 'user' ? '我' : 'AI 助手';
+  meta.appendChild(author);
+  if (m.is_fallback) {
+    const tag = document.createElement('span');
+    tag.className = 'chat-fallback-tag';
+    tag.title = 'AI 未启用，使用规则引擎回答';
+    tag.textContent = '规则引擎';
+    meta.appendChild(tag);
+  }
+  const content = document.createElement('div');
+  content.className = 'chat-content';
+  // Phase 7.4 (建议 1): 解析 [ref:snapshot:N] / [ref:inspiration:N] 标记为可点击 chip
+  // 用 DOM 分段构建（textContent 渲染文本部分 + createElement('a') 渲染 chip 部分），防 XSS
+  content.appendChild(_renderChatContent(m.content || ''));
+  body.appendChild(meta);
+  body.appendChild(content);
+  wrap.appendChild(avatar);
+  wrap.appendChild(body);
+  return wrap;
+}
+
+// Phase 7.4 (建议 1): 解析 AI 回答中的 [ref:snapshot:N] / [ref:inspiration:N] 标记
+// 渲染为 DocumentFragment：文本节点 + chip 链接交替
+// 安全性：所有文本部分用 createTextNode 渲染（自动 HTML 转义），chip 用 DOM API 创建（无 innerHTML 注入风险）
+function _renderChatContent(content) {
+  const frag = document.createDocumentFragment();
+  // 匹配 [ref:snapshot:N] 或 [ref:inspiration:N]，N 为数字 id
+  const refRegex = /\[ref:(snapshot|inspiration):(\d+)\]/g;
+  let lastIndex = 0;
+  let match;
+  while ((match = refRegex.exec(content)) !== null) {
+    // 标记前的文本部分
+    if (match.index > lastIndex) {
+      frag.appendChild(document.createTextNode(content.slice(lastIndex, match.index)));
+    }
+    // chip 元素
+    const chip = document.createElement('a');
+    const refType = match[1];  // snapshot | inspiration
+    const refId = match[2];
+    chip.className = 'chat-ref-chip chat-ref-chip--' + refType;
+    chip.dataset.refType = refType;
+    chip.dataset.refId = refId;
+    chip.href = '#ctx-' + refType + '-' + refId;
+    chip.textContent = refType === 'snapshot' ? '快照#' + refId : '灵感#' + refId;
+    chip.title = '点击查看关联' + (refType === 'snapshot' ? ' Focus 快照' : ' Muse 灵感');
+    chip.setAttribute('aria-label', chip.title);
+    frag.appendChild(chip);
+    lastIndex = match.index + match[0].length;
+  }
+  // 剩余文本
+  if (lastIndex < content.length) {
+    frag.appendChild(document.createTextNode(content.slice(lastIndex)));
+  }
+  return frag;
+}
+
+// Phase 7.4 (建议 1): chip 点击事件委托 — 切换 Context Cards tab + 滚动到对应卡片 + 高亮 2s
+// 已知竞态（P2 F3 文档化）：_switchContextTab 内部调用 _renderContextList 是同步的（基于已缓存的
+// _ctxState.snapshots/inspirations），故 querySelector 能在切换后立即找到目标卡片。
+// 若未来 _switchContextTab 改为异步重新 fetch + 渲染，需改为回调式滚动，否则 target 可能为 null
+// 误报"关联卡片可能已被删除"。
+function _handleChatRefChipClick(e) {
+  const chip = e.target.closest('.chat-ref-chip');
+  if (!chip) return;
+  e.preventDefault();
+  const refType = chip.dataset.refType;
+  const refId = chip.dataset.refId;
+  // 切到对应 tab（snapshots / inspirations）
+  const tabName = refType === 'snapshot' ? 'snapshots' : 'inspirations';
+  if (typeof _switchContextTab === 'function') {
+    _switchContextTab(tabName);
+  }
+  // 滚动到对应卡片
+  const selector = refType === 'snapshot'
+    ? '[data-snapshot-id="' + refId + '"]'
+    : '[data-inspiration-id="' + refId + '"]';
+  const target = document.querySelector(selector);
+  if (target) {
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.classList.remove('ctx-card--highlight');  // 重置以便重新触发动画
+    // 强制 reflow 后再加 class，确保动画重新播放
+    void target.offsetWidth;
+    target.classList.add('ctx-card--highlight');
+    setTimeout(() => target.classList.remove('ctx-card--highlight'), 2000);
+  } else {
+    if (window.showToast) window.showToast('关联卡片可能已被删除', 'info');
+  }
+}
+
+async function _ensureConversation() {
+  if (_chatState.conversationId) return _chatState.conversationId;
+  const result = await postJson('/api/projects/' + projectId + '/conversations', { title: '新会话' });
+  if (!result.ok) {
+    throw new Error('创建会话失败：' + (result.data.detail || '未知错误'));
+  }
+  _chatState.conversationId = result.data.id;
+  return _chatState.conversationId;
+}
+
+// SSE 流式解析：fetch + ReadableStream（POST 不能用 EventSource）
+// 协议：event: delta\ndata: {"delta": "..."}\n\n  /  event: done\ndata: {...}\n\n  /  event: error\ndata: {...}\n\n
+async function _streamChatAnswer(convId, question, assistantContentEl) {
+  const res = await fetch('/api/conversations/' + convId + '/ask', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...CSRF_HEADER },
+    body: JSON.stringify({ question: question })
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error('请求失败：' + (errData.detail || res.status));
+  }
+  if (!res.body) {
+    // 浏览器不支持 ReadableStream：fallback 到无流式
+    const text = await res.text();
+    return text;
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let collected = '';
+  let currentEvent = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || ''; // 最后一行可能不完整，留到下次
+    for (const line of lines) {
+      if (line.startsWith('event: ')) {
+        currentEvent = line.slice(7).trim();
+      } else if (line.startsWith('data: ')) {
+        const payload = line.slice(6);
+        try {
+          const data = JSON.parse(payload);
+          if (currentEvent === 'delta' && data.delta) {
+            collected += data.delta;
+            if (assistantContentEl) {
+              // Phase 7.4 (建议 1): 流式渲染也解析 [ref:snapshot:N] / [ref:inspiration:N] 标记
+              // 每次清空并重新渲染（chip 可能跨 chunk，重新解析保证一致性）
+              // 性能取舍（P2 F2 文档化）：O(n) per chunk × n chunks = O(n²) 总复杂度，n = collected 长度。
+              //   典型 500 字回答 = 25 chunks × 平均 250 字 = ~6K 字符操作，sub-ms 级。
+              //   最坏情况 4000 字上限（chat_router.py:373 截断）× 1-char chunks = 8M 字符操作，可能感知卡顿。
+              //   增量渲染可优化为 O(n) 但需处理跨 chunk 的 [ref: 标记状态机，复杂度高，当前 O(n²) 可接受。
+              //   陌生人勿误判为冗余重绘去"优化"，会破坏跨 chunk chip 的语义正确性。
+              assistantContentEl.textContent = '';
+              assistantContentEl.appendChild(_renderChatContent(collected));
+              const container = document.getElementById('aiChatMessages');
+              if (container) container.scrollTop = container.scrollHeight;
+            }
+          } else if (currentEvent === 'error') {
+            throw new Error(data.message || '生成失败');
+          }
+          // done 事件：流式结束，无需特殊处理（重新加载消息会拿到真实 id）
+        } catch (e) {
+          if (e.message) throw e;
+          // JSON 解析失败：忽略（可能是心跳或不完整片段）
+        }
+        currentEvent = '';
+      } else if (line.trim() === '') {
+        // 空行：SSE 事件分隔符，重置 currentEvent
+        currentEvent = '';
+      }
+    }
+  }
+  return collected;
+}
+
+async function _sendChatQuestion(question) {
+  const convId = await _ensureConversation();
+  // 立即显示用户消息（乐观更新）
+  const userMsg = { id: 'temp-user-' + Date.now(), role: 'user', content: question, is_fallback: false };
+  _chatState.messages.push(userMsg);
+  _renderChatMessages();
+  // 创建占位 assistant 气泡（流式更新 content）
+  const assistantMsg = { id: 'temp-assistant-' + Date.now(), role: 'assistant', content: '', is_fallback: false };
+  _chatState.messages.push(assistantMsg);
+  _renderChatMessages();
+  // 获取刚插入的 assistant 气泡 content 元素
+  const container = document.getElementById('aiChatMessages');
+  const assistantBubble = container ? container.querySelector('.chat-bubble--assistant:last-child .chat-content') : null;
+  if (assistantBubble) {
+    // 占位提示
+    assistantBubble.textContent = '思考中…';
+    assistantBubble.classList.add('chat-content--pending');
+  }
+  // 流式请求
+  await _streamChatAnswer(convId, question, assistantBubble);
+  if (assistantBubble) {
+    assistantBubble.classList.remove('chat-content--pending');
+  }
+  // 流式完成后重新加载消息（拿到真实 id + is_fallback 标记）
+  await _loadChatMessages();
+}
+
+document.getElementById('aiChatForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (_chatState.isStreaming) return;
+  const form = e.target;
+  const question = form.question.value.trim();
+  if (!question) return;
+  const sendBtn = document.getElementById('aiChatSendBtn');
+  const orig = sendBtn.innerHTML;
+  sendBtn.disabled = true;
+  sendBtn.textContent = '生成中…';
+  _chatState.isStreaming = true;
+  form.question.value = '';
+  try {
+    await _sendChatQuestion(question);
+  } catch (err) {
+    window.showToast('AI 回答失败：' + err.message, 'error');
+    // P2 修复（DRL R1b/R2 finding #2）：异常路径后端可能已持久化半成品 assistant 消息，
+    // 前端需重新加载 DB 状态，避免下次刷新时"凭空出现"一条 assistant 回答。
+    try {
+      if (_chatState.conversationId) {
+        await _loadChatMessages(_chatState.conversationId);
+      } else {
+        // 无会话 ID（_ensureConversation 失败）：仅清占位气泡
+        _chatState.messages = _chatState.messages.filter(m => !String(m.id).startsWith('temp-assistant-'));
+        _renderChatMessages();
+      }
+    } catch (reloadErr) {
+      // 重载也失败：兜底清占位气泡
+      _chatState.messages = _chatState.messages.filter(m => !String(m.id).startsWith('temp-assistant-'));
+      _renderChatMessages();
+    }
+  } finally {
+    _chatState.isStreaming = false;
+    sendBtn.disabled = false;
+    sendBtn.innerHTML = orig;
+  }
+});
+
+// Ctrl/Cmd + Enter 快捷提交
+document.getElementById('aiChatInput').addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    document.getElementById('aiChatForm').requestSubmit();
+  }
+});
+
+document.getElementById('newChatBtn').addEventListener('click', () => {
+  if (_chatState.isStreaming) {
+    window.showToast('AI 正在生成回答，请稍后再开始新会话', 'info');
+    return;
+  }
+  window.showModal({
+    title: '开始新会话',
+    body: '当前对话历史将被软删除（保留在数据库供审计），是否继续？',
+    confirmText: '开始新会话',
+    cancelText: '取消',
+    danger: false,
+    onConfirm: async function() {
+      if (_chatState.conversationId) {
+        await deleteResource('/api/conversations/' + _chatState.conversationId);
+      }
+      _chatState.conversationId = null;
+      _chatState.messages = [];
+      _renderChatMessages();
+      window.showToast('已开始新会话', 'info');
+      const input = document.getElementById('aiChatInput');
+      if (input) input.focus();
+      return true;
+    }
+  });
+});
+
+_initAiChat();
+</script>
+{% endblock %}

@@ -1,0 +1,6 @@
+# Bandit 配置：排除测试目录与已知低风险模式
+exclude_dirs:
+  - tests
+  - .pytest_cache
+skips:
+  - B101  # assert_used：pytest 测试代码使用 assert 是正常做法

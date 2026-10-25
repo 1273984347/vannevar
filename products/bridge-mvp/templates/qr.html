@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}二维码分享 · {{ project.name }}{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="brand">
+    <span class="v-logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 6 L12 18 L20 6"/>
+      </svg>
+    </span>
+    <div class="brand-text">
+      <h1>
+        二维码分享
+        <span class="scene-icon" aria-hidden="true" title="社会服务 · 公益项目交接">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21h-10a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2z"/>
+            <line x1="12" y1="11" x2="12" y2="11"/>
+            <line x1="8" y1="11" x2="8" y2="11"/>
+            <line x1="16" y1="11" x2="16" y2="11"/>
+          </svg>
+        </span>
+      </h1>
+      <p>扫码查看项目上下文</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <a href="/admin/projects/{{ project.id }}" class="secondary-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      返回项目
+    </a>
+  </div>
+</header>
+
+<main class="container center" id="main-content">
+  <div class="qr-wrap">
+    <section class="qr-card" aria-labelledby="qrTitle">
+      <h2 class="qr-title" id="qrTitle">{{ project.name }}</h2>
+      <p class="qr-subtitle">志愿者扫码进入项目视图</p>
+      <img src="{{ qr_uri }}" alt="{{ project.name }} 项目二维码" class="qr-image" width="240" height="240">
+      <p class="qr-url" id="qrUrl">{{ share_url }}</p>
+      <div class="qr-actions">
+        <button type="button" id="copyLinkBtn" class="primary-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          一键复制链接
+        </button>
+        <a id="downloadQrBtn" class="secondary-btn" href="{{ qr_uri }}" download="{{ project.name }}-二维码.png" aria-label="下载二维码图片">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          下载二维码
+        </a>
+      </div>
+      <p class="hint" style="margin-top:1rem;">志愿者用微信/浏览器扫描上方二维码，即可查看项目档案、任务与留言。</p>
+    </section>
+  </div>
+</main>
+
+<script>
+document.getElementById('copyLinkBtn').addEventListener('click', async () => {
+  const url = document.getElementById('qrUrl').textContent.trim();
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(url);
+    } else {
+      // 回退方案
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    window.showToast('链接已复制到剪贴板', 'success');
+  } catch (err) {
+    window.showToast('复制失败：' + err.message, 'error');
+  }
+});
+</script>
+{% endblock %}

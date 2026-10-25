@@ -1,0 +1,1211 @@
+/* ============================================================
+   Vannevar · Bridge · 案卷纸视觉语言(Phase 6.6 视觉重设计)
+   母题:东方留白 × Memex 档案(1945 原典致敬)
+   变体:B · 复古档案
+   基准规格:demo/designs/visual-redesign-spec.md
+   ============================================================
+
+   设计哲学:
+   - 纸张即底色,墨色即文字,松烟绿即点缀
+   - 直角索引卡 + 偏移阴影 = 案卷感
+   - 毛笔笔触图表 + 盖章密度 = 1945 档案馆视觉锚点
+   - 褪色档案深色模式 = 老化纸张语义替换暗色
+
+   作用范围:
+   - 本文件仅覆盖 Bridge 3 个首屏页(stats / project-detail / index)
+   - Focus / Muse 保持现状,不改
+   - 引入方式:在 stats.html / project_detail.html / index.html 的 {% block head %} 中
+     <link rel="stylesheet" href="/static/archive-paper.css">
+   - 本文件加载在 style.css / stats.css 之后,通过 CSS 层叠覆盖原令牌
+   ============================================================ */
+
+/* ---------- 字体引入(系统优先,失败回退) ----------
+   注:不使用 Google Fonts 远程依赖(Phase 7.1 dogfood P1 教训:
+   CORS 阻塞 LCP + Basic Auth 凭据污染跨域请求)
+   优先使用系统已装的中文衬线字体(macOS Songti / Windows SimSun / Linux Noto)
+   数据等宽优先 JetBrains Mono / SF Mono / Cascadia Code */
+
+@font-face {
+  font-family: 'Vannevar Serif';
+  src: local('Noto Serif SC'),
+       local('Source Han Serif SC'),
+       local('Songti SC'),
+       local('SimSun'),
+       local('STSong'),
+       local('Georgia');
+  font-display: swap;
+  font-weight: 100 900;
+  unicode-range: U+0000-00FF, U+2000-206F, U+4E00-9FFF, U+3000-303F, U+FF00-FFEF;
+}
+
+@font-face {
+  font-family: 'Vannevar Mono';
+  src: local('JetBrains Mono'),
+       local('SF Mono'),
+       local('Cascadia Code'),
+       local('Consolas'),
+       local('Source Code Pro'),
+       local('Courier New');
+  font-display: swap;
+  font-weight: 100 900;
+}
+
+/* ============================================================
+   §1 设计令牌系统 · 亮色(案卷纸)
+   ============================================================ */
+
+:root {
+  /* —— 纸张色板 —— */
+  --v-paper:        #e8dcc0;   /* 案卷纸主色(泛黄) */
+  --v-paper-light:  #f0e6c8;   /* 索引卡背景 */
+  --v-paper-dark:   #d4c5a9;   /* 折痕/边框 */
+  --v-paper-edge:   #b8a878;   /* 纸边阴影 */
+
+  /* —— 墨色 —— */
+  --v-ink:          #1a3a18;   /* 深松烟墨(主文字) */
+  --v-ink-medium:   #3a2e15;   /* 中墨(正文) */
+  --v-ink-light:    #6b5a35;   /* 淡墨(辅助) */
+  --v-ink-faded:    #8b7355;   /* 褪色墨(标签) */
+
+  /* —— 松烟绿点缀(Bridge 品牌色保留语义) —— */
+  --v-primary:      #1a3a18;   /* 深松烟(主按钮) */
+  --v-primary-dark: #0d2010;   /* hover */
+  --v-primary-light: #2d4a2b;  /* light(保留令牌兼容) */
+  --v-accent:       #2d4a2b;   /* 交互高亮 */
+
+  /* —— 语义色(墨色化) —— */
+  --v-success:      #1a3a18;
+  --v-success-bg:   rgba(26, 58, 24, 0.08);
+  --v-warning:      #8b4513;
+  --v-warning-bg:   rgba(139, 69, 19, 0.08);
+  --v-danger:       #8b2c1c;
+  --v-danger-bg:    rgba(139, 44, 28, 0.08);
+
+  /* —— 状态色(任务看板) —— */
+  --status-todo:    #6b5a35;   /* 淡墨 */
+  --status-doing:   #8b4513;   /* 赭石 */
+  --status-done:    #1a3a18;   /* 深松烟 */
+
+  /* —— 热力图 4 级松烟色阶 —— */
+  --v-heat-1: rgba(26, 58, 24, 0.15);
+  --v-heat-1-border: rgba(26, 58, 24, 0.25);
+  --v-heat-2: rgba(26, 58, 24, 0.40);
+  --v-heat-2-border: rgba(26, 58, 24, 0.55);
+  --v-heat-3: rgba(26, 58, 24, 0.70);
+  --v-heat-3-border: rgba(26, 58, 24, 0.85);
+  --v-heat-4: rgba(26, 58, 24, 0.95);
+  --v-heat-4-border: rgba(26, 58, 24, 1);
+
+  /* —— 图表色板(松烟绿单色系 + 赭石点缀) —— */
+  --v-chart-grid:      rgba(26, 58, 24, 0.08);
+  --v-chart-area:      rgba(26, 58, 24, 0.10);
+  --v-chart-line-1:    #1a3a18;   /* 主线(任务趋势) */
+  --v-chart-line-2:    #2d4a2b;   /* 项目线 */
+  --v-chart-line-3:    #4a6a48;   /* 任务线 */
+  --v-chart-line-4:    #8b4513;   /* 留言线(赭石) */
+  --v-chart-line-5:    #6b5a35;   /* Focus 快照线 */
+  --v-chart-line-6:    #8b2c1c;   /* Muse 灵感线(赭红) */
+  --v-chart-dot-stroke: var(--v-paper-light);
+  --v-chart-axis-text:  var(--v-ink-faded);
+  --v-chart-label-text: var(--v-ink);
+
+  /* —— 系列色(保留原令牌兼容 stats.css 引用) —— */
+  --v-series-project:     #1a3a18;
+  --v-series-task:        #2d4a2b;
+  --v-series-snapshot:    #6b5a35;
+  --v-series-inspiration: #8b4513;
+
+  /* —— 圆角(档案直角化) —— */
+  --v-radius-sm: 0px;
+  --v-radius:    2px;
+  --v-radius-lg: 4px;
+
+  /* —— 阴影(单层墨迹 + 案卷偏移) —— */
+  --v-shadow-sm: 0 1px 2px rgba(26, 58, 24, 0.08);
+  --v-shadow:    0 2px 4px rgba(26, 58, 24, 0.10);
+  --v-shadow-md: 2px 2px 0 var(--v-paper-edge);   /* 案卷偏移阴影 */
+  --v-shadow-lg: 4px 4px 0 var(--v-paper-edge);
+  --v-shadow-brand: 2px 2px 0 var(--v-ink);        /* hover 品牌偏移 */
+
+  /* —— 过渡 —— */
+  --v-transition:      0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --v-transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --v-transition-ink:  0.4s ease-out;  /* 墨迹晕染专用 */
+
+  /* —— 玻璃态令牌(保留兼容,改为纸面半透明) —— */
+  --v-glass-bg:     rgba(232, 220, 192, 0.85);
+  --v-glass-border: var(--v-paper-dark);
+
+  /* —— 已归档 badge(褪色化) —— */
+  --v-archived-bg:     rgba(139, 115, 85, 0.12);
+  --v-archived-fg:     var(--v-ink-faded);
+  --v-archived-border: var(--v-paper-dark);
+
+  /* —— 字体系统 —— */
+  --v-font-serif: 'Vannevar Serif', 'Noto Serif SC', 'Source Han Serif SC',
+                  'Songti SC', Georgia, 'Times New Roman', serif;
+  --v-font-mono:  'Vannevar Mono', 'JetBrains Mono', 'SF Mono', 'Consolas',
+                  'Source Code Pro', 'Courier New', monospace;
+  --v-font-kai:   'KaiTi', 'STKaiti', 'Noto Serif SC', serif;
+  --v-font-body:    var(--v-font-serif);
+  --v-font-display: var(--v-font-serif);
+  --v-font-data:    var(--v-font-mono);
+
+  /* —— 兼容原令牌(stats.css / style.css 引用) —— */
+  --v-bg:          var(--v-paper);
+  --v-bg-radial:   var(--v-paper);
+  --v-bg-elevated: var(--v-paper-light);
+  --v-surface:     var(--v-paper-light);
+  --v-border:      var(--v-paper-dark);
+  --v-text:          var(--v-ink);
+  --v-text-secondary: var(--v-ink-medium);
+  --v-text-muted:    var(--v-ink-light);
+  --v-text-label:    var(--v-ink-faded);
+
+  /* —— 渐变(品牌渐变改单色,保留令牌兼容) —— */
+  --v-gradient:       linear-gradient(135deg, var(--v-ink), var(--v-accent));
+  --v-gradient-rail:  linear-gradient(90deg, var(--v-ink), var(--v-accent));
+
+  /* —— 警示色文字(保留兼容) —— */
+  --v-warning-fg: #8b4513;
+  --v-muse-fg:    #8b4513;
+}
+
+/* ============================================================
+   §1.2 设计令牌系统 · 褪色档案深色模式
+   语义:老化纸张(深咖)+ 褪色墨(浅黄)
+   ============================================================ */
+
+:root[data-theme="dark"] {
+  /* —— 老化纸张色板(深咖) —— */
+  --v-paper:        #2a2018;   /* 老化案卷纸 */
+  --v-paper-light:  #332822;   /* 索引卡 */
+  --v-paper-dark:   #1a1410;   /* 折痕 */
+  --v-paper-edge:   #0d0a08;   /* 纸边 */
+
+  /* —— 褪色墨 —— */
+  --v-ink:          #d4c5a9;   /* 褪色墨(主文字) */
+  --v-ink-medium:   #b8a878;   /* 中墨 */
+  --v-ink-light:    #8b7355;   /* 淡墨 */
+  --v-ink-faded:    #6b5a35;   /* 褪色 */
+
+  /* —— 褪色松烟绿点缀 —— */
+  --v-primary:      #d4c5a9;
+  --v-primary-dark: #b8a878;
+  --v-primary-light: #8b9a78;
+  --v-accent:       #8b9a78;   /* 褪色松烟绿 */
+
+  /* —— 语义色(褪色) —— */
+  --v-success:      #8b9a78;
+  --v-success-bg:   rgba(139, 154, 120, 0.12);
+  --v-warning:      #a06342;
+  --v-warning-bg:   rgba(160, 99, 66, 0.12);
+  --v-danger:       #a04535;
+  --v-danger-bg:    rgba(160, 69, 53, 0.12);
+
+  /* —— 状态色(褪色) —— */
+  --status-todo:    #8b7355;
+  --status-doing:   #a06342;
+  --status-done:    #8b9a78;
+
+  /* —— 热力图 4 级褪色色阶 —— */
+  --v-heat-1: rgba(212, 197, 169, 0.15);
+  --v-heat-1-border: rgba(212, 197, 169, 0.25);
+  --v-heat-2: rgba(212, 197, 169, 0.40);
+  --v-heat-2-border: rgba(212, 197, 169, 0.55);
+  --v-heat-3: rgba(212, 197, 169, 0.70);
+  --v-heat-3-border: rgba(212, 197, 169, 0.85);
+  --v-heat-4: rgba(212, 197, 169, 0.95);
+  --v-heat-4-border: rgba(212, 197, 169, 1);
+
+  /* —— 图表色板(褪色) —— */
+  --v-chart-grid:      rgba(212, 197, 169, 0.10);
+  --v-chart-area:      rgba(212, 197, 169, 0.10);
+  --v-chart-line-1:    #d4c5a9;
+  --v-chart-line-2:    #8b9a78;
+  --v-chart-line-3:    #b8a878;
+  --v-chart-line-4:    #a06342;
+  --v-chart-line-5:    #8b7355;
+  --v-chart-line-6:    #a04535;
+  --v-chart-dot-stroke: var(--v-paper-light);
+  --v-chart-axis-text:  var(--v-ink-faded);
+  --v-chart-label-text: var(--v-ink);
+
+  --v-series-project:     #d4c5a9;
+  --v-series-task:        #8b9a78;
+  --v-series-snapshot:    #b8a878;
+  --v-series-inspiration: #a06342;
+
+  /* —— 阴影(深色背景下改深黑偏移) —— */
+  --v-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --v-shadow:    0 2px 4px rgba(0, 0, 0, 0.4);
+  --v-shadow-md: 2px 2px 0 #0d0a08;
+  --v-shadow-lg: 4px 4px 0 #0d0a08;
+  --v-shadow-brand: 2px 2px 0 var(--v-ink);
+
+  /* —— 玻璃态(深色) —— */
+  --v-glass-bg:     rgba(42, 32, 24, 0.85);
+  --v-glass-border: var(--v-paper-dark);
+
+  /* —— 归档 badge —— */
+  --v-archived-bg:     rgba(107, 90, 53, 0.15);
+  --v-archived-fg:     var(--v-ink-faded);
+  --v-archived-border: var(--v-paper-dark);
+
+  /* —— 兼容原令牌 —— */
+  --v-bg:          var(--v-paper);
+  --v-bg-radial:   var(--v-paper);
+  --v-bg-elevated: var(--v-paper-light);
+  --v-surface:     var(--v-paper-light);
+  --v-border:      var(--v-paper-dark);
+  --v-text:          var(--v-ink);
+  --v-text-secondary: var(--v-ink-medium);
+  --v-text-muted:    var(--v-ink-light);
+  --v-text-label:    var(--v-ink-faded);
+
+  --v-gradient:       linear-gradient(135deg, var(--v-ink), var(--v-accent));
+  --v-gradient-rail:  linear-gradient(90deg, var(--v-ink), var(--v-accent));
+
+  --v-warning-fg: #a06342;
+  --v-muse-fg:    #a06342;
+}
+
+/* ============================================================
+   §2 案卷纸材质纹理(全局背景)
+   ============================================================ */
+
+html, body {
+  background: var(--v-paper) !important;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 22px,
+    rgba(26, 58, 24, 0.04) 22px,
+    rgba(26, 58, 24, 0.04) 23px
+  ) !important;
+  color: var(--v-ink) !important;
+  font-family: var(--v-font-body) !important;
+  line-height: 1.7 !important;
+}
+
+:root[data-theme="dark"] body {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 22px,
+    rgba(212, 197, 169, 0.04) 22px,
+    rgba(212, 197, 169, 0.04) 23px
+  ) !important;
+}
+
+/* —— 全局 tap-highlight 清理(a11y P3) —— */
+*, *::before, *::after {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* —— color-scheme meta 兜底(a11y P2,base.html 已加 meta,这里冗余) —— */
+html {
+  color-scheme: light dark;
+}
+
+/* ============================================================
+   §3 全局字体应用
+   ============================================================ */
+
+body, p, span, li, td, th, div, label, button, a,
+input, textarea, select, option {
+  font-family: var(--v-font-body);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--v-font-display);
+  letter-spacing: 0.02em;
+}
+
+/* —— 数据/编号统一等宽 —— */
+.kpi-value, .kpi-sub, .project-no, .archive-no,
+.chart-axis-text, .chart-label, .heatmap-labels,
+code, pre, .mono {
+  font-family: var(--v-font-data);
+}
+
+/* ============================================================
+   §4 focus-visible 焦点环(墨迹风格,a11y P1)
+   ============================================================ */
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--v-ink);
+  outline-offset: 2px;
+  border-radius: 0;
+}
+
+:root[data-theme="dark"] a:focus-visible,
+:root[data-theme="dark"] button:focus-visible,
+:root[data-theme="dark"] input:focus-visible,
+:root[data-theme="dark"] textarea:focus-visible,
+:root[data-theme="dark"] select:focus-visible,
+:root[data-theme="dark"] [tabindex]:focus-visible {
+  outline: 2px solid var(--v-ink);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   §5 响应式断点(保留原 768px + 480px,字体微调)
+   ============================================================ */
+
+@media (max-width: 768px) {
+  html, body {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  html, body {
+    font-size: 12px;
+  }
+}
+
+/* ============================================================
+   §6 prefers-reduced-motion(a11y)
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   §7 Phase 6.6.2 · 组件层(案卷纸视觉语言)
+   ============================================================
+   策略:令牌层已覆盖 90% 组件视觉(因现有组件几乎全部通过 var(--v-*) 引用令牌)
+   本节仅处理令牌无法覆盖的部分:
+   - 硬编码颜色覆盖(rgba(4,120,87,0.1) 品牌色透明背景等)
+   - 戳印编号(KPI 右上角壹贰叁肆)
+   - 章节标题(左 3px 装饰线 + 字距松散)
+   - 印章状态(任务 badge 改印章风)
+   - 案卷偏移阴影统一
+   - 3px 顶部装饰线改单色(原渐变 rail)
+   ============================================================ */
+
+/* ---------- §7.1 戳印编号令牌 ---------- */
+:root {
+  --v-stamp-bg: var(--v-ink);
+  --v-stamp-fg: var(--v-paper);
+  --v-stamp-rotate: -1.5deg;
+  --v-tag-bg-soft: rgba(26, 58, 24, 0.10);   /* 品牌色 10% 透明(替换硬编码 rgba(4,120,87,0.1)) */
+}
+
+:root[data-theme="dark"] {
+  --v-tag-bg-soft: rgba(212, 197, 169, 0.12);
+}
+
+/* ---------- §7.2 顶栏(案卷化) ---------- */
+.topbar {
+  background: var(--v-paper) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom: 2px solid var(--v-ink) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0.85rem 1.5rem !important;
+}
+
+/* v-logo 改戳印风 */
+.topbar .v-logo {
+  background: var(--v-paper-light) !important;
+  color: var(--v-ink) !important;
+  border: 2px solid var(--v-ink) !important;
+  border-radius: 0 !important;
+  transform: rotate(var(--v-stamp-rotate));
+  box-shadow: 1px 1px 0 var(--v-paper-edge) !important;
+}
+
+.topbar .v-logo svg {
+  stroke-width: 2.5;
+}
+
+.topbar .brand h1,
+.topbar .brand .app-title {
+  font-family: var(--v-font-display) !important;
+  letter-spacing: 0.05em !important;
+  font-weight: 600 !important;
+}
+
+.topbar .brand p {
+  font-family: var(--v-font-mono) !important;
+  letter-spacing: 0.15em !important;
+  font-size: 0.72rem !important;
+  text-transform: uppercase;
+}
+
+/* ---------- §7.3 KPI 索引卡(案卷化) ---------- */
+.stat-kpi {
+  background: var(--v-paper-light) !important;
+  border: 1px solid var(--v-ink) !important;
+  border-left: 3px solid var(--v-ink) !important;
+  border-radius: 0 !important;
+  box-shadow: var(--v-shadow-md) !important;
+  position: relative;
+  overflow: visible;
+}
+
+/* 顶部装饰线改单色(原 ::before 渐变 rail) */
+.stat-kpi::before {
+  background: var(--v-ink) !important;
+  height: 1px !important;
+  opacity: 0.6;
+}
+
+/* 戳印编号(右上角) — 通过 nth-child 自动分配壹贰叁肆伍陆柒捌玖拾 */
+.stats-kpi-grid .stat-kpi:nth-child(1)::after,
+.stats-kpi-grid .stat-kpi:nth-child(2)::after,
+.stats-kpi-grid .stat-kpi:nth-child(3)::after,
+.stats-kpi-grid .stat-kpi:nth-child(4)::after,
+.stats-kpi-grid .stat-kpi:nth-child(5)::after,
+.stats-kpi-grid .stat-kpi:nth-child(6)::after,
+.stats-kpi-grid .stat-kpi:nth-child(7)::after,
+.stats-kpi-grid .stat-kpi:nth-child(8)::after,
+.stats-kpi-grid .stat-kpi:nth-child(9)::after,
+.stats-kpi-grid .stat-kpi:nth-child(10)::after {
+  content: attr(data-archive-no);
+  position: absolute;
+  top: -1px; right: -1px;
+  background: var(--v-stamp-bg);
+  color: var(--v-stamp-fg);
+  font-size: 0.65rem;
+  padding: 0.15rem 0.5rem;
+  letter-spacing: 0.2em;
+  font-family: var(--v-font-serif);
+  font-weight: 700;
+  z-index: 1;
+}
+
+/* hover:偏移阴影加重,模拟纸张抬起 */
+.stat-kpi:hover {
+  transform: translate(-1px, -1px) !important;
+  box-shadow: var(--v-shadow-lg) !important;
+  border-color: var(--v-ink) !important;
+}
+
+.stat-kpi .kpi-label {
+  font-family: var(--v-font-serif) !important;
+  letter-spacing: 0.25em !important;
+  font-size: 0.7rem !important;
+  color: var(--v-ink-faded) !important;
+  text-transform: none;
+  font-weight: 600;
+}
+
+.stat-kpi .kpi-value {
+  font-family: var(--v-font-data) !important;
+  font-weight: 700 !important;
+  color: var(--v-ink) !important;
+  letter-spacing: -0.01em !important;
+}
+
+.stat-kpi .kpi-sub {
+  font-family: var(--v-font-data) !important;
+  color: var(--v-ink-light) !important;
+}
+
+.stat-kpi .kpi-hint {
+  font-family: var(--v-font-serif) !important;
+  font-style: italic !important;
+  color: var(--v-ink-faded) !important;
+  border-top: 1px dashed var(--v-paper-dark);
+  padding-top: 0.4rem;
+}
+
+.stat-kpi .kpi-icon {
+  color: var(--v-ink-light) !important;
+  opacity: 0.5 !important;
+}
+
+/* ---------- §7.4 图表卡片(案卷化) ---------- */
+.chart-card {
+  background: var(--v-paper-light) !important;
+  border: 1px solid var(--v-ink) !important;
+  border-radius: 0 !important;
+  box-shadow: var(--v-shadow-md) !important;
+}
+
+.chart-card::before {
+  background: var(--v-ink) !important;
+  height: 1px !important;
+  opacity: 0.6;
+}
+
+.chart-card h3 {
+  font-family: var(--v-font-display) !important;
+  letter-spacing: 0.1em !important;
+  border-bottom: 1px solid var(--v-paper-dark) !important;
+  padding-bottom: 0.5rem !important;
+  color: var(--v-ink) !important;
+}
+
+.chart-card h3 svg {
+  color: var(--v-ink) !important;
+}
+
+/* ---------- §7.5 章节标题(案卷化) ---------- */
+.chart-group-title {
+  border-bottom: 1px solid var(--v-ink) !important;
+  padding-bottom: 0.5rem !important;
+  padding-left: 0.75rem !important;
+  border-left: 3px solid var(--v-ink) !important;
+  margin-top: 2rem !important;
+}
+
+.chart-group-title .group-tag {
+  background: var(--v-ink) !important;
+  color: var(--v-paper) !important;
+  border-radius: 0 !important;
+  letter-spacing: 0.2em !important;
+  font-family: var(--v-font-serif) !important;
+  font-weight: 700 !important;
+  text-transform: none !important;
+}
+
+.chart-group-title .group-name {
+  font-family: var(--v-font-display) !important;
+  font-weight: 600 !important;
+  color: var(--v-ink) !important;
+  letter-spacing: 0.05em !important;
+}
+
+.chart-group-title .group-desc {
+  font-family: var(--v-font-serif) !important;
+  font-style: italic !important;
+  color: var(--v-ink-light) !important;
+}
+
+/* ---------- §7.6 通用卡片(案卷化) ---------- */
+.card,
+.v-card {
+  background: var(--v-paper-light) !important;
+  border: 1px solid var(--v-ink) !important;
+  border-radius: 0 !important;
+  box-shadow: var(--v-shadow-md) !important;
+}
+
+.card::before,
+.v-card::before {
+  background: var(--v-ink) !important;
+  height: 1px !important;
+  opacity: 0.6;
+}
+
+/* ---------- §7.7 按钮(墨迹风) ---------- */
+.primary-btn,
+.v-btn--primary {
+  background: var(--v-ink) !important;
+  color: var(--v-paper) !important;
+  border: 1px solid var(--v-ink) !important;
+  border-radius: 0 !important;
+  box-shadow: var(--v-shadow-sm) !important;
+  font-family: var(--v-font-serif) !important;
+  letter-spacing: 0.05em;
+}
+
+.primary-btn:hover,
+.v-btn--primary:hover {
+  background: var(--v-primary-dark) !important;
+  box-shadow: var(--v-shadow-md) !important;
+  transform: translate(-1px, -1px) !important;
+}
+
+.secondary-btn,
+.v-btn--ghost {
+  background: transparent !important;
+  color: var(--v-ink) !important;
+  border: 1px solid var(--v-ink) !important;
+  border-radius: 0 !important;
+  font-family: var(--v-font-serif) !important;
+  letter-spacing: 0.05em;
+  position: relative;
+  overflow: hidden;
+}
+
+.secondary-btn:hover,
+.v-btn--ghost:hover {
+  background: var(--v-ink) !important;
+  color: var(--v-paper) !important;
+  border-color: var(--v-ink) !important;
+  box-shadow: var(--v-shadow-md) !important;
+  transform: translate(-1px, -1px) !important;
+}
+
+.danger-btn,
+.v-btn--danger {
+  background: var(--v-danger-bg) !important;
+  color: var(--v-danger) !important;
+  border: 1px solid var(--v-danger) !important;
+  border-radius: 0 !important;
+  font-family: var(--v-font-serif) !important;
+}
+
+.danger-btn:hover,
+.v-btn--danger:hover {
+  background: var(--v-danger) !important;
+  color: var(--v-paper) !important;
+  box-shadow: 2px 2px 0 var(--v-paper-edge) !important;
+  transform: translate(-1px, -1px) !important;
+}
+
+/* ---------- §7.8 状态标签(印章风) ---------- */
+.badge,
+.v-badge--todo,
+.badge--todo,
+.v-badge--doing,
+.badge--doing,
+.v-badge--done,
+.badge--done {
+  border-radius: 0 !important;
+  font-family: var(--v-font-serif) !important;
+  letter-spacing: 0.1em !important;
+  font-weight: 600 !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+}
+
+/* 待办:空心圆印章 */
+.v-badge--todo,
+.badge--todo {
+  background: transparent !important;
+  color: var(--status-todo) !important;
+  border-color: var(--status-todo) !important;
+}
+
+/* 进行中:赭石实心印章 + 轻微旋转 */
+.v-badge--doing,
+.badge--doing {
+  background: var(--status-doing) !important;
+  color: var(--v-paper) !important;
+  border-color: var(--status-doing) !important;
+  transform: rotate(-1deg);
+}
+
+/* 完成:松烟盖章 + 轻微旋转 */
+.v-badge--done,
+.badge--done {
+  background: var(--status-done) !important;
+  color: var(--v-paper) !important;
+  border-color: var(--status-done) !important;
+  transform: rotate(1deg);
+  box-shadow: 1px 1px 0 var(--v-paper-edge);
+}
+
+/* ---------- §7.9 硬编码颜色覆盖 ---------- */
+/* chart-group-title .group-tag 背景(原 rgba(4,120,87,0.1)) */
+.chart-group-title .group-tag {
+  background: var(--v-ink) !important;
+}
+
+/* v-guide-card-tag 背景(project_detail.html inline) */
+.v-guide-card-tag {
+  background: var(--v-tag-bg-soft) !important;
+  color: var(--v-ink) !important;
+  border-radius: 0 !important;
+  letter-spacing: 0.1em !important;
+}
+
+/* chart-insight 背景(原 rgba(16, 185, 129, 0.08)) */
+.chart-insight {
+  background: var(--v-tag-bg-soft) !important;
+  border-left: 3px solid var(--v-ink) !important;
+  border-radius: 0 !important;
+  font-family: var(--v-font-serif) !important;
+  font-style: italic !important;
+  color: var(--v-ink-medium) !important;
+}
+
+/* ---------- §7.10 热力图(盖章密度化) ---------- */
+.heatmap-cell {
+  border-radius: 50% !important;  /* 方块改圆形(盖章) */
+  border: none !important;
+  background: var(--v-ink) !important;
+}
+
+.heatmap-cell.h-0 { opacity: 0.08; }
+.heatmap-cell.h-1 { opacity: 0.25; background: var(--v-ink) !important; }
+.heatmap-cell.h-2 { opacity: 0.45; background: var(--v-ink) !important; }
+.heatmap-cell.h-3 { opacity: 0.70; background: var(--v-ink) !important; }
+.heatmap-cell.h-4 { opacity: 0.95; background: var(--v-ink) !important; }
+
+.heatmap-cell.today {
+  outline: 2px solid var(--v-ink) !important;
+  outline-offset: 2px !important;
+}
+
+.heatmap-legend-cell {
+  border-radius: 50% !important;
+  border: none !important;
+}
+
+/* ---------- §7.11 主题切换按钮(案卷化) ---------- */
+.theme-toggle {
+  background: var(--v-paper-light) !important;
+  border: 1px solid var(--v-ink) !important;
+  border-radius: 0 !important;
+  box-shadow: var(--v-shadow-md) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.theme-toggle:hover {
+  transform: translate(-1px, -1px) !important;
+  box-shadow: var(--v-shadow-lg) !important;
+}
+
+/* ---------- §7.12 Toast 与 Modal(案卷化) ---------- */
+.v-toast {
+  background: var(--v-paper-light) !important;
+  border: 1px solid var(--v-ink) !important;
+  border-radius: 0 !important;
+  box-shadow: var(--v-shadow-lg) !important;
+  font-family: var(--v-font-serif) !important;
+}
+
+.modal {
+  background: var(--v-paper-light) !important;
+  border: 1px solid var(--v-ink) !important;
+  border-radius: 0 !important;
+  box-shadow: var(--v-shadow-lg) !important;
+}
+
+.modal h3 {
+  font-family: var(--v-font-display) !important;
+  border-bottom: 1px solid var(--v-paper-dark);
+  padding-bottom: 0.5rem;
+}
+
+/* ---------- §7.13 空状态(水墨化) ---------- */
+.v-empty,
+.empty {
+  font-family: var(--v-font-serif) !important;
+}
+
+.v-empty-title,
+.empty-title {
+  font-family: var(--v-font-display) !important;
+  letter-spacing: 0.1em !important;
+  color: var(--v-ink) !important;
+}
+
+.v-empty-desc,
+.empty-desc {
+  font-style: italic !important;
+  color: var(--v-ink-faded) !important;
+}
+
+.v-empty-icon,
+.empty-icon {
+  color: var(--v-ink-faded) !important;
+  opacity: 0.4 !important;
+}
+
+/* ---------- §7.14 项目列表 / 状态 Tab(案卷化,index.html inline 覆盖) ---------- */
+.status-tabs {
+  border-bottom: 1px solid var(--v-ink) !important;
+}
+
+.status-tab {
+  font-family: var(--v-font-serif) !important;
+  border-radius: 0 !important;
+  color: var(--v-ink-light) !important;
+  border-bottom: 2px solid transparent !important;
+}
+
+.status-tab:hover {
+  background: var(--v-paper) !important;
+  color: var(--v-ink) !important;
+}
+
+.status-tab.is-active {
+  color: var(--v-ink) !important;
+  border-bottom-color: var(--v-ink) !important;
+  background: var(--v-tag-bg-soft) !important;
+  font-weight: 600 !important;
+}
+
+.status-tab .tab-tag {
+  background: var(--v-tag-bg-soft) !important;
+  color: var(--v-ink-light) !important;
+  border-radius: 0 !important;
+  font-family: var(--v-font-data) !important;
+}
+
+.status-tab.is-active .tab-tag {
+  background: var(--v-ink) !important;
+  color: var(--v-paper) !important;
+}
+
+/* ---------- §7.15 v-guides(案卷化,project_detail.html inline 覆盖) ---------- */
+.v-guides {
+  background: var(--v-paper-light) !important;
+  border: 1px solid var(--v-ink) !important;
+  border-radius: 0 !important;
+  box-shadow: var(--v-shadow-md) !important;
+}
+
+.v-guides::before {
+  background: var(--v-ink) !important;
+  height: 1px !important;
+  opacity: 0.6;
+}
+
+.v-guides h2 {
+  font-family: var(--v-font-display) !important;
+  letter-spacing: 0.05em !important;
+  color: var(--v-ink) !important;
+}
+
+.v-guides h2 svg {
+  color: var(--v-ink) !important;
+}
+
+.v-guide-card {
+  background: var(--v-paper) !important;
+  border: 1px solid var(--v-paper-dark) !important;
+  border-radius: 0 !important;
+  font-family: var(--v-font-serif) !important;
+}
+
+.v-guide-card:hover {
+  border-color: var(--v-ink) !important;
+  transform: translate(-1px, -1px) !important;
+  box-shadow: var(--v-shadow-md) !important;
+}
+
+.v-guide-card-head {
+  color: var(--v-ink) !important;
+  font-family: var(--v-font-display) !important;
+}
+
+.v-guide-card-head svg {
+  color: var(--v-ink) !important;
+}
+
+.v-guide-card-steps {
+  color: var(--v-ink-medium) !important;
+}
+
+.v-guide-card-steps li::marker {
+  color: var(--v-ink) !important;
+}
+
+/* ---------- §7.16 sync-indicator(案卷化) ---------- */
+.sync-indicator {
+  background: var(--v-paper-light) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid var(--v-paper-dark) !important;
+  border-radius: 0 !important;
+  color: var(--v-ink-medium) !important;
+  font-family: var(--v-font-mono) !important;
+}
+
+/* ---------- §7.17 响应式微调 ---------- */
+@media (max-width: 768px) {
+  .stat-kpi .kpi-value {
+    font-size: 1.5rem !important;
+  }
+  .stats-kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .topbar {
+    padding: 0.65rem 1rem !important;
+  }
+}
+
+/* ---------- §7.18 view-switcher 案卷化(补查定义) ----------
+   view-switcher CSS 在 project_detail.html inline,本节提供覆盖 */
+
+.view-switcher {
+  background: var(--v-paper-light) !important;
+  border: 1px solid var(--v-ink) !important;
+  border-radius: 0 !important;
+  padding: 0.4rem !important;
+  box-shadow: var(--v-shadow-sm) !important;
+}
+
+.view-switcher-label {
+  font-family: var(--v-font-serif) !important;
+  letter-spacing: 0.2em !important;
+  color: var(--v-ink-faded) !important;
+  font-size: 0.7rem !important;
+  text-transform: uppercase;
+}
+
+.view-switch-btn {
+  font-family: var(--v-font-serif) !important;
+  border-radius: 0 !important;
+  border: 1px solid transparent !important;
+  color: var(--v-ink-medium) !important;
+  background: transparent !important;
+  letter-spacing: 0.05em !important;
+}
+
+.view-switch-btn:hover {
+  background: var(--v-tag-bg-soft) !important;
+  color: var(--v-ink) !important;
+}
+
+.view-switch-btn.is-active {
+  background: var(--v-ink) !important;
+  color: var(--v-paper) !important;
+  border-color: var(--v-ink) !important;
+}
+
+/* ---------- §7.19 表单输入(纸面书写风) ---------- */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="url"],
+input[type="number"],
+textarea,
+select {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid var(--v-ink-medium) !important;
+  border-radius: 0 !important;
+  font-family: var(--v-font-serif) !important;
+  color: var(--v-ink) !important;
+  padding: 0.4rem 0.2rem !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-bottom: 2px solid var(--v-ink) !important;
+  /* Phase 6.6.7 DRL R1b P1 修复:删除 outline: none !important,避免静默覆盖 §4 focus-visible。
+     键盘 Tab 时 §4 input:focus-visible 显示松烟墨焦点环;鼠标点击时仅 border-bottom(纸面书写风)。
+     现代浏览器 :focus 默认不显示 outline,行为符合 WCAG 2.4.7。 */
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--v-ink-faded) !important;
+  font-style: italic;
+}
+
+/* ---------- §7.20 链接与强调 ---------- */
+a {
+  color: var(--v-ink) !important;
+  text-decoration: underline;
+  text-decoration-color: var(--v-ink-faded);
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  text-decoration-color: var(--v-ink);
+}
+
+/* ============================================================
+   §8 Phase 6.6.3 · 图表层(毛笔笔触改造)
+   ============================================================
+   策略:令牌层 §1 已覆盖图表色板(--v-chart-line-1~6 / --v-heat-1~4 /
+   --v-chart-dot-stroke / --v-chart-axis-text),§7.10 已完成热力图
+   盖章(border-radius 50% + 4 级松烟透明度)。本节仅处理毛笔笔触
+   视觉锚点:
+   - 趋势线 stroke-width 2.5→3.5(粗笔提按)
+   - 桑基图 stroke-linecap round(墨迹流向收笔)
+   - 雷达图 stroke-width 2→3.5 + stroke-linejoin round(毛笔边线)
+   - 网络图 stroke-linecap round(关系连线收笔)
+   - 数据点印章圆统一 stroke-width 1.5(纸面留白边)
+   基准:demo/designs/visual-redesign-spec.md §5 图表毛笔笔触改造
+   ============================================================ */
+
+/* ---------- §8.1 趋势线(折线图)毛笔笔触 ----------
+   覆盖 stats.html 第 159 行 polyline.chart-line-1 stroke-width 2.5
+   覆盖 stats.css 第 272 行 .line-path stroke-width 2
+   保持 stroke-linecap round(已有) */
+.chart-line-1,
+.line-path {
+  stroke-width: 3.5 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+}
+
+/* ---------- §8.2 桑基图(墨迹流向)收笔 ----------
+   stats.html 第 728 行 path.sankey-flow 已贝塞尔曲线
+   stats.css 第 482-484 行无 stroke-linecap
+   stroke-width 由模板变量 {{ f.stroke_w }} 控制,保留渐变提按 */
+.sankey-flow {
+  stroke-linecap: round !important;
+}
+
+/* ---------- §8.3 雷达图(毛笔边线) ----------
+   覆盖 stats.css 第 558 行 .radar-polygon stroke-width 2 → 3.5
+   保留 stats.css 第 557 行 fill-opacity: 0.18(墨晕感,已就绪)
+   保留 stats.css 第 564-566 行 .radar-proj-1/2/3 fill 颜色编码(3 项目 emerald 渐变区分)
+   Phase 6.6.7 DRL R1b P2 修复:原 §8.3 fill: var(--v-chart-area) !important
+   会覆盖 .radar-proj-N 的 fill 颜色编码,导致 3 项目多边形 fill 统一为单一
+   松烟绿,失去颜色区分。移除 fill !important,让 .radar-proj-N 接管 fill,
+   .radar-polygon fill-opacity: 0.18 提供墨晕感。 */
+.radar-polygon {
+  stroke-width: 3.5 !important;
+  stroke-linejoin: round !important;  /* 锁定原值(stats.css:559 已有),防御未来改动 */
+  stroke-linecap: round !important;
+}
+
+/* ---------- §8.4 网络图(关系连线)收笔 ----------
+   stats.html 第 789 行 line.network-edge 无 stroke-linecap
+   stroke-width 由模板变量 {{ 2 + e.weight * 2 }} 控制 */
+.network-edge {
+  stroke-linecap: round !important;
+}
+
+/* ---------- §8.5 数据点印章圆 ----------
+   stats.html 第 165 行 chart-dot-1 r=4 stroke-width 1.5(已就绪)
+   stats.html 第 252/267/282/297/312 行 chart-dot-2~6 r=3 无 stroke-width
+   统一为 stroke-width 1.5,fill 由 §1 --v-chart-line-N 控制(已就绪) */
+.chart-dot-1,
+.chart-dot-2,
+.chart-dot-3,
+.chart-dot-4,
+.chart-dot-5,
+.chart-dot-6 {
+  stroke-width: 1.5 !important;
+}
+
+/* ============================================================
+   §9 Phase 6.6.4 · 动画层(墨迹晕染 + 淡入如墨 + 空状态水墨)
+   ============================================================
+   策略:规格书 §4 动画系统(混合)
+   - §4.1 UI 元素 · 墨迹晕染:新增 .v-ink-hover 类(::after 伪元素墨迹扩散)
+   - §4.2 入场 · 淡入如墨:新增 @keyframes ink-fade-in(opacity + translateY + blur)
+     覆盖 .project-card / .stat-kpi / .chart-card 的 fadeSlideUp 为 ink-fade-in
+     保留 stagger delay(50ms 步进)
+   - §4.3 数据图表 · 保留原动画:已在 Phase 6.6.3 §8 处理(毛笔笔触)
+   - §4.4 空状态 · 水墨插画:§7.13 已水墨化,本节增强 .empty-glow 墨迹晕染
+     + .empty-icon 浮动改 ink-float(更柔和,墨迹漂浮感)
+   注:prefers-reduced-motion 由 §9.5 显式接管(§6 通配符 * specificity 0,0,0
+   低于 §9.2/§9.3 类选择器 0,1,0 + !important,需 §9.5 同 specificity 后加载胜出)
+   ============================================================ */
+
+/* ---------- §9.1 UI 元素 · 墨迹晕染 ----------
+   供未来 HTML 主动添加 .v-ink-hover 类的元素使用(hover 时墨迹扩散) */
+.v-ink-hover {
+  position: relative;
+  transition: var(--v-transition);
+}
+.v-ink-hover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--v-ink);
+  opacity: 0;
+  transition: opacity var(--v-transition-ink);
+  pointer-events: none;
+  border-radius: inherit;
+}
+.v-ink-hover:hover::after {
+  opacity: 0.08;
+}
+.v-ink-hover:focus-visible::after {
+  opacity: 0.06;
+}
+
+/* ---------- §9.2 入场 · 淡入如墨 ----------
+   覆盖 style.css 第 2154 行 @keyframes fadeSlideUp(opacity + translateY 8px)
+   改为 ink-fade-in(opacity + translateY 4px + blur 2px),墨迹晕染感
+   保留原 stagger delay(.project-card / .stat-kpi 的 nth-child delay) */
+@keyframes ink-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* 覆盖 style.css 第 2160/2170/2342 行的 fadeSlideUp animation
+   保留 stagger delay(由 nth-child 规则控制,不被覆盖) */
+.project-card,
+.stat-kpi,
+.chart-card {
+  animation-name: ink-fade-in !important;
+  animation-duration: 0.5s !important;
+  animation-timing-function: ease-out !important;
+}
+
+/* ---------- §9.3 空状态 · 水墨插画增强 ----------
+   §7.13 已水墨化字体/颜色/opacity,本节增强光晕与浮动 */
+/* 覆盖 style.css 第 2133-2139 行 .empty-glow 的 radial-gradient
+   原 var(--v-bg) 改为 var(--v-ink) 透明度,墨迹晕染感 */
+.empty-glow {
+  background: radial-gradient(
+    circle,
+    rgba(26, 58, 24, 0.12) 0%,
+    transparent 70%
+  ) !important;
+}
+
+:root[data-theme="dark"] .empty-glow {
+  background: radial-gradient(
+    circle,
+    rgba(212, 197, 169, 0.12) 0%,
+    transparent 70%
+  ) !important;
+}
+
+/* 新增 @keyframes ink-float(更柔和的浮动,墨迹漂浮感)
+   覆盖 style.css 第 2148-2151 行 @keyframes float + 第 2145 行 .empty-icon animation
+   原 translateY 0→-4px→0 改为 0→-2px→0(更克制) */
+@keyframes ink-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+.empty-icon {
+  animation: ink-float 4s ease-in-out infinite !important;
+}
+
+/* ---------- §9.4 .v-enter 工具类(供未来 HTML 主动使用) ---------- */
+.v-enter {
+  animation: ink-fade-in 0.5s ease-out both;
+}
+
+/* ---------- §9.5 prefers-reduced-motion 显式接管 ----------
+   Phase 6.6.7 DRL R1b P1 修复:§9.2/§9.3 的 !important + 类选择器(0,1,0)
+   覆盖 §6 通配符 *(0,0,0) + !important,导致 reduced-motion 失效。
+   本节用同 specificity(0,1,0)+ !important + 后加载(§9.5 在 §9.2/§9.3 之后)
+   在 @media (prefers-reduced-motion: reduce) 内显式禁用 §9 动画。
+   同时覆盖 §9.1 .v-ink-hover 的 transition(transition-duration 也需接管)。 */
+@media (prefers-reduced-motion: reduce) {
+  .project-card,
+  .stat-kpi,
+  .chart-card,
+  .empty-icon,
+  .v-enter {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .v-ink-hover,
+  .v-ink-hover::after {
+    transition: none !important;
+  }
+}
+
+/* —— End of archive-paper.css · Phase 6.6.1 令牌层 + Phase 6.6.2 组件层 + Phase 6.6.3 图表层 + Phase 6.6.4 动画层 —— */

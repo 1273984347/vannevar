@@ -1,0 +1,1138 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} · 志愿者查看{% endblock %}
+
+{% block content %}
+<header class="topbar h5">
+  <div class="brand">
+    <span class="v-logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 6 L12 18 L20 6"/>
+      </svg>
+    </span>
+    <div class="brand-text">
+      <h1>{{ project.name }}</h1>
+      <p>志愿者项目视图</p>
+    </div>
+  </div>
+</header>
+
+<main class="container h5" id="main-content">
+  <div id="syncIndicator" class="sync-indicator is-reconnecting" role="status" aria-live="polite" aria-label="实时同步状态" style="margin-bottom:0.75rem;">
+    <span class="sync-dot" aria-hidden="true"></span>
+    <span class="sync-text">连接中…</span>
+  </div>
+  <section class="h5-section" aria-labelledby="projInfoTitle">
+    <h2 id="projInfoTitle">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      项目简介
+    </h2>
+    <p style="margin:0;color:var(--v-text-secondary);font-size:0.9rem;line-height:1.6;word-break:break-word;">{{ project.description or '暂无简介' }}</p>
+  </section>
+
+  <section class="h5-section" aria-labelledby="taskTitle">
+    <div class="section-header">
+      <h2 id="taskTitle">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        任务进展
+        {% if project.tasks %}<span class="count-pill" style="background:var(--v-bg);color:var(--v-text-secondary);font-size:0.72rem;padding:2px 8px;border-radius:99px;border:1px solid var(--v-border);">{{ project.tasks | length }}</span>{% endif %}
+      </h2>
+      <button type="button" id="addTaskBtn" class="secondary-btn" style="padding:8px 14px;font-size:0.8rem;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        新增任务
+      </button>
+    </div>
+    {% if project.tasks %}
+    <ul class="h5-task-list" id="volunteerTaskList" aria-labelledby="taskTitle">
+      {% for t in project.tasks %}
+      <li class="h5-task" id="task-{{ t.id }}" data-task-id="{{ t.id }}" data-status="{{ t.status }}">
+        <div class="ht-head">
+          <div>
+            <div class="ht-title">{{ t.title }}</div>
+            <div class="ht-owner">负责人：{{ t.owner_name or '未分配' }}</div>
+            {% if t.description %}<div class="ht-desc" style="margin-top:0.25rem;font-size:0.8rem;color:var(--v-text-secondary);">{{ t.description[:80] }}{% if t.description|length > 80 %}…{% endif %}</div>{% endif %}
+          </div>
+          <span class="v-badge v-badge--{{ 'todo' if t.status == 'todo' else ('doing' if t.status == 'in_progress' else 'done') }}" data-badge>
+            {{ '待办' if t.status == 'todo' else ('进行中' if t.status == 'in_progress' else '已完成') }}
+          </span>
+        </div>
+        <div class="ht-actions" role="group" aria-label="更新任务状态">
+          <button type="button" class="status-btn is-todo {% if t.status == 'todo' %}is-active{% endif %}" data-status="todo" aria-pressed="{% if t.status == 'todo' %}true{% else %}false{% endif %}">待办</button>
+          <button type="button" class="status-btn is-doing {% if t.status == 'in_progress' %}is-active{% endif %}" data-status="in_progress" aria-pressed="{% if t.status == 'in_progress' %}true{% else %}false{% endif %}">进行中</button>
+          <button type="button" class="status-btn is-done {% if t.status == 'done' %}is-active{% endif %}" data-status="done" aria-pressed="{% if t.status == 'done' %}true{% else %}false{% endif %}">已完成</button>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="v-empty">
+      <svg class="v-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <div class="v-empty-title">暂无任务</div>
+      <div class="v-empty-desc">点击「新增任务」记录待办事项</div>
+      <a href="#taskTitle" class="v-empty-cta">查看任务看板 →</a>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="h5-section" aria-labelledby="handoffTitle">
+    <h2 id="handoffTitle">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+      接力交接记录
+      {% if project.handoffs %}<span class="count-pill" style="background:var(--v-bg);color:var(--v-text-secondary);font-size:0.72rem;padding:2px 8px;border-radius:99px;border:1px solid var(--v-border);">{{ project.handoffs | length }}</span>{% endif %}
+    </h2>
+    {% if project.handoffs %}
+    <ul class="timeline" id="volunteerHandoffList" aria-labelledby="handoffTitle">
+      {% for h in project.handoffs %}
+      <li data-handoff-id="{{ h.id }}" data-status="{{ h.status }}">
+        <div class="tl-card">
+          <div class="tl-head">
+            <span class="tl-people">{{ h.outgoing_volunteer or '?' }} → {{ h.incoming_volunteer or '?' }}
+              {% if h.status == 'confirmed' %}<span class="v-badge v-badge--done" style="margin-left:0.5rem;font-size:0.7rem;">已确认</span>{% else %}<span class="v-badge v-badge--todo" style="margin-left:0.5rem;font-size:0.7rem;">待确认</span>{% endif %}
+              {% if h.summary and h.summary.startswith('【自动生成于') %}<span class="handoff-source-tag handoff-source-tag--rule" title="由本地规则引擎基于任务/留言结构化生成" aria-label="规则引擎生成">规则引擎</span>{% else %}<span class="handoff-source-tag handoff-source-tag--ai" title="由 AI 基于项目上下文生成" aria-label="AI 生成">AI 生成</span>{% endif %}
+            </span>
+            <time class="tl-time" datetime="{{ h.created_at.strftime('%Y-%m-%dT%H:%M') }}">{{ h.created_at.strftime('%Y-%m-%d %H:%M') }}</time>
+          </div>
+          <p class="tl-summary">{{ h.summary }}</p>
+          {% if h.summary and not h.summary.startswith('【自动生成于') %}
+          <div class="ai-disclaimer">
+            <span class="ai-disclaimer-icon" aria-hidden="true">⚠️</span>
+            <span class="ai-disclaimer-text">此摘要由 AI 生成，仅供参考，请务必核对原始任务和留言。</span>
+          </div>
+          {% endif %}
+          {% if h.status == 'confirmed' and h.confirmed_by %}<p class="tl-confirmed" style="margin:0.4rem 0 0;font-size:0.78rem;color:var(--v-text-secondary);">已由 {{ h.confirmed_by }} 于 {{ h.confirmed_at.strftime('%Y-%m-%d %H:%M') }} 确认接收</p>{% endif %}
+          {% if h.status != 'confirmed' %}<button type="button" class="primary-btn confirm-handoff-btn" style="margin-top:0.6rem;" data-handoff-id="{{ h.id }}" aria-label="确认接收此交接">确认接收</button>{% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="v-empty">
+      <svg class="v-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <div class="v-empty-title">暂无交接记录</div>
+      <div class="v-empty-desc">等待管理员或老志愿者记录交接</div>
+      <a href="#volunteerMessageForm" class="v-empty-cta">联系管理员 →</a>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="h5-section" aria-labelledby="msgTitle">
+    <h2 id="msgTitle">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      协作留言
+      {% if project.messages %}<span class="count-pill" style="background:var(--v-bg);color:var(--v-text-secondary);font-size:0.72rem;padding:2px 8px;border-radius:99px;border:1px solid var(--v-border);">{{ project.messages | length }}</span>{% endif %}
+    </h2>
+    <form id="volunteerMessageForm" class="form" aria-label="发送留言">
+      <div class="field">
+        <label for="volAuthor">你的名字</label>
+        <input id="volAuthor" name="author" type="text" maxlength="60" value="志愿者" placeholder="昵称" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="volTask">关联任务（可选）</label>
+        <select id="volTask" name="task_id" aria-label="关联任务">
+          <option value="">不关联任务</option>
+          {% for t in project.tasks %}
+          <option value="{{ t.id }}">{{ t.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="volContent">留言内容</label>
+        <textarea id="volContent" name="content" rows="2" required maxlength="2000" placeholder="关于项目的进展、问题或建议…"></textarea>
+      </div>
+      <button type="submit" class="primary-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        发送留言
+      </button>
+    </form>
+    {% if project.messages %}
+    <ul class="bubble-list" id="volunteerMessageList" style="margin-top:0.75rem;" aria-labelledby="msgTitle">
+      {% for m in project.messages %}
+      <li class="bubble">
+        <span class="b-avatar" aria-hidden="true">{{ m.author[:1] if m.author else '?' }}</span>
+        <div class="b-body">
+          <div class="b-meta">
+            <span class="b-author">{{ m.author }}</span>
+            <time class="b-time" datetime="{{ m.created_at.strftime('%Y-%m-%dT%H:%M') }}">{{ m.created_at.strftime('%Y-%m-%d %H:%M') }}</time>
+          </div>
+          {% if m.task %}<a class="b-task-tag" href="#task-{{ m.task.id }}" title="跳转到关联任务">#{{ m.task.title }}</a>{% endif %}
+          <span class="b-content">{{ m.content }}</span>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="v-empty" id="volunteerMessageEmpty">
+      <svg class="v-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <div class="v-empty-title">暂无留言</div>
+      <div class="v-empty-desc">发起第一条讨论吧</div>
+      <a href="#volContent" class="v-empty-cta">去留言 →</a>
+    </div>
+    {% endif %}
+  </section>
+</main>
+
+<script>
+const projectId = {{ project.id }};
+const qrToken = {{ project.qr_token | tojson }};
+
+// B-PERF-03: 带超时的 fetch，避免网络异常时请求挂起导致 UI 卡死
+function fetchWithTimeout(url, options, timeout) {
+  timeout = timeout || 10000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  return fetch(url, Object.assign({}, options, { signal: controller.signal }))
+    .then(function(res) { clearTimeout(timer); return res; })
+    .catch(function(err) { clearTimeout(timer); throw err; });
+}
+
+async function patchJson(url, body) {
+  const res = await fetchWithTimeout(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'BridgeVolunteer' },
+    body: JSON.stringify(body)
+  });
+  return { ok: res.ok, data: await res.json().catch(() => ({})) };
+}
+
+// 焦点陷阱：modal 打开时 Tab/Shift+Tab 在 modal 内循环
+function _trapModalFocus(maskEl, modalEl) {
+  maskEl.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+    const focusable = modalEl.querySelectorAll('button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
+}
+
+// P0: 确认接收交接
+document.querySelectorAll('.confirm-handoff-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const handoffId = btn.dataset.handoffId;
+    const li = btn.closest('li[data-handoff-id]');
+    // 询问志愿者姓名
+    const mask = document.createElement('div');
+    mask.className = 'modal-mask';
+    mask.setAttribute('role', 'dialog');
+    mask.setAttribute('aria-modal', 'true');
+    mask.setAttribute('aria-labelledby', 'confirmHandoffTitle');
+    mask.setAttribute('aria-describedby', 'confirmHandoffDesc');
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML =
+      '<h3 id="confirmHandoffTitle">确认接收交接</h3>' +
+      '<p id="confirmHandoffDesc" style="margin:0 0 0.75rem;font-size:0.9rem;color:var(--v-text-secondary);">请输入你的名字，确认你已接收此交接。</p>' +
+      '<div class="field"><label for="confirmNameInput">你的名字</label><input id="confirmNameInput" type="text" maxlength="60" placeholder="姓名"></div>' +
+      '<div class="modal-actions">' +
+        '<button type="button" class="secondary-btn" data-act="cancel">取消</button>' +
+        '<button type="button" class="primary-btn" data-act="confirm">确认接收</button>' +
+      '</div>';
+    mask.appendChild(modal);
+    document.body.appendChild(mask);
+    _trapModalFocus(mask, modal);
+    const close = () => { if (mask.parentNode) mask.parentNode.removeChild(mask); };
+    mask.addEventListener('click', e => { if (e.target === mask) close(); });
+    modal.querySelector('[data-act="cancel"]').addEventListener('click', close);
+    const nameInput = modal.querySelector('#confirmNameInput');
+    // 预填表单里的志愿者名字
+    const volForm = document.getElementById('volunteerMessageForm');
+    if (volForm && volForm.author) nameInput.value = volForm.author.value || '';
+    // B-LOW-1: 仅在精确指针设备（桌面）自动聚焦，移动端避免键盘弹起遮挡
+    setTimeout(() => { if (matchMedia('(pointer: fine)').matches) nameInput.focus(); }, 50);
+    const escHandler = e => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', escHandler); } };
+    document.addEventListener('keydown', escHandler);
+    modal.querySelector('[data-act="confirm"]').addEventListener('click', async () => {
+      const name = nameInput.value.trim();
+      if (!name) {
+        window.showToast('请输入你的名字', 'error');
+        return;
+      }
+      const confirmBtn = modal.querySelector('[data-act="confirm"]');
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = '确认中…';
+      try {
+        const res = await fetchWithTimeout('/api/projects/' + projectId + '/handoffs/' + handoffId + '/confirm?qr_token=' + encodeURIComponent(qrToken), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'BridgeVolunteer' },
+          body: JSON.stringify({ confirmed_by: name })
+        });
+        if (res.ok) {
+          const h = await res.json().catch(() => ({}));
+          window.showToast('已确认接收交接', 'success');
+          // 更新 DOM：替换徽标为已确认，移除按钮，加确认信息
+          if (li) {
+            const oldBadge = li.querySelector('.tl-people .v-badge');
+            if (oldBadge) {
+              const newBadge = document.createElement('span');
+              newBadge.className = 'v-badge v-badge--done';
+              newBadge.style.cssText = 'margin-left:0.5rem;font-size:0.7rem;';
+              newBadge.textContent = '已确认';
+              oldBadge.replaceWith(newBadge);
+            }
+            if (btn.parentNode) btn.remove();
+            const card = li.querySelector('.tl-card');
+            if (card && h.confirmed_at) {
+              const pad = n => String(n).padStart(2, '0');
+              const dt = new Date(h.confirmed_at);
+              const dtStr = dt.getFullYear() + '-' + pad(dt.getMonth()+1) + '-' + pad(dt.getDate()) + ' ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+              const conf = document.createElement('p');
+              conf.className = 'tl-confirmed';
+              conf.style.cssText = 'margin:0.4rem 0 0;font-size:0.78rem;color:var(--v-text-secondary);';
+              conf.textContent = '已由 ' + (h.confirmed_by || name) + ' 于 ' + dtStr + ' 确认接收';
+              card.appendChild(conf);
+            }
+          }
+          close();
+        } else {
+          const data = await res.json().catch(() => ({}));
+          window.showToast('确认失败：' + (data.detail || '未知错误'), 'error');
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = '确认接收';
+        }
+      } catch (err) {
+        window.showToast('确认失败：' + err.message, 'error');
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = '确认接收';
+      }
+    });
+  });
+});
+
+// 状态按钮组：点击切换状态
+document.querySelectorAll('.h5-task .status-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const taskLi = btn.closest('.h5-task');
+    if (!taskLi) return;
+    const taskId = taskLi.dataset.taskId;
+    const newStatus = btn.dataset.status;
+    const currentStatus = taskLi.dataset.status;
+    if (newStatus === currentStatus) return; // 已是当前状态
+
+    // 乐观 UI：先标记 active
+    const allBtns = taskLi.querySelectorAll('.status-btn');
+    allBtns.forEach(b => {
+      b.classList.remove('is-active');
+      b.setAttribute('aria-pressed', 'false');
+    });
+    btn.classList.add('is-active');
+    btn.setAttribute('aria-pressed', 'true');
+
+    const result = await patchJson('/api/tasks/' + taskId + '?qr_token=' + encodeURIComponent(qrToken), { status: newStatus });
+    if (result.ok) {
+      taskLi.dataset.status = newStatus;
+      // 更新徽标
+      const badge = taskLi.querySelector('[data-badge]');
+      if (badge) {
+        badge.className = 'v-badge v-badge--' + (newStatus === 'todo' ? 'todo' : (newStatus === 'in_progress' ? 'doing' : 'done'));
+        badge.textContent = newStatus === 'todo' ? '待办' : (newStatus === 'in_progress' ? '进行中' : '已完成');
+      }
+      const label = newStatus === 'todo' ? '待办' : (newStatus === 'in_progress' ? '进行中' : '已完成');
+      window.showToast('任务已更新为「' + label + '」', 'success');
+    } else {
+      // 还原
+      taskLi.dataset.status = currentStatus;
+      allBtns.forEach(b => {
+        b.classList.remove('is-active');
+        b.setAttribute('aria-pressed', 'false');
+        if (b.dataset.status === currentStatus) {
+          b.classList.add('is-active');
+          b.setAttribute('aria-pressed', 'true');
+        }
+      });
+      window.showToast('更新状态失败：' + (result.data.detail || '未知错误'), 'error');
+    }
+  });
+});
+
+// 留言提交
+document.getElementById('volunteerMessageForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const orig = submitBtn.innerHTML;
+  submitBtn.disabled = true;
+  submitBtn.textContent = '发送中…';
+  try {
+    const taskVal = form.task_id ? form.task_id.value : '';
+    const res = await fetchWithTimeout('/api/projects/' + projectId + '/messages?qr_token=' + encodeURIComponent(qrToken), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'BridgeVolunteer' },
+      body: JSON.stringify({
+        author: form.author.value.trim() || '志愿者',
+        content: form.content.value.trim(),
+        task_id: taskVal ? parseInt(taskVal, 10) : null
+      })
+    });
+    if (res.ok) {
+      const m = await res.json().catch(() => ({}));
+      // 动态插入聊天气泡
+      let ul = document.getElementById('volunteerMessageList');
+      let emptyEl = document.getElementById('volunteerMessageEmpty');
+      if (emptyEl) emptyEl.remove();
+      if (!ul) {
+        ul = document.createElement('ul');
+        ul.className = 'bubble-list';
+        ul.id = 'volunteerMessageList';
+        ul.style.marginTop = '0.75rem';
+        form.parentNode.insertBefore(ul, form.nextSibling);
+      }
+      const li = document.createElement('li');
+      li.className = 'bubble';
+      const avatar = document.createElement('span');
+      avatar.className = 'b-avatar';
+      avatar.setAttribute('aria-hidden', 'true');
+      avatar.textContent = (m.author || '?').charAt(0);
+      const body = document.createElement('div');
+      body.className = 'b-body';
+      const meta = document.createElement('div');
+      meta.className = 'b-meta';
+      const author = document.createElement('span');
+      author.className = 'b-author';
+      author.textContent = m.author || '';
+      const time = document.createElement('time');
+      time.className = 'b-time';
+      if (m.created_at) {
+        const dt = new Date(m.created_at);
+        const pad = n => String(n).padStart(2, '0');
+        time.setAttribute('datetime', dt.toISOString());
+        time.textContent = dt.getFullYear() + '-' + pad(dt.getMonth()+1) + '-' + pad(dt.getDate()) + ' ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+      }
+      meta.appendChild(author);
+      meta.appendChild(time);
+      // P0: 关联任务标签
+      if (m.task) {
+        const tag = document.createElement('a');
+        tag.className = 'b-task-tag';
+        tag.setAttribute('href', '#task-' + m.task.id);
+        tag.setAttribute('title', '跳转到关联任务');
+        tag.textContent = '#' + (m.task.title || '');
+        body.appendChild(meta);
+        body.appendChild(tag);
+      } else {
+        body.appendChild(meta);
+      }
+      const content = document.createElement('span');
+      content.className = 'b-content';
+      content.textContent = m.content || '';
+      body.appendChild(content);
+      li.appendChild(avatar);
+      li.appendChild(body);
+      ul.appendChild(li);
+      form.content.value = '';
+      if (form.task_id) form.task_id.value = '';
+      window.showToast('留言已发送', 'success');
+      // 内容审核：命中敏感词时额外提示（不阻止提交）
+      if (m.moderation_flagged && m.moderation_warning) {
+        window.showToast(m.moderation_warning, 'info');
+      }
+    } else {
+      const data = await res.json().catch(() => ({}));
+      window.showToast('发送失败：' + (data.detail || '未知错误'), 'error');
+    }
+  } catch (err) {
+    window.showToast('发送失败：' + err.message, 'error');
+  }
+  submitBtn.disabled = false;
+  submitBtn.innerHTML = orig;
+});
+
+// 志愿者新增任务 — modal 表单
+document.getElementById('addTaskBtn').addEventListener('click', () => {
+  const mask = document.createElement('div');
+  mask.className = 'modal-mask';
+  mask.setAttribute('role', 'dialog');
+  mask.setAttribute('aria-modal', 'true');
+  mask.setAttribute('aria-labelledby', 'addTaskTitle');
+  mask.setAttribute('aria-describedby', 'addTaskDesc');
+
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML =
+    '<h3 id="addTaskTitle">新增任务</h3>' +
+    '<p id="addTaskDesc" style="margin:0 0 0.75rem;font-size:0.9rem;color:var(--v-text-secondary);">记录一个待办事项，方便接力协作。</p>' +
+    '<div class="field"><label for="newTaskTitle">任务标题</label><input id="newTaskTitle" type="text" maxlength="200" placeholder="例如：联系社区确认时间"></div>' +
+    '<div class="field"><label for="newTaskDesc">任务描述（可选）</label><textarea id="newTaskDesc" rows="3" maxlength="2000" placeholder="背景、要求、注意事项…"></textarea></div>' +
+    '<div class="field"><label for="newTaskOwner">你的名字</label><input id="newTaskOwner" type="text" maxlength="60" placeholder="昵称，作为负责人"></div>' +
+    '<div class="modal-actions">' +
+      '<button type="button" class="secondary-btn" data-act="cancel">取消</button>' +
+      '<button type="button" class="primary-btn" data-act="submit">添加任务</button>' +
+    '</div>';
+  mask.appendChild(modal);
+  document.body.appendChild(mask);
+  _trapModalFocus(mask, modal);
+
+  // 预填留言表单里的志愿者名字
+  const volForm = document.getElementById('volunteerMessageForm');
+  const ownerInput = modal.querySelector('#newTaskOwner');
+  if (volForm && volForm.author && volForm.author.value && volForm.author.value !== '志愿者') {
+    ownerInput.value = volForm.author.value;
+  }
+
+  const close = () => { if (mask.parentNode) mask.parentNode.removeChild(mask); };
+  mask.addEventListener('click', e => { if (e.target === mask) close(); });
+  modal.querySelector('[data-act="cancel"]').addEventListener('click', close);
+  const escHandler = e => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', escHandler); } };
+  document.addEventListener('keydown', escHandler);
+
+  modal.querySelector('[data-act="submit"]').addEventListener('click', async () => {
+    const title = modal.querySelector('#newTaskTitle').value.trim();
+    const description = modal.querySelector('#newTaskDesc').value.trim();
+    const owner_name = modal.querySelector('#newTaskOwner').value.trim();
+    if (!title) {
+      window.showToast('任务标题不能为空', 'error');
+      return;
+    }
+    const submitBtn = modal.querySelector('[data-act="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = '添加中…';
+    try {
+      const res = await fetch('/api/projects/' + projectId + '/tasks?qr_token=' + encodeURIComponent(qrToken), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'BridgeVolunteer' },
+        body: JSON.stringify({ title: title, description: description, owner_name: owner_name })
+      });
+      if (res.ok) {
+        const t = await res.json().catch(() => ({}));
+        // 动态插入任务到列表
+        let ul = document.getElementById('volunteerTaskList');
+        let emptyEl = ul ? ul.querySelector('.v-empty') : null;
+        // 如果没有 ul（原先是空状态），创建一个
+        if (!ul) {
+          const section = document.getElementById('taskTitle').closest('.h5-section');
+          // 移除空状态
+          const oldEmpty = section.querySelector('.v-empty');
+          if (oldEmpty) oldEmpty.remove();
+          ul = document.createElement('ul');
+          ul.className = 'h5-task-list';
+          ul.id = 'volunteerTaskList';
+          section.appendChild(ul);
+        }
+        const li = document.createElement('li');
+        li.className = 'h5-task';
+        li.setAttribute('id', 'task-' + String(t.id));
+        li.setAttribute('data-task-id', String(t.id));
+        li.setAttribute('data-status', t.status || 'todo');
+        const head = document.createElement('div');
+        head.className = 'ht-head';
+        const headLeft = document.createElement('div');
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'ht-title';
+        titleDiv.textContent = t.title || '';
+        const ownerDiv = document.createElement('div');
+        ownerDiv.className = 'ht-owner';
+        ownerDiv.textContent = '负责人：' + (t.owner_name || '未分配');
+        headLeft.appendChild(titleDiv);
+        headLeft.appendChild(ownerDiv);
+        if (t.description) {
+          const descDiv = document.createElement('div');
+          descDiv.style.cssText = 'margin-top:0.25rem;font-size:0.8rem;color:var(--v-text-secondary);';
+          descDiv.textContent = t.description.length > 80 ? t.description.substring(0, 80) + '…' : t.description;
+          headLeft.appendChild(descDiv);
+        }
+        const badge = document.createElement('span');
+        const statusKey = t.status === 'todo' ? 'todo' : (t.status === 'in_progress' ? 'doing' : 'done');
+        badge.className = 'v-badge v-badge--' + statusKey;
+        badge.setAttribute('data-badge', '');
+        badge.textContent = t.status === 'todo' ? '待办' : (t.status === 'in_progress' ? '进行中' : '已完成');
+        head.appendChild(headLeft);
+        head.appendChild(badge);
+        const actions = document.createElement('div');
+        actions.className = 'ht-actions';
+        actions.setAttribute('role', 'group');
+        actions.setAttribute('aria-label', '更新任务状态');
+        const statusOptions = [
+          { value: 'todo', label: '待办' },
+          { value: 'in_progress', label: '进行中' },
+          { value: 'done', label: '已完成' }
+        ];
+        statusOptions.forEach(opt => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'status-btn is-' + (opt.value === 'in_progress' ? 'doing' : opt.value) + (t.status === opt.value ? ' is-active' : '');
+          btn.setAttribute('data-status', opt.value);
+          btn.setAttribute('aria-pressed', t.status === opt.value ? 'true' : 'false');
+          btn.textContent = opt.label;
+          btn.addEventListener('click', async () => {
+            const taskLi = btn.closest('.h5-task');
+            if (!taskLi) return;
+            const taskId = taskLi.dataset.taskId;
+            const newStatus = btn.dataset.status;
+            const currentStatus = taskLi.dataset.status;
+            if (newStatus === currentStatus) return;
+            const allBtns = taskLi.querySelectorAll('.status-btn');
+            allBtns.forEach(b => { b.classList.remove('is-active'); b.setAttribute('aria-pressed', 'false'); });
+            btn.classList.add('is-active');
+            btn.setAttribute('aria-pressed', 'true');
+            const result = await patchJson('/api/tasks/' + taskId + '?qr_token=' + encodeURIComponent(qrToken), { status: newStatus });
+            if (result.ok) {
+              taskLi.dataset.status = newStatus;
+              const bEl = taskLi.querySelector('[data-badge]');
+              if (bEl) {
+                bEl.className = 'v-badge v-badge--' + (newStatus === 'todo' ? 'todo' : (newStatus === 'in_progress' ? 'doing' : 'done'));
+                bEl.textContent = newStatus === 'todo' ? '待办' : (newStatus === 'in_progress' ? '进行中' : '已完成');
+              }
+              const label = newStatus === 'todo' ? '待办' : (newStatus === 'in_progress' ? '进行中' : '已完成');
+              window.showToast('任务已更新为「' + label + '」', 'success');
+            } else {
+              taskLi.dataset.status = currentStatus;
+              allBtns.forEach(b => {
+                b.classList.remove('is-active');
+                b.setAttribute('aria-pressed', 'false');
+                if (b.dataset.status === currentStatus) {
+                  b.classList.add('is-active');
+                  b.setAttribute('aria-pressed', 'true');
+                }
+              });
+              window.showToast('更新状态失败：' + (result.data.detail || '未知错误'), 'error');
+            }
+          });
+          actions.appendChild(btn);
+        });
+        li.appendChild(head);
+        li.appendChild(actions);
+        ul.appendChild(li);
+        close();
+        window.showToast('任务已添加', 'success');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        window.showToast('添加任务失败：' + (data.detail || '未知错误'), 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = '添加任务';
+      }
+    } catch (err) {
+      window.showToast('添加任务失败：' + err.message, 'error');
+      submitBtn.disabled = false;
+      submitBtn.textContent = '添加任务';
+    }
+  });
+  // B-LOW-1: 仅在精确指针设备（桌面）自动聚焦，移动端避免键盘弹起遮挡
+  setTimeout(() => { if (matchMedia('(pointer: fine)').matches) modal.querySelector('#newTaskTitle').focus(); }, 50);
+});
+
+// P2-4: 表单未提交修改 beforeunload 提示
+function _trackFormDirty(formEl) {
+  let dirty = false;
+  formEl.addEventListener('input', () => { dirty = true; });
+  formEl.addEventListener('change', () => { dirty = true; });
+  formEl.addEventListener('submit', () => { dirty = false; });
+  window.addEventListener('beforeunload', (e) => {
+    if (dirty) { e.preventDefault(); e.returnValue = ''; }
+  });
+}
+(function() {
+  const f = document.getElementById('volunteerMessageForm');
+  if (f) _trackFormDirty(f);
+})();
+
+// ---------- 第三批升级：SSE 实时同步 ----------
+// 收到事件后局部刷新对应区域（任务/留言/交接），避免影响表单输入
+let _syncES = null;
+let _syncReconnectTimer = null;
+
+function _setSyncState(state) {
+  const indicator = document.getElementById('syncIndicator');
+  if (!indicator) return;
+  indicator.classList.remove('is-live', 'is-reconnecting');
+  const text = indicator.querySelector('.sync-text');
+  if (state === 'live') {
+    indicator.classList.add('is-live');
+    if (text) text.textContent = '实时同步中';
+  } else if (state === 'reconnecting') {
+    indicator.classList.add('is-reconnecting');
+    if (text) text.textContent = '同步断开，重连中…';
+  }
+}
+
+async function _fetchProject() {
+  const res = await fetch('/api/projects/' + projectId + '?qr_token=' + encodeURIComponent(qrToken));
+  if (!res.ok) return null;
+  return await res.json();
+}
+
+function _attachStatusBtnHandler(btn) {
+  btn.addEventListener('click', async () => {
+    const taskLi = btn.closest('.h5-task');
+    if (!taskLi) return;
+    const taskId = taskLi.dataset.taskId;
+    const newStatus = btn.dataset.status;
+    const currentStatus = taskLi.dataset.status;
+    if (newStatus === currentStatus) return;
+    const allBtns = taskLi.querySelectorAll('.status-btn');
+    allBtns.forEach(b => { b.classList.remove('is-active'); b.setAttribute('aria-pressed', 'false'); });
+    btn.classList.add('is-active');
+    btn.setAttribute('aria-pressed', 'true');
+    const result = await patchJson('/api/tasks/' + taskId + '?qr_token=' + encodeURIComponent(qrToken), { status: newStatus });
+    if (result.ok) {
+      taskLi.dataset.status = newStatus;
+      const bEl = taskLi.querySelector('[data-badge]');
+      if (bEl) {
+        bEl.className = 'v-badge v-badge--' + (newStatus === 'todo' ? 'todo' : (newStatus === 'in_progress' ? 'doing' : 'done'));
+        bEl.textContent = newStatus === 'todo' ? '待办' : (newStatus === 'in_progress' ? '进行中' : '已完成');
+      }
+      const label = newStatus === 'todo' ? '待办' : (newStatus === 'in_progress' ? '进行中' : '已完成');
+      window.showToast('任务已更新为「' + label + '」', 'success');
+    } else {
+      taskLi.dataset.status = currentStatus;
+      allBtns.forEach(b => {
+        b.classList.remove('is-active');
+        b.setAttribute('aria-pressed', 'false');
+        if (b.dataset.status === currentStatus) {
+          b.classList.add('is-active');
+          b.setAttribute('aria-pressed', 'true');
+        }
+      });
+      window.showToast('更新状态失败：' + (result.data.detail || '未知错误'), 'error');
+    }
+  });
+}
+
+function _buildTaskLi(t) {
+  const li = document.createElement('li');
+  li.className = 'h5-task';
+  li.setAttribute('id', 'task-' + String(t.id));
+  li.setAttribute('data-task-id', String(t.id));
+  li.setAttribute('data-status', t.status || 'todo');
+  const head = document.createElement('div');
+  head.className = 'ht-head';
+  const headLeft = document.createElement('div');
+  const titleDiv = document.createElement('div');
+  titleDiv.className = 'ht-title';
+  titleDiv.textContent = t.title || '';
+  const ownerDiv = document.createElement('div');
+  ownerDiv.className = 'ht-owner';
+  ownerDiv.textContent = '负责人：' + (t.owner_name || '未分配');
+  headLeft.appendChild(titleDiv);
+  headLeft.appendChild(ownerDiv);
+  if (t.description) {
+    const descDiv = document.createElement('div');
+    descDiv.style.cssText = 'margin-top:0.25rem;font-size:0.8rem;color:var(--v-text-secondary);';
+    descDiv.textContent = t.description.length > 80 ? t.description.substring(0, 80) + '…' : t.description;
+    headLeft.appendChild(descDiv);
+  }
+  const badge = document.createElement('span');
+  const statusKey = t.status === 'todo' ? 'todo' : (t.status === 'in_progress' ? 'doing' : 'done');
+  badge.className = 'v-badge v-badge--' + statusKey;
+  badge.setAttribute('data-badge', '');
+  badge.textContent = t.status === 'todo' ? '待办' : (t.status === 'in_progress' ? '进行中' : '已完成');
+  head.appendChild(headLeft);
+  head.appendChild(badge);
+  const actions = document.createElement('div');
+  actions.className = 'ht-actions';
+  actions.setAttribute('role', 'group');
+  actions.setAttribute('aria-label', '更新任务状态');
+  const statusOptions = [
+    { value: 'todo', label: '待办' },
+    { value: 'in_progress', label: '进行中' },
+    { value: 'done', label: '已完成' }
+  ];
+  statusOptions.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'status-btn is-' + (opt.value === 'in_progress' ? 'doing' : opt.value) + (t.status === opt.value ? ' is-active' : '');
+    btn.setAttribute('data-status', opt.value);
+    btn.setAttribute('aria-pressed', t.status === opt.value ? 'true' : 'false');
+    btn.textContent = opt.label;
+    _attachStatusBtnHandler(btn);
+    actions.appendChild(btn);
+  });
+  li.appendChild(head);
+  li.appendChild(actions);
+  return li;
+}
+
+function _buildMessageLi(m) {
+  const li = document.createElement('li');
+  li.className = 'bubble';
+  const avatar = document.createElement('span');
+  avatar.className = 'b-avatar';
+  avatar.setAttribute('aria-hidden', 'true');
+  avatar.textContent = (m.author || '?').charAt(0);
+  const body = document.createElement('div');
+  body.className = 'b-body';
+  const meta = document.createElement('div');
+  meta.className = 'b-meta';
+  const author = document.createElement('span');
+  author.className = 'b-author';
+  author.textContent = m.author || '';
+  const time = document.createElement('time');
+  time.className = 'b-time';
+  if (m.created_at) {
+    const dt = new Date(m.created_at);
+    const pad = n => String(n).padStart(2, '0');
+    time.setAttribute('datetime', dt.toISOString());
+    time.textContent = dt.getFullYear() + '-' + pad(dt.getMonth()+1) + '-' + pad(dt.getDate()) + ' ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+  }
+  meta.appendChild(author);
+  meta.appendChild(time);
+  body.appendChild(meta);
+  if (m.task) {
+    const tag = document.createElement('a');
+    tag.className = 'b-task-tag';
+    tag.setAttribute('href', '#task-' + m.task.id);
+    tag.setAttribute('title', '跳转到关联任务');
+    tag.textContent = '#' + (m.task.title || '');
+    body.appendChild(tag);
+  }
+  const content = document.createElement('span');
+  content.className = 'b-content';
+  content.textContent = m.content || '';
+  body.appendChild(content);
+  li.appendChild(avatar);
+  li.appendChild(body);
+  return li;
+}
+
+function _attachConfirmHandoffHandler(btn) {
+  btn.addEventListener('click', async () => {
+    const handoffId = btn.dataset.handoffId;
+    const li = btn.closest('li[data-handoff-id]');
+    const mask = document.createElement('div');
+    mask.className = 'modal-mask';
+    mask.setAttribute('role', 'dialog');
+    mask.setAttribute('aria-modal', 'true');
+    mask.setAttribute('aria-labelledby', 'confirmHandoffTitle');
+    mask.setAttribute('aria-describedby', 'confirmHandoffDesc');
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML =
+      '<h3 id="confirmHandoffTitle">确认接收交接</h3>' +
+      '<p id="confirmHandoffDesc" style="margin:0 0 0.75rem;font-size:0.9rem;color:var(--v-text-secondary);">请输入你的名字，确认你已接收此交接。</p>' +
+      '<div class="field"><label for="confirmNameInput">你的名字</label><input id="confirmNameInput" type="text" maxlength="60" placeholder="姓名"></div>' +
+      '<div class="modal-actions">' +
+        '<button type="button" class="secondary-btn" data-act="cancel">取消</button>' +
+        '<button type="button" class="primary-btn" data-act="confirm">确认接收</button>' +
+      '</div>';
+    mask.appendChild(modal);
+    document.body.appendChild(mask);
+    _trapModalFocus(mask, modal);
+    const close = () => { if (mask.parentNode) mask.parentNode.removeChild(mask); };
+    mask.addEventListener('click', e => { if (e.target === mask) close(); });
+    modal.querySelector('[data-act="cancel"]').addEventListener('click', close);
+    const nameInput = modal.querySelector('#confirmNameInput');
+    const volForm = document.getElementById('volunteerMessageForm');
+    if (volForm && volForm.author) nameInput.value = volForm.author.value || '';
+    // B-LOW-1: 仅在精确指针设备（桌面）自动聚焦，移动端避免键盘弹起遮挡
+    setTimeout(() => { if (matchMedia('(pointer: fine)').matches) nameInput.focus(); }, 50);
+    const escHandler = e => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', escHandler); } };
+    document.addEventListener('keydown', escHandler);
+    modal.querySelector('[data-act="confirm"]').addEventListener('click', async () => {
+      const name = nameInput.value.trim();
+      if (!name) {
+        window.showToast('请输入你的名字', 'error');
+        return;
+      }
+      const confirmBtn = modal.querySelector('[data-act="confirm"]');
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = '确认中…';
+      try {
+        const res = await fetchWithTimeout('/api/projects/' + projectId + '/handoffs/' + handoffId + '/confirm?qr_token=' + encodeURIComponent(qrToken), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'BridgeVolunteer' },
+          body: JSON.stringify({ confirmed_by: name })
+        });
+        if (res.ok) {
+          const h = await res.json().catch(() => ({}));
+          window.showToast('已确认接收交接', 'success');
+          if (li) {
+            const oldBadge = li.querySelector('.tl-people .v-badge');
+            if (oldBadge) {
+              const newBadge = document.createElement('span');
+              newBadge.className = 'v-badge v-badge--done';
+              newBadge.style.cssText = 'margin-left:0.5rem;font-size:0.7rem;';
+              newBadge.textContent = '已确认';
+              oldBadge.replaceWith(newBadge);
+            }
+            if (btn.parentNode) btn.remove();
+            const card = li.querySelector('.tl-card');
+            if (card && h.confirmed_at) {
+              const pad = n => String(n).padStart(2, '0');
+              const dt = new Date(h.confirmed_at);
+              const dtStr = dt.getFullYear() + '-' + pad(dt.getMonth()+1) + '-' + pad(dt.getDate()) + ' ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+              const conf = document.createElement('p');
+              conf.className = 'tl-confirmed';
+              conf.style.cssText = 'margin:0.4rem 0 0;font-size:0.78rem;color:var(--v-text-secondary);';
+              conf.textContent = '已由 ' + (h.confirmed_by || name) + ' 于 ' + dtStr + ' 确认接收';
+              card.appendChild(conf);
+            }
+          }
+          close();
+        } else {
+          const data = await res.json().catch(() => ({}));
+          window.showToast('确认失败：' + (data.detail || '未知错误'), 'error');
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = '确认接收';
+        }
+      } catch (err) {
+        window.showToast('确认失败：' + err.message, 'error');
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = '确认接收';
+      }
+    });
+  });
+}
+
+function _buildHandoffLi(h) {
+  const li = document.createElement('li');
+  li.setAttribute('data-handoff-id', String(h.id));
+  li.setAttribute('data-status', h.status || 'pending');
+  const card = document.createElement('div');
+  card.className = 'tl-card';
+  const head = document.createElement('div');
+  head.className = 'tl-head';
+  const people = document.createElement('span');
+  people.className = 'tl-people';
+  people.textContent = (h.outgoing_volunteer || '?') + ' → ' + (h.incoming_volunteer || '?') + ' ';
+  const badge = document.createElement('span');
+  if (h.status === 'confirmed') {
+    badge.className = 'v-badge v-badge--done';
+    badge.style.cssText = 'margin-left:0.5rem;font-size:0.7rem;';
+    badge.textContent = '已确认';
+  } else {
+    badge.className = 'v-badge v-badge--todo';
+    badge.style.cssText = 'margin-left:0.5rem;font-size:0.7rem;';
+    badge.textContent = '待确认';
+  }
+  people.appendChild(badge);
+  // P0-AI: 标注摘要来源——规则引擎 vs AI 生成
+  const summaryText = h.summary || '';
+  const isRuleEngine = /^【自动生成于\s/.test(summaryText);
+  const sourceTag = document.createElement('span');
+  sourceTag.className = 'handoff-source-tag handoff-source-tag--' + (isRuleEngine ? 'rule' : 'ai');
+  sourceTag.title = isRuleEngine ? '由本地规则引擎基于任务/留言结构化生成' : '由 AI 基于项目上下文生成';
+  sourceTag.setAttribute('aria-label', isRuleEngine ? '规则引擎生成' : 'AI 生成');
+  sourceTag.textContent = isRuleEngine ? '⚙️ 规则引擎' : '✨ AI 生成';
+  people.appendChild(sourceTag);
+  const time = document.createElement('time');
+  time.className = 'tl-time';
+  if (h.created_at) {
+    const dt = new Date(h.created_at);
+    const pad = n => String(n).padStart(2, '0');
+    time.setAttribute('datetime', dt.toISOString());
+    time.textContent = dt.getFullYear() + '-' + pad(dt.getMonth()+1) + '-' + pad(dt.getDate()) + ' ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+  }
+  head.appendChild(people);
+  head.appendChild(time);
+  const summary = document.createElement('p');
+  summary.className = 'tl-summary';
+  summary.textContent = h.summary || '';
+  card.appendChild(head);
+  card.appendChild(summary);
+  // P0-AI: AI 生成的摘要加免责提示，避免志愿者误判任务状态
+  if (!isRuleEngine) {
+    const disclaimer = document.createElement('div');
+    disclaimer.className = 'ai-disclaimer';
+    const dIcon = document.createElement('span');
+    dIcon.className = 'ai-disclaimer-icon';
+    dIcon.setAttribute('aria-hidden', 'true');
+    dIcon.textContent = '⚠️';
+    const dText = document.createElement('span');
+    dText.className = 'ai-disclaimer-text';
+    dText.textContent = '此摘要由 AI 生成，仅供参考，请务必核对原始任务和留言。';
+    disclaimer.appendChild(dIcon);
+    disclaimer.appendChild(dText);
+    card.appendChild(disclaimer);
+  }
+  if (h.status === 'confirmed' && h.confirmed_by) {
+    const conf = document.createElement('p');
+    conf.className = 'tl-confirmed';
+    conf.style.cssText = 'margin:0.4rem 0 0;font-size:0.78rem;color:var(--v-text-secondary);';
+    let confStr = '已由 ' + (h.confirmed_by || '') + ' 确认接收';
+    if (h.confirmed_at) {
+      const dt = new Date(h.confirmed_at);
+      const pad = n => String(n).padStart(2, '0');
+      confStr += ' 于 ' + dt.getFullYear() + '-' + pad(dt.getMonth()+1) + '-' + pad(dt.getDate()) + ' ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+    }
+    conf.textContent = confStr;
+    card.appendChild(conf);
+  }
+  if (h.status !== 'confirmed') {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'primary-btn confirm-handoff-btn';
+    btn.style.marginTop = '0.6rem';
+    btn.setAttribute('data-handoff-id', String(h.id));
+    btn.setAttribute('aria-label', '确认接收此交接');
+    btn.textContent = '确认接收';
+    _attachConfirmHandoffHandler(btn);
+    card.appendChild(btn);
+  }
+  li.appendChild(card);
+  return li;
+}
+
+async function _refreshVolunteerTasks() {
+  const data = await _fetchProject();
+  if (!data) return;
+  const titleEl = document.getElementById('taskTitle');
+  if (!titleEl) return;
+  const section = titleEl.closest('.h5-section');
+  let ul = document.getElementById('volunteerTaskList');
+  if (data.tasks.length === 0) {
+    if (ul) ul.remove();
+    let emptyEl = section.querySelector('.v-empty');
+    if (!emptyEl) {
+      emptyEl = document.createElement('div');
+      emptyEl.className = 'v-empty';
+      emptyEl.innerHTML =
+        '<svg class="v-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' +
+        '<div class="v-empty-title">暂无任务</div>' +
+        '<div class="v-empty-desc">点击「新增任务」记录待办事项</div>' +
+        '<a href="#taskTitle" class="v-empty-cta">查看任务看板 →</a>';
+      section.appendChild(emptyEl);
+    }
+    const cp = section.querySelector('.count-pill');
+    if (cp) cp.remove();
+    return;
+  }
+  let emptyEl = section.querySelector('.v-empty');
+  if (emptyEl) emptyEl.remove();
+  if (!ul) {
+    ul = document.createElement('ul');
+    ul.className = 'h5-task-list';
+    ul.id = 'volunteerTaskList';
+    section.appendChild(ul);
+  }
+  ul.innerHTML = '';
+  data.tasks.forEach(t => ul.appendChild(_buildTaskLi(t)));
+  let countPill = section.querySelector('.count-pill');
+  if (!countPill) {
+    countPill = document.createElement('span');
+    countPill.className = 'count-pill';
+    countPill.style.cssText = 'background:var(--v-bg);color:var(--v-text-secondary);font-size:0.72rem;padding:2px 8px;border-radius:99px;border:1px solid var(--v-border);';
+    titleEl.appendChild(countPill);
+  }
+  countPill.textContent = String(data.tasks.length);
+}
+
+async function _refreshVolunteerMessages() {
+  const data = await _fetchProject();
+  if (!data) return;
+  const titleEl = document.getElementById('msgTitle');
+  if (!titleEl) return;
+  const section = titleEl.parentElement;
+  const form = document.getElementById('volunteerMessageForm');
+  let ul = document.getElementById('volunteerMessageList');
+  let emptyEl = document.getElementById('volunteerMessageEmpty');
+  if (data.messages.length === 0) {
+    if (ul) ul.remove();
+    if (!emptyEl) {
+      emptyEl = document.createElement('div');
+      emptyEl.className = 'v-empty';
+      emptyEl.id = 'volunteerMessageEmpty';
+      emptyEl.innerHTML =
+        '<svg class="v-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' +
+        '<div class="v-empty-title">暂无留言</div>' +
+        '<div class="v-empty-desc">发起第一条讨论吧</div>' +
+        '<a href="#volContent" class="v-empty-cta">去留言 →</a>';
+      if (form && form.parentNode) form.parentNode.insertBefore(emptyEl, form.nextSibling);
+    }
+    const cp = section.querySelector('.count-pill');
+    if (cp) cp.remove();
+    return;
+  }
+  if (emptyEl) emptyEl.remove();
+  if (!ul) {
+    ul = document.createElement('ul');
+    ul.className = 'bubble-list';
+    ul.id = 'volunteerMessageList';
+    ul.style.marginTop = '0.75rem';
+    if (form && form.parentNode) form.parentNode.insertBefore(ul, form.nextSibling);
+  }
+  ul.innerHTML = '';
+  data.messages.forEach(m => ul.appendChild(_buildMessageLi(m)));
+  let countPill = section.querySelector('.count-pill');
+  if (!countPill) {
+    countPill = document.createElement('span');
+    countPill.className = 'count-pill';
+    countPill.style.cssText = 'background:var(--v-bg);color:var(--v-text-secondary);font-size:0.72rem;padding:2px 8px;border-radius:99px;border:1px solid var(--v-border);';
+    titleEl.appendChild(countPill);
+  }
+  countPill.textContent = String(data.messages.length);
+}
+
+async function _refreshVolunteerHandoffs() {
+  const data = await _fetchProject();
+  if (!data) return;
+  const titleEl = document.getElementById('handoffTitle');
+  if (!titleEl) return;
+  const section = titleEl.parentElement;
+  let ul = document.getElementById('volunteerHandoffList');
+  let emptyEl = section.querySelector('.v-empty');
+  if (data.handoffs.length === 0) {
+    if (ul) ul.remove();
+    if (!emptyEl) {
+      emptyEl = document.createElement('div');
+      emptyEl.className = 'v-empty';
+      emptyEl.innerHTML =
+        '<svg class="v-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
+        '<div class="v-empty-title">暂无交接记录</div>' +
+        '<div class="v-empty-desc">等待管理员或老志愿者记录交接</div>' +
+        '<a href="#volunteerMessageForm" class="v-empty-cta">联系管理员 →</a>';
+      section.appendChild(emptyEl);
+    }
+    const cp = section.querySelector('.count-pill');
+    if (cp) cp.remove();
+    return;
+  }
+  if (emptyEl) emptyEl.remove();
+  if (!ul) {
+    ul = document.createElement('ul');
+    ul.className = 'timeline';
+    ul.id = 'volunteerHandoffList';
+    section.appendChild(ul);
+  }
+  ul.innerHTML = '';
+  data.handoffs.forEach(h => ul.appendChild(_buildHandoffLi(h)));
+  let countPill = section.querySelector('.count-pill');
+  if (!countPill) {
+    countPill = document.createElement('span');
+    countPill.className = 'count-pill';
+    countPill.style.cssText = 'background:var(--v-bg);color:var(--v-text-secondary);font-size:0.72rem;padding:2px 8px;border-radius:99px;border:1px solid var(--v-border);';
+    titleEl.appendChild(countPill);
+  }
+  countPill.textContent = String(data.handoffs.length);
+}
+
+function _connectSSE() {
+  if (_syncES) { try { _syncES.close(); } catch(e){} }
+  _setSyncState('reconnecting');
+  try {
+    _syncES = new EventSource('/api/projects/' + projectId + '/events?qr_token=' + encodeURIComponent(qrToken));
+  } catch(e) {
+    _syncReconnectTimer = setTimeout(_connectSSE, 3000);
+    return;
+  }
+  _syncES.addEventListener('hello', () => _setSyncState('live'));
+  // P2-2: 监听 ping 心跳事件（可选，仅作为保活确认，无需处理）
+  _syncES.addEventListener('ping', () => {});
+  _syncES.addEventListener('task_updated', () => _refreshVolunteerTasks());
+  _syncES.addEventListener('task_created', () => _refreshVolunteerTasks());
+  _syncES.addEventListener('task_deleted', () => _refreshVolunteerTasks());
+  _syncES.addEventListener('message_created', () => _refreshVolunteerMessages());
+  _syncES.addEventListener('handoff_created', () => _refreshVolunteerHandoffs());
+  _syncES.addEventListener('handoff_updated', () => _refreshVolunteerHandoffs());
+  _syncES.addEventListener('error', () => {
+    _setSyncState('reconnecting');
+    try { _syncES.close(); } catch(e){}
+    _syncES = null;
+    if (_syncReconnectTimer) clearTimeout(_syncReconnectTimer);
+    _syncReconnectTimer = setTimeout(_connectSSE, 3000);
+  });
+}
+
+// Phase 7.3 (Lighthouse P0): SSE 延迟到 idle 时连接，避免与首屏渲染竞争网络/CPU 资源
+if ('requestIdleCallback' in window) {
+  window.requestIdleCallback(_connectSSE, { timeout: 2000 });
+} else {
+  setTimeout(_connectSSE, 0);
+}
+window.addEventListener('beforeunload', () => { if (_syncES) _syncES.close(); });
+</script>
+{% endblock %}

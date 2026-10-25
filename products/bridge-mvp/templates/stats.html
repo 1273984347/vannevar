@@ -1,0 +1,966 @@
+{% extends "base.html" %}
+
+{% block title %}统计仪表盘 · Bridge{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/stats.css">
+<!-- Phase 6.6.1 视觉重设计:案卷纸视觉语言(覆盖 stats.css 令牌) -->
+<link rel="stylesheet" href="/static/archive-paper.css">
+{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="brand">
+    <span class="v-logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 6 L12 18 L20 6"/>
+      </svg>
+    </span>
+    <div class="brand-text">
+      <h1>
+        统计仪表盘
+        <span class="scene-icon" aria-hidden="true" title="社会服务 · 公益项目交接">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21h-10a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2z"/>
+            <line x1="12" y1="11" x2="12" y2="11"/>
+            <line x1="8" y1="11" x2="8" y2="11"/>
+            <line x1="16" y1="11" x2="16" y2="11"/>
+          </svg>
+        </span>
+      </h1>
+      <p>Bridge · 数据概览</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <a href="/" class="secondary-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      返回列表
+    </a>
+  </div>
+</header>
+
+<main class="container" id="main-content">
+  {# —— KPI 卡片 —— #}
+  <section class="stats-kpi-grid" aria-label="核心指标">
+    <div class="stat-kpi" data-archive-no="壹">
+      <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      <p class="kpi-label">项目总数</p>
+      <p class="kpi-value">{{ stats.projects.total }}</p>
+      <p class="kpi-hint">含 active / archived / done 全状态</p>
+    </div>
+    <div class="stat-kpi" data-archive-no="贰">
+      <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <p class="kpi-label">任务总数</p>
+      <p class="kpi-value">{{ stats.tasks.total }}</p>
+      <p class="kpi-hint">todo / in_progress / done 累计</p>
+    </div>
+    <div class="stat-kpi" data-archive-no="叁">
+      <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <p class="kpi-label">留言总数</p>
+      <p class="kpi-value">{{ stats.messages_total }}</p>
+      <p class="kpi-hint">项目级 + 关联任务</p>
+    </div>
+    <div class="stat-kpi" data-archive-no="肆">
+      <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+      <p class="kpi-label">交接总数</p>
+      <p class="kpi-value">{{ stats.handoffs_total }}</p>
+      <p class="kpi-hint">全状态累计</p>
+    </div>
+  </section>
+
+  {# —— Phase 4.3: 平台生态指标 KPI 卡片 —— #}
+  <section class="stats-kpi-grid" aria-label="Phase 4.3 平台生态指标">
+    <div class="stat-kpi" data-archive-no="伍">
+      <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <p class="kpi-label">注册用户</p>
+      <p class="kpi-value">{{ stats.users.total }}</p>
+      <p class="kpi-sub">活跃 {{ stats.users.active }}</p>
+      <p class="kpi-hint">含活跃 + 非活跃账号</p>
+    </div>
+    <div class="stat-kpi" data-archive-no="陆">
+      <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+      <p class="kpi-label">云端同步项</p>
+      <p class="kpi-value">{{ stats.sync.total }}</p>
+      <p class="kpi-sub">{{ stats.sync.active_users }} 用户参与</p>
+      <p class="kpi-hint">Focus + Muse push 累计</p>
+    </div>
+    <div class="stat-kpi" data-archive-no="柒">
+      <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      <p class="kpi-label">Focus 快照</p>
+      <p class="kpi-value">{{ stats.context.snapshots_total }}</p>
+      <p class="kpi-sub">推送到项目档案</p>
+      <p class="kpi-hint">扩展主动推送的标签上下文</p>
+    </div>
+    <div class="stat-kpi" data-archive-no="捌">
+      <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      <p class="kpi-label">Muse 灵感</p>
+      <p class="kpi-value">{{ stats.context.inspirations_total }}</p>
+      <p class="kpi-sub">推送到项目档案</p>
+      <p class="kpi-hint">扩展主动推送的灵感卡片</p>
+    </div>
+    <div class="stat-kpi" data-archive-no="玖">
+      <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/></svg>
+      <p class="kpi-label">Agent 建议</p>
+      <p class="kpi-value">{{ stats.agent.total }}</p>
+      <p class="kpi-sub">待处理 {{ stats.agent.by_status.pending }}</p>
+      <p class="kpi-hint">AI 主动建议总数（4 类）</p>
+    </div>
+  </section>
+
+  {# —— NameThatUI 同族对比分组：趋势类（单折线 + 多折线对比） —— #}
+  <h2 class="chart-group-title">
+    <span class="group-tag">Trend</span>
+    <span class="group-name">趋势对比</span>
+    <span class="group-desc">时间序列变化 · 单指标趋势 + 跨产品多指标同台对比</span>
+  </h2>
+
+  {# —— 近 7 天任务新增趋势 —— #}
+  {% set daily = stats.daily_tasks | default([]) %}
+  {% set trend_max = daily | map(attribute='count') | max if daily else 0 %}
+  <section class="stats-charts" style="grid-template-columns: 1fr; margin-bottom: 1.25rem;">
+    <div class="chart-card" style="animation: fadeSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;">
+      <h3>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
+        近 7 天任务新增趋势
+      </h3>
+      {% if trend_max and trend_max > 0 %}
+        {% set y_max = trend_max %}
+        {% set plot_left = 40 %}
+        {% set plot_right = 685 %}
+        {% set plot_top = 15 %}
+        {% set plot_bottom = 170 %}
+        {% set plot_w = plot_right - plot_left %}
+        {% set plot_h = plot_bottom - plot_top %}
+        {% set n = daily | length %}
+        {% set x_step = (plot_w / (n - 1)) if n > 1 else 0 %}
+        <div class="trend-chart" id="trendChart">
+          <svg viewBox="0 0 700 200" preserveAspectRatio="xMidYMid meet" style="width:100%;height:200px;display:block;" role="img" aria-label="近 7 天任务新增趋势折线图">
+            {# 网格线 + Y 轴标签 (5 条: 0%, 25%, 50%, 75%, 100%) #}
+            {% for level in [0, 1, 2, 3, 4] %}
+              {% set y = plot_bottom - (level / 4) * plot_h %}
+              {% set tick_val = (y_max * level / 4) | round | int %}
+              <line class="chart-grid-line" x1="{{ plot_left }}" y1="{{ '%.2f' | format(y) }}" x2="{{ plot_right }}" y2="{{ '%.2f' | format(y) }}" stroke-width="1" stroke-dasharray="3 3"/>
+              <text class="chart-axis-text" x="{{ plot_left - 6 }}" y="{{ '%.2f' | format(y + 3) }}" text-anchor="end" style="font-size:10px;">{{ tick_val }}</text>
+            {% endfor %}
+
+            {# 计算折线点位 #}
+            {% set ns = namespace(points="") %}
+            {% for d in daily %}
+              {% set xi = plot_left + loop.index0 * x_step %}
+              {% set yi = plot_bottom - (d.count / y_max) * plot_h %}
+              {% set sep = ' ' if ns.points else '' %}
+              {% set ns.points = ns.points ~ sep ~ ('%.2f' | format(xi)) ~ ',' ~ ('%.2f' | format(yi)) %}
+            {% endfor %}
+
+            {# 填充区域 polygon #}
+            <polygon class="chart-area" points="{{ plot_left }},{{ plot_bottom }} {{ ns.points }} {{ plot_right }},{{ plot_bottom }}" fill-opacity="0.8" stroke="none"/>
+
+            {# 折线 #}
+            <polyline class="chart-line-1" points="{{ ns.points }}" fill="none" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+
+            {# 数据点 + 数值标签 #}
+            {% for d in daily %}
+              {% set xi = plot_left + loop.index0 * x_step %}
+              {% set yi = plot_bottom - (d.count / y_max) * plot_h %}
+              <circle class="chart-dot-1" cx="{{ '%.2f' | format(xi) }}" cy="{{ '%.2f' | format(yi) }}" r="4" stroke-width="1.5"><title>{{ d.date }}：{{ d.count }} 个任务</title></circle>
+              {% if d.count > 0 %}
+                <text class="chart-label" x="{{ '%.2f' | format(xi) }}" y="{{ '%.2f' | format(yi - 8) }}" text-anchor="middle" style="font-size:10px;font-weight:600;">{{ d.count }}</text>
+              {% endif %}
+            {% endfor %}
+
+            {# X 轴日期标签 #}
+            {% for d in daily %}
+              {% set xi = plot_left + loop.index0 * x_step %}
+              <text class="chart-axis-text" x="{{ '%.2f' | format(xi) }}" y="{{ plot_bottom + 18 }}" text-anchor="middle" style="font-size:10px;">{{ d.date }}</text>
+            {% endfor %}
+          </svg>
+        </div>
+        <table class="visually-hidden" aria-label="近 7 天任务新增数据">
+          <thead><tr><th>日期</th><th>新增任务数</th></tr></thead>
+          <tbody>
+            {% for d in daily %}<tr><td>{{ d.date }}</td><td>{{ d.count }}</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="stats-empty v-empty">
+          <p class="v-empty-title">暂无任务数据</p>
+          <p class="v-empty-desc">创建项目后，这里会显示近 7 天任务新增趋势</p>
+          <a class="v-empty-cta primary-btn" href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>创建项目</a>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+
+  {# —— Phase 4.3: 跨产品活动多折线对比图 —— #}
+  {% set dp = stats.daily_projects | default([]) %}
+  {% set dt = stats.daily_tasks | default([]) %}
+  {% set dm = stats.daily_messages | default([]) %}
+  {% set ds = stats.daily_snapshots | default([]) %}
+  {% set di = stats.daily_inspirations | default([]) %}
+  {% set all_counts = [] %}
+  {% for d in dp %}{% set _ = all_counts.append(d.count) %}{% endfor %}
+  {% for d in dt %}{% set _ = all_counts.append(d.count) %}{% endfor %}
+  {% for d in dm %}{% set _ = all_counts.append(d.count) %}{% endfor %}
+  {% for d in ds %}{% set _ = all_counts.append(d.count) %}{% endfor %}
+  {% for d in di %}{% set _ = all_counts.append(d.count) %}{% endfor %}
+  {% set ml_max = all_counts | max if all_counts else 0 %}
+  <section class="stats-charts" style="grid-template-columns: 1fr; margin-bottom: 1.25rem;">
+    <div class="chart-card">
+      <h3>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="3" y1="20" x2="21" y2="20"/></svg>
+        Phase 4.3 · 跨产品活动趋势对比（近 7 天）
+      </h3>
+      {% if ml_max and ml_max > 0 %}
+        {% set y_max = ml_max %}
+        {% set plot_left = 50 %}
+        {% set plot_right = 685 %}
+        {% set plot_top = 15 %}
+        {% set plot_bottom = 170 %}
+        {% set plot_w = plot_right - plot_left %}
+        {% set plot_h = plot_bottom - plot_top %}
+        {% set n = dp | length %}
+        {% set x_step = (plot_w / (n - 1)) if n > 1 else 0 %}
+        <div class="multi-line-chart">
+          <svg viewBox="0 0 700 200" preserveAspectRatio="xMidYMid meet" style="width:100%;height:220px;display:block;" role="img" aria-label="近 7 天跨产品活动趋势对比折线图，含项目、任务、留言、Focus 快照、Muse 灵感 5 条折线">
+            {# 网格线 + Y 轴标签 #}
+            {% for level in [0, 1, 2, 3, 4] %}
+              {% set y = plot_bottom - (level / 4) * plot_h %}
+              {% set tick_val = (y_max * level / 4) | round | int %}
+              <line class="chart-grid-line" x1="{{ plot_left }}" y1="{{ '%.2f' | format(y) }}" x2="{{ plot_right }}" y2="{{ '%.2f' | format(y) }}" stroke-width="1" stroke-dasharray="3 3"/>
+              <text class="chart-axis-text" x="{{ plot_left - 6 }}" y="{{ '%.2f' | format(y + 3) }}" text-anchor="end" style="font-size:10px;">{{ tick_val }}</text>
+            {% endfor %}
+
+            {# X 轴日期标签 #}
+            {% for d in dp %}
+              {% set xi = plot_left + loop.index0 * x_step %}
+              <text class="chart-axis-text" x="{{ '%.2f' | format(xi) }}" y="{{ plot_bottom + 16 }}" text-anchor="middle" style="font-size:10px;">{{ d.date }}</text>
+            {% endfor %}
+
+            {# 5 条折线 — 颜色统一使用设计令牌（P1-DOG-I）#}
+            {# 1. 项目（emerald 主色）#}
+            {% set ns_p = namespace(points="") %}
+            {% for d in dp %}
+              {% set xi = plot_left + loop.index0 * x_step %}
+              {% set yi = plot_bottom - (d.count / y_max) * plot_h %}
+              {% set sep = ' ' if ns_p.points else '' %}
+              {% set ns_p.points = ns_p.points ~ sep ~ ('%.2f' | format(xi)) ~ ',' ~ ('%.2f' | format(yi)) %}
+            {% endfor %}
+            <polyline class="line-path chart-line-2" points="{{ ns_p.points }}"/>
+            {% for d in dp %}
+              {% set xi = plot_left + loop.index0 * x_step %}
+              {% set yi = plot_bottom - (d.count / y_max) * plot_h %}
+              <circle class="line-dot chart-dot-2" cx="{{ '%.2f' | format(xi) }}" cy="{{ '%.2f' | format(yi) }}" r="3"><title>项目 · {{ d.date }}：{{ d.count }}</title></circle>
+            {% endfor %}
+
+            {# 2. 任务（teal）#}
+            {% set ns_t = namespace(points="") %}
+            {% for d in dt %}
+              {% set xi = plot_left + loop.index0 * x_step %}
+              {% set yi = plot_bottom - (d.count / y_max) * plot_h %}
+              {% set sep = ' ' if ns_t.points else '' %}
+              {% set ns_t.points = ns_t.points ~ sep ~ ('%.2f' | format(xi)) ~ ',' ~ ('%.2f' | format(yi)) %}
+            {% endfor %}
+            <polyline class="line-path chart-line-3" points="{{ ns_t.points }}"/>
+            {% for d in dt %}
+              {% set xi = plot_left + loop.index0 * x_step %}
+              {% set yi = plot_bottom - (d.count / y_max) * plot_h %}
+              <circle class="line-dot chart-dot-3" cx="{{ '%.2f' | format(xi) }}" cy="{{ '%.2f' | format(yi) }}" r="3"><title>任务 · {{ d.date }}：{{ d.count }}</title></circle>
+            {% endfor %}
+
+            {# 3. 留言（amber 警示色）#}
+            {% set ns_m = namespace(points="") %}
+            {% for d in dm %}
+              {% set xi = plot_left + loop.index0 * x_step %}
+              {% set yi = plot_bottom - (d.count / y_max) * plot_h %}
+              {% set sep = ' ' if ns_m.points else '' %}
+              {% set ns_m.points = ns_m.points ~ sep ~ ('%.2f' | format(xi)) ~ ',' ~ ('%.2f' | format(yi)) %}
+            {% endfor %}
+            <polyline class="line-path chart-line-4" points="{{ ns_m.points }}"/>
+            {% for d in dm %}
+              {% set xi = plot_left + loop.index0 * x_step %}
+              {% set yi = plot_bottom - (d.count / y_max) * plot_h %}
+              <circle class="line-dot chart-dot-4" cx="{{ '%.2f' | format(xi) }}" cy="{{ '%.2f' | format(yi) }}" r="3"><title>留言 · {{ d.date }}：{{ d.count }}</title></circle>
+            {% endfor %}
+
+            {# 4. Focus 快照（indigo）#}
+            {% set ns_s = namespace(points="") %}
+            {% for d in ds %}
+              {% set xi = plot_left + loop.index0 * x_step %}
+              {% set yi = plot_bottom - (d.count / y_max) * plot_h %}
+              {% set sep = ' ' if ns_s.points else '' %}
+              {% set ns_s.points = ns_s.points ~ sep ~ ('%.2f' | format(xi)) ~ ',' ~ ('%.2f' | format(yi)) %}
+            {% endfor %}
+            <polyline class="line-path chart-line-5" points="{{ ns_s.points }}"/>
+            {% for d in ds %}
+              {% set xi = plot_left + loop.index0 * x_step %}
+              {% set yi = plot_bottom - (d.count / y_max) * plot_h %}
+              <circle class="line-dot chart-dot-5" cx="{{ '%.2f' | format(xi) }}" cy="{{ '%.2f' | format(yi) }}" r="3"><title>Focus 快照 · {{ d.date }}：{{ d.count }}</title></circle>
+            {% endfor %}
+
+            {# 5. Muse 灵感（rose）#}
+            {% set ns_i = namespace(points="") %}
+            {% for d in di %}
+              {% set xi = plot_left + loop.index0 * x_step %}
+              {% set yi = plot_bottom - (d.count / y_max) * plot_h %}
+              {% set sep = ' ' if ns_i.points else '' %}
+              {% set ns_i.points = ns_i.points ~ sep ~ ('%.2f' | format(xi)) ~ ',' ~ ('%.2f' | format(yi)) %}
+            {% endfor %}
+            <polyline class="line-path chart-line-6" points="{{ ns_i.points }}"/>
+            {% for d in di %}
+              {% set xi = plot_left + loop.index0 * x_step %}
+              {% set yi = plot_bottom - (d.count / y_max) * plot_h %}
+              <circle class="line-dot chart-dot-6" cx="{{ '%.2f' | format(xi) }}" cy="{{ '%.2f' | format(yi) }}" r="3"><title>Muse 灵感 · {{ d.date }}：{{ d.count }}</title></circle>
+            {% endfor %}
+          </svg>
+        </div>
+        <div class="line-legend">
+          <div class="line-legend-item"><span class="line-legend-swatch chart-line-2-bg"></span>项目</div>
+          <div class="line-legend-item"><span class="line-legend-swatch chart-line-3-bg"></span>任务</div>
+          <div class="line-legend-item"><span class="line-legend-swatch chart-line-4-bg"></span>留言</div>
+          <div class="line-legend-item"><span class="line-legend-swatch chart-line-5-bg"></span>Focus 快照</div>
+          <div class="line-legend-item"><span class="line-legend-swatch chart-line-6-bg"></span>Muse 灵感</div>
+        </div>
+        <table class="visually-hidden" aria-label="近 7 天跨产品活动趋势数据">
+          <thead><tr><th>日期</th><th>项目</th><th>任务</th><th>留言</th><th>Focus 快照</th><th>Muse 灵感</th></tr></thead>
+          <tbody>
+            {% for i in range(dp | length) %}
+            <tr>
+              <td>{{ dp[i].date }}</td>
+              <td>{{ dp[i].count }}</td>
+              <td>{{ dt[i].count }}</td>
+              <td>{{ dm[i].count }}</td>
+              <td>{{ ds[i].count }}</td>
+              <td>{{ di[i].count }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="stats-empty v-empty">
+          <p class="v-empty-title">近 7 天暂无活动数据</p>
+          <p class="v-empty-desc">项目 / 任务 / 留言 / Focus 快照 / Muse 灵感的活动会在同一时间轴对比</p>
+          <a class="v-empty-cta primary-btn" href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>创建项目</a>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+
+  {# —— NameThatUI 同族对比分组：占比与分布类（环形图 + 条形图） —— #}
+  <h2 class="chart-group-title">
+    <span class="group-tag">Distribution</span>
+    <span class="group-name">占比与分布</span>
+    <span class="group-desc">状态/类型切片 · 环形图看占比 + 条形图看离散分布</span>
+  </h2>
+
+  {# —— 图表区 —— #}
+  <section class="stats-charts">
+    {# 任务状态分布 — 环形图 #}
+    {% set total_tasks = stats.tasks.total %}
+    {% set ts = stats.tasks.by_status %}
+    {% set todo_n = ts.todo %}
+    {% set inprog_n = ts.in_progress %}
+    {% set done_n = ts.done %}
+    {% set circ = 314.16 %}
+    {% if total_tasks > 0 %}
+      {% set todo_pct = todo_n / total_tasks %}
+      {% set inprog_pct = inprog_n / total_tasks %}
+      {% set done_pct = done_n / total_tasks %}
+    {% else %}
+      {% set todo_pct = 0.0 %}
+      {% set inprog_pct = 0.0 %}
+      {% set done_pct = 0.0 %}
+    {% endif %}
+
+    <div class="chart-card">
+      <h3>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+        任务状态分布
+      </h3>
+      <div class="donut-wrap">
+        <svg class="donut-svg" width="160" height="160" viewBox="0 0 120 120" role="img" aria-label="任务状态环形图：待办 {{ todo_n }}，进行中 {{ inprog_n }}，已完成 {{ done_n }}">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="var(--v-border)" stroke-width="14"/>
+          {% if total_tasks > 0 %}
+          <circle cx="60" cy="60" r="50" fill="none" stroke="var(--v-text-muted)" stroke-width="14"
+            stroke-dasharray="{{ '%.2f' % (todo_pct * circ) }} {{ '%.2f' % circ }}"
+            stroke-dashoffset="0"
+            transform="rotate(-90 60 60)"><title>待办：{{ todo_n }}</title></circle>
+          <circle cx="60" cy="60" r="50" fill="none" stroke="var(--v-warning)" stroke-width="14"
+            stroke-dasharray="{{ '%.2f' % (inprog_pct * circ) }} {{ '%.2f' % circ }}"
+            stroke-dashoffset="{{ '%.2f' % (-todo_pct * circ) }}"
+            transform="rotate(-90 60 60)"><title>进行中：{{ inprog_n }}</title></circle>
+          <circle cx="60" cy="60" r="50" fill="none" stroke="var(--v-success)" stroke-width="14"
+            stroke-dasharray="{{ '%.2f' % (done_pct * circ) }} {{ '%.2f' % circ }}"
+            stroke-dashoffset="{{ '%.2f' % (-(todo_pct + inprog_pct) * circ) }}"
+            transform="rotate(-90 60 60)"><title>已完成：{{ done_n }}</title></circle>
+          {% endif %}
+          <text x="60" y="56" text-anchor="middle" class="donut-total-text" style="font-size:22px;font-weight:700;fill:var(--v-text);">{{ total_tasks }}</text>
+          <text x="60" y="74" text-anchor="middle" style="font-size:9px;fill:var(--v-text-muted);">任务</text>
+        </svg>
+        <div class="legend">
+          <div class="legend-item">
+            <span class="legend-dot" style="background: var(--v-text-muted);"></span>
+            <span>待办</span>
+            <span class="legend-count">{{ todo_n }}</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot" style="background: var(--v-warning);"></span>
+            <span>进行中</span>
+            <span class="legend-count">{{ inprog_n }}</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot" style="background: var(--v-success);"></span>
+            <span>已完成</span>
+            <span class="legend-count">{{ done_n }}</span>
+          </div>
+        </div>
+        <table class="visually-hidden" aria-label="任务状态分布数据">
+          <thead><tr><th>状态</th><th>数量</th></tr></thead>
+          <tbody>
+            <tr><td>待办</td><td>{{ todo_n }}</td></tr>
+            <tr><td>进行中</td><td>{{ inprog_n }}</td></tr>
+            <tr><td>已完成</td><td>{{ done_n }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {# 项目状态分布 — 条形图 #}
+    {% set total_projects = stats.projects.total %}
+    {% set ps = stats.projects.by_status %}
+    {% set max_n = [ps.active, ps.archived, ps.done, 1] | max %}
+    <div class="chart-card">
+      <h3>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        项目状态分布
+      </h3>
+      <div class="bar-row" title="进行中：{{ ps.active }}" aria-label="进行中：{{ ps.active }}">
+        <span class="bar-label">进行中</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width: {{ (ps.active / max_n * 100) | round }}%; background: var(--v-primary);"></div>
+        </div>
+        <span class="bar-value">{{ ps.active }}</span>
+      </div>
+      <div class="bar-row" title="已归档：{{ ps.archived }}" aria-label="已归档：{{ ps.archived }}">
+        <span class="bar-label">已归档</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width: {{ (ps.archived / max_n * 100) | round }}%; background: var(--v-text-muted);"></div>
+        </div>
+        <span class="bar-value">{{ ps.archived }}</span>
+      </div>
+      <div class="bar-row" title="已完成：{{ ps.done }}" aria-label="已完成：{{ ps.done }}">
+        <span class="bar-label">已完成</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width: {{ (ps.done / max_n * 100) | round }}%; background: var(--v-success);"></div>
+        </div>
+        <span class="bar-value">{{ ps.done }}</span>
+      </div>
+      <table class="visually-hidden" aria-label="项目状态分布数据">
+        <thead><tr><th>状态</th><th>数量</th></tr></thead>
+        <tbody>
+          <tr><td>进行中</td><td>{{ ps.active }}</td></tr>
+          <tr><td>已归档</td><td>{{ ps.archived }}</td></tr>
+          <tr><td>已完成</td><td>{{ ps.done }}</td></tr>
+        </tbody>
+      </table>
+      <p class="hint" style="margin: 0.75rem 0 0; font-size: 0.78rem;">共 {{ total_projects }} 个项目</p>
+    </div>
+  </section>
+
+  {# —— Phase 4.3: SyncItem 跨产品分布 + Agent 建议分布 —— #}
+  <section class="stats-charts">
+    {# SyncItem 按 app 分布 — 环形图 #}
+    {% set sync_total = stats.sync.total %}
+    {% set sa = stats.sync.by_app %}
+    {% set focus_n = sa.focus %}
+    {% set muse_n = sa.muse %}
+    {% set sync_circ = 314.16 %}
+    {% if sync_total > 0 %}
+      {% set focus_pct = focus_n / sync_total %}
+      {% set muse_pct = muse_n / sync_total %}
+    {% else %}
+      {% set focus_pct = 0.0 %}
+      {% set muse_pct = 0.0 %}
+    {% endif %}
+
+    <div class="chart-card">
+      <h3>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+        SyncItem · 按产品分布
+      </h3>
+      <div class="donut-wrap">
+        <svg class="donut-svg" width="160" height="160" viewBox="0 0 120 120" role="img" aria-label="SyncItem 产品分布环形图：Focus {{ focus_n }}，Muse {{ muse_n }}">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="var(--v-border)" stroke-width="14"/>
+          {% if sync_total > 0 %}
+          <circle class="chart-line-2" cx="60" cy="60" r="50" fill="none" stroke-width="14"
+            stroke-dasharray="{{ '%.2f' % (focus_pct * sync_circ) }} {{ '%.2f' % sync_circ }}"
+            stroke-dashoffset="0"
+            transform="rotate(-90 60 60)"><title>Focus：{{ focus_n }}</title></circle>
+          <circle class="chart-line-5" cx="60" cy="60" r="50" fill="none" stroke-width="14"
+            stroke-dasharray="{{ '%.2f' % (muse_pct * sync_circ) }} {{ '%.2f' % sync_circ }}"
+            stroke-dashoffset="{{ '%.2f' % (-focus_pct * sync_circ) }}"
+            transform="rotate(-90 60 60)"><title>Muse：{{ muse_n }}</title></circle>
+          {% endif %}
+          <text x="60" y="56" text-anchor="middle" style="font-size:22px;font-weight:700;fill:var(--v-text);">{{ sync_total }}</text>
+          <text x="60" y="74" text-anchor="middle" style="font-size:9px;fill:var(--v-text-muted);">同步项</text>
+        </svg>
+        <div class="legend">
+          <div class="legend-item">
+            <span class="legend-dot chart-line-2-bg"></span>
+            <span>Focus</span>
+            <span class="legend-count">{{ focus_n }}</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot chart-line-5-bg"></span>
+            <span>Muse</span>
+            <span class="legend-count">{{ muse_n }}</span>
+          </div>
+        </div>
+        <table class="visually-hidden" aria-label="SyncItem 按产品分布数据">
+          <thead><tr><th>产品</th><th>数量</th></tr></thead>
+          <tbody>
+            <tr><td>Focus</td><td>{{ focus_n }}</td></tr>
+            <tr><td>Muse</td><td>{{ muse_n }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="hint" style="margin: 0.75rem 0 0; font-size: 0.78rem;">活跃用户 {{ stats.sync.active_users }} 人</p>
+    </div>
+
+    {# SyncItem 按 item_type 分布 — 条形图 #}
+    {% set sit = stats.sync.by_item_type %}
+    {% set sit_max = [sit.snapshot, sit.inspiration, sit.mood, 1] | max %}
+    <div class="chart-card">
+      <h3>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        SyncItem · 按类型分布
+      </h3>
+      <div class="bar-row" title="Snapshot：{{ sit.snapshot }}" aria-label="Snapshot：{{ sit.snapshot }}">
+        <span class="bar-label">Snapshot</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width: {{ (sit.snapshot / sit_max * 100) | round }}%; background: var(--v-series-snapshot);"></div>
+        </div>
+        <span class="bar-value">{{ sit.snapshot }}</span>
+      </div>
+      <div class="bar-row" title="Inspiration：{{ sit.inspiration }}" aria-label="Inspiration：{{ sit.inspiration }}">
+        <span class="bar-label">Inspiration</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width: {{ (sit.inspiration / sit_max * 100) | round }}%; background: var(--v-series-inspiration);"></div>
+        </div>
+        <span class="bar-value">{{ sit.inspiration }}</span>
+      </div>
+      <div class="bar-row" title="Mood：{{ sit.mood }}" aria-label="Mood：{{ sit.mood }}">
+        <span class="bar-label">Mood</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width: {{ (sit.mood / sit_max * 100) | round }}%; background: var(--v-danger);"></div>
+        </div>
+        <span class="bar-value">{{ sit.mood }}</span>
+      </div>
+      <table class="visually-hidden" aria-label="SyncItem 按类型分布数据">
+        <thead><tr><th>类型</th><th>数量</th></tr></thead>
+        <tbody>
+          <tr><td>Snapshot</td><td>{{ sit.snapshot }}</td></tr>
+          <tr><td>Inspiration</td><td>{{ sit.inspiration }}</td></tr>
+          <tr><td>Mood</td><td>{{ sit.mood }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    {# Agent 建议 — 按类型环形图 + 按状态条形图（双视图） #}
+    {% set agent_total = stats.agent.total %}
+    {% set at = stats.agent.by_type %}
+    {% set as_ = stats.agent.by_status %}
+    {% set agent_circ = 314.16 %}
+    {# P1-DOG-I F-OOB-1 修复：agent_types 颜色令牌化，避免 dark mode 下硬编码颜色不可读 #}
+    {% set agent_types = [('stale_warning', '过期警告', 'chart-line-4'), ('overdue_task', '逾期任务', 'chart-line-6'), ('handoff_gap', '交接缺口', 'chart-line-5'), ('daily_summary', '每日总结', 'chart-line-2')] %}
+    {% if agent_total > 0 %}
+      {% set ns_agent_offset = namespace(offset=0.0) %}
+    {% endif %}
+    <div class="chart-card">
+      <h3>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Agent 建议 · 按类型
+      </h3>
+      <div class="donut-wrap">
+        <svg class="donut-svg" width="160" height="160" viewBox="0 0 120 120" role="img" aria-label="Agent 建议类型环形图：过期警告 {{ at.stale_warning }}，逾期任务 {{ at.overdue_task }}，交接缺口 {{ at.handoff_gap }}，每日总结 {{ at.daily_summary }}">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="var(--v-border)" stroke-width="14"/>
+          {% if agent_total > 0 %}
+            {% for key, label, color_cls in agent_types %}
+              {% set count_val = at[key] %}
+              {% if count_val > 0 %}
+                {% set pct = count_val / agent_total %}
+                <circle class="{{ color_cls }}" cx="60" cy="60" r="50" fill="none" stroke-width="14"
+                  stroke-dasharray="{{ '%.2f' % (pct * agent_circ) }} {{ '%.2f' % agent_circ }}"
+                  stroke-dashoffset="{{ '%.2f' % (-ns_agent_offset.offset * agent_circ) }}"
+                  transform="rotate(-90 60 60)"><title>{{ label }}：{{ count_val }}</title></circle>
+                {% set ns_agent_offset.offset = ns_agent_offset.offset + pct %}
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+          <text x="60" y="56" text-anchor="middle" style="font-size:22px;font-weight:700;fill:var(--v-text);">{{ agent_total }}</text>
+          <text x="60" y="74" text-anchor="middle" style="font-size:9px;fill:var(--v-text-muted);">建议</text>
+        </svg>
+        <div class="legend">
+          {% for key, label, color_cls in agent_types %}
+          <div class="legend-item">
+            <span class="legend-dot {{ color_cls }}-bg"></span>
+            <span>{{ label }}</span>
+            <span class="legend-count">{{ at[key] }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        <table class="visually-hidden" aria-label="Agent 建议按类型分布数据">
+          <thead><tr><th>类型</th><th>数量</th></tr></thead>
+          <tbody>
+            {% for key, label, color in agent_types %}
+            <tr><td>{{ label }}</td><td>{{ at[key] }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="hint" style="margin: 0.75rem 0 0; font-size: 0.78rem;">
+        待处理 {{ as_.pending }} · 已展示 {{ as_.shown }} · 已处理 {{ as_.acted }} · 已忽略 {{ as_.dismissed }}
+      </p>
+    </div>
+  </section>
+
+  {# —— NameThatUI 同族对比分组：密度类（热力图） —— #}
+  <h2 class="chart-group-title">
+    <span class="group-tag">Density</span>
+    <span class="group-name">活跃度密度</span>
+    <span class="group-desc">GitHub 风格热力图 · 30 天按天聚合多源活动</span>
+  </h2>
+
+  {# —— Phase 4.3: 志愿者活跃度热力图（近 30 天，GitHub 风格）—— #}
+  {% set heatmap = stats.activity_heatmap | default([]) %}
+  {% set hm_totals = heatmap | map(attribute='total') | list %}
+  {% set hm_max = hm_totals | max if hm_totals else 0 %}
+  <section class="stats-charts" style="grid-template-columns: 1fr; margin-bottom: 1.25rem;">
+    <div class="chart-card">
+      <h3>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Phase 4.3 · 志愿者活跃度热力图（近 30 天）
+      </h3>
+      {% if heatmap %}
+        {% set today_iso = heatmap[-1].date %}
+        <div class="heatmap-wrap">
+          <div class="heatmap-grid" role="img" aria-label="近 30 天志愿者活跃度热力图，每格代表一天的总活动量">
+            {# GitHub 风格 5 级色阶：阈值按 3 等分（日均 ≤3 轻度 / 4-6 中度 / 7-9 较高 / 10+ 高强度），
+               与 GitHub contribution graph 视觉密度对齐；h-0 无活动用基类 var(--v-bg) 回落，无需显式 CSS 规则。 #}
+            {% for cell in heatmap %}
+              {% set total = cell.total %}
+              {% if total == 0 %}
+                {% set level = 0 %}
+              {% elif total <= 3 %}
+                {% set level = 1 %}
+              {% elif total <= 6 %}
+                {% set level = 2 %}
+              {% elif total <= 9 %}
+                {% set level = 3 %}
+              {% else %}
+                {% set level = 4 %}
+              {% endif %}
+              {% set is_today = (cell.date == today_iso) %}
+              <div class="heatmap-cell h-{{ level }}{% if is_today %} today{% endif %}" title="{{ cell.date }} · 总活动 {{ total }}（项目 {{ cell.projects }} / 任务 {{ cell.tasks }} / 留言 {{ cell.messages }} / Focus 快照 {{ cell.snapshots }} / Muse 灵感 {{ cell.inspirations }}）"></div>
+            {% endfor %}
+          </div>
+          <div class="heatmap-axis">
+            <span>{{ heatmap[0].date }}</span>
+            <span>今日 {{ heatmap[-1].date }}</span>
+          </div>
+        </div>
+        <div class="heatmap-legend">
+          <span>少</span>
+          <div class="heatmap-legend-cells">
+            <div class="heatmap-legend-cell" style="background: var(--v-bg);"></div>
+            <div class="heatmap-legend-cell" style="background: var(--v-heat-1); border-color: var(--v-heat-1-border);"></div>
+            <div class="heatmap-legend-cell" style="background: var(--v-heat-2); border-color: var(--v-heat-2-border);"></div>
+            <div class="heatmap-legend-cell" style="background: var(--v-heat-3); border-color: var(--v-heat-3-border);"></div>
+            <div class="heatmap-legend-cell" style="background: var(--v-heat-4); border-color: var(--v-heat-4-border);"></div>
+          </div>
+          <span>多</span>
+          <span class="heatmap-legend-peak">峰值 {{ hm_max }} 次/天</span>
+        </div>
+        <table class="visually-hidden" aria-label="近 30 天志愿者活跃度热力图数据">
+          <thead><tr><th>日期</th><th>总活动</th><th>项目</th><th>任务</th><th>留言</th><th>Focus 快照</th><th>Muse 灵感</th></tr></thead>
+          <tbody>
+            {% for cell in heatmap %}
+            <tr>
+              <td>{{ cell.date }}</td>
+              <td>{{ cell.total }}</td>
+              <td>{{ cell.projects }}</td>
+              <td>{{ cell.tasks }}</td>
+              <td>{{ cell.messages }}</td>
+              <td>{{ cell.snapshots }}</td>
+              <td>{{ cell.inspirations }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="stats-empty v-empty">
+          <p class="v-empty-title">暂无热力图数据</p>
+          <p class="v-empty-desc">近 30 天的志愿者活动会按天聚合展示在这里</p>
+          <a class="v-empty-cta primary-btn" href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>创建项目</a>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+
+  {# —— Phase 6.K1: 志愿者跨项目流向桑基图 —— #}
+  {% set vf = stats.volunteer_flows %}
+  <h2 class="chart-group-title">
+    <span class="group-tag">Relation</span>
+    <span class="group-name">关系流向</span>
+    <span class="group-desc">志愿者 × 项目任务分布 · 跨项目协作一目了然</span>
+  </h2>
+  <section class="stats-charts" style="grid-template-columns: 1fr; margin-bottom: 1.25rem;">
+    <div class="chart-card">
+      <h3>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>
+        Phase 6.K1 · 志愿者跨项目流向
+        {% if vf and vf.cross_project_volunteers %}<span class="count-pill">{{ vf.cross_project_volunteers }} 人跨项目</span>{% endif %}
+      </h3>
+      {% if vf and vf.flows %}
+        <div class="sankey-chart">
+          <svg viewBox="0 0 {{ vf.viewBox_w }} {{ vf.viewBox_h }}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:360px;display:block;" role="img" aria-label="志愿者跨项目流向桑基图，展示每位志愿者在不同项目中的任务分布">
+            {# 流向曲线（先画，让节点覆盖在上层） #}
+            {% for f in vf.flows %}
+              <path class="sankey-flow" d="M 200 {{ f.y1 }} C 400 {{ f.y1 }}, 400 {{ f.y2 }}, 600 {{ f.y2 }}" fill="none" stroke-width="{{ f.stroke_w }}">
+                <title>{{ f.volunteer }} → {{ f.project }}：{{ f.value }} 个任务</title>
+              </path>
+            {% endfor %}
+
+            {# 左列：志愿者节点 + 标签 #}
+            {% for v in vf.volunteers %}
+              <rect class="sankey-node sankey-vol" x="180" y="{{ v.y_start }}" width="20" height="{{ v.y_end - v.y_start }}" rx="2"/>
+              <text class="sankey-label" x="170" y="{{ v.y_center + 4 }}" text-anchor="end">{{ v.name }}</text>
+              <text class="sankey-count" x="170" y="{{ v.y_center + 16 }}" text-anchor="end">{{ v.task_count }} 任务</text>
+            {% endfor %}
+
+            {# 右列：项目节点 + 标签 #}
+            {% for p in vf.projects %}
+              <rect class="sankey-node sankey-proj" x="600" y="{{ p.y_start }}" width="20" height="{{ p.y_end - p.y_start }}" rx="2"/>
+              <text class="sankey-label" x="630" y="{{ p.y_center + 4 }}">{{ p.name }}</text>
+              <text class="sankey-count" x="630" y="{{ p.y_center + 16 }}">{{ p.task_count }} 任务</text>
+            {% endfor %}
+
+            {# 列标题 #}
+            <text class="sankey-axis" x="100" y="25" text-anchor="middle">志愿者</text>
+            <text class="sankey-axis" x="700" y="25" text-anchor="middle">项目</text>
+          </svg>
+        </div>
+        <table class="visually-hidden" aria-label="志愿者跨项目流向数据">
+          <thead><tr><th>志愿者</th><th>项目</th><th>任务数</th></tr></thead>
+          <tbody>
+            {% for f in vf.flows %}<tr><td>{{ f.volunteer }}</td><td>{{ f.project }}</td><td>{{ f.value }}</td></tr>{% endfor %}
+          </tbody>
+        </table>
+        {% if vf.cross_project_volunteers %}
+        <p class="chart-insight">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <strong>{{ vf.cross_project_volunteers }}</strong> 位志愿者跨项目参与，体现 Bridge 的核心价值——上下文无缝衔接，让志愿经验跨项目复用。
+        </p>
+        {% endif %}
+      {% else %}
+        <div class="stats-empty v-empty">
+          <p class="v-empty-title">暂无流向数据</p>
+          <p class="v-empty-desc">为任务分配负责人后，这里会显示志愿者跨项目流向桑基图</p>
+          <a class="v-empty-cta primary-btn" href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>创建项目</a>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+
+  {# —— Phase 6.K3: 项目协作网络图 —— #}
+  {% set pn = stats.project_network %}
+  {% if pn and pn.nodes %}
+  <section class="stats-charts" style="grid-template-columns: 1fr; margin-bottom: 1.25rem;">
+    <div class="chart-card">
+      <h3>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><line x1="7" y1="6" x2="10" y2="10"/><line x1="17" y1="6" x2="14" y2="10"/><line x1="7" y1="18" x2="10" y2="14"/><line x1="17" y1="18" x2="14" y2="14"/></svg>
+        Phase 6.K3 · 项目协作网络
+        {% if pn.shared_volunteers %}<span class="count-pill">{{ pn.shared_volunteers | length }} 人跨项目</span>{% endif %}
+      </h3>
+      {% if pn.edges %}
+        <div class="network-chart-wrap">
+          <svg viewBox="0 0 {{ pn.viewBox_w }} {{ pn.viewBox_h }}" preserveAspectRatio="xMidYMid meet" style="width:100%;max-width:480px;height:auto;display:block;margin:0 auto;" role="img" aria-label="项目协作网络图，节点为项目，边表示两个项目共享志愿者">
+            {# 边（先画，让节点覆盖在上层） #}
+            {% for e in pn.edges %}
+              <line class="network-edge" x1="{{ e.source_xy[0] }}" y1="{{ e.source_xy[1] }}" x2="{{ e.target_xy[0] }}" y2="{{ e.target_xy[1] }}" stroke-width="{{ 2 + e.weight * 2 }}"/>
+              {# 边中点标签：共享志愿者名 #}
+              {% set mid_x = (e.source_xy[0] + e.target_xy[0]) / 2 %}
+              {% set mid_y = (e.source_xy[1] + e.target_xy[1]) / 2 %}
+              <text class="network-edge-label" x="{{ mid_x }}" y="{{ mid_y - 6 }}" text-anchor="middle">{{ e.volunteers | join(" / ") }}</text>
+            {% endfor %}
+
+            {# 节点 #}
+            {% for node in pn.nodes %}
+              <circle class="network-node" cx="{{ node.x }}" cy="{{ node.y }}" r="{{ node.radius }}"/>
+              <text class="network-node-label" x="{{ node.x }}" y="{{ node.y + node.radius + 14 }}" text-anchor="middle">{{ node.name }}</text>
+              <text class="network-node-count" x="{{ node.x }}" y="{{ node.y + node.radius + 26 }}" text-anchor="middle">{{ node.task_count }} 任务 · {{ node.volunteer_count }} 人</text>
+            {% endfor %}
+          </svg>
+
+          <div class="network-legend">
+            <h4>跨项目志愿者</h4>
+            {% for sv in pn.shared_volunteers %}
+              <div class="network-legend-item">
+                <span class="network-legend-name">{{ sv.name }}</span>
+                <span class="network-legend-projects">{{ sv.projects | join(" ↔ ") }}</span>
+                <span class="network-legend-count">{{ sv.task_count }} 任务</span>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+        <table class="visually-hidden" aria-label="项目协作网络数据">
+          <thead><tr><th>项目 A</th><th>项目 B</th><th>共享志愿者</th><th>共享人数</th></tr></thead>
+          <tbody>
+            {% for e in pn.edges %}
+            <tr>
+              <td>{{ pn.nodes[e.source].name }}</td>
+              <td>{{ pn.nodes[e.target].name }}</td>
+              <td>{{ e.volunteers | join(", ") }}</td>
+              <td>{{ e.weight }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <p class="chart-insight">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          网络图揭示项目间的<strong>人力协同关系</strong>——共享志愿者是上下文衔接的桥梁，他们的经验在项目间流转，避免知识孤岛。
+        </p>
+      {% else %}
+        <div class="stats-empty v-empty">
+          <p class="v-empty-title">暂无协作关系</p>
+          <p class="v-empty-desc">当志愿者跨项目参与时，这里会显示项目协作网络图</p>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  {# —— Phase 6.K2: 项目健康度雷达图 —— #}
+  {% set ph = stats.project_health %}
+  {% if ph and ph.projects %}
+  <section class="stats-charts" style="grid-template-columns: 1fr; margin-bottom: 1.25rem;">
+    <div class="chart-card">
+      <h3>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="8.5" x2="22" y2="15.5"/><line x1="22" y1="8.5" x2="2" y2="15.5"/></svg>
+        Phase 6.K2 · 项目健康度雷达图
+        <span class="count-pill">{{ ph.projects | length }} 个项目</span>
+      </h3>
+      <div class="radar-chart-wrap">
+        <svg viewBox="0 0 {{ ph.viewBox_w }} {{ ph.viewBox_h }}" preserveAspectRatio="xMidYMid meet" style="width:100%;max-width:480px;height:auto;display:block;margin:0 auto;" role="img" aria-label="项目健康度雷达图，5 维评分：活跃度、完成率、交接质量、留言密度、Agent 干预">
+          {# 5 级网格五边形 #}
+          {% for ring in ph.grid_rings %}
+            <polygon class="radar-grid" points="{% for pt in ring.points %}{{ pt[0] }},{{ pt[1] }} {% endfor %}" fill="none"/>
+          {% endfor %}
+
+          {# 5 条轴线（中心 → 端点） #}
+          {% for ep in ph.axis_endpoints %}
+            <line class="radar-axis" x1="{{ ph.cx }}" y1="{{ ph.cy }}" x2="{{ ep.x }}" y2="{{ ep.y }}"/>
+          {% endfor %}
+
+          {# 每个项目的评分多边形 #}
+          {% for p in ph.projects %}
+            <polygon class="radar-polygon radar-proj-{{ loop.index }}" points="{{ p.polygon_points }}">
+              <title>{{ p.name }}：活跃度 {{ p.scores.activity }} / 完成率 {{ p.scores.completion }} / 交接 {{ p.scores.handoff_quality }} / 留言 {{ p.scores.message_density }} / Agent {{ p.scores.agent_action }}</title>
+            </polygon>
+          {% endfor %}
+
+          {# 轴标签 #}
+          {% for lbl in ph.axis_labels %}
+            <text class="radar-axis-label" x="{{ lbl.x }}" y="{{ lbl.y }}" text-anchor="middle">{{ lbl.label }}</text>
+          {% endfor %}
+
+          {# 网格刻度标签（20/40/60/80/100） #}
+          <text class="radar-tick" x="{{ ph.cx + 3 }}" y="{{ ph.cy - ph.r * 0.2 + 3 }}">20</text>
+          <text class="radar-tick" x="{{ ph.cx + 3 }}" y="{{ ph.cy - ph.r * 0.4 + 3 }}">40</text>
+          <text class="radar-tick" x="{{ ph.cx + 3 }}" y="{{ ph.cy - ph.r * 0.6 + 3 }}">60</text>
+          <text class="radar-tick" x="{{ ph.cx + 3 }}" y="{{ ph.cy - ph.r * 0.8 + 3 }}">80</text>
+          <text class="radar-tick" x="{{ ph.cx + 3 }}" y="{{ ph.cy - ph.r + 3 }}">100</text>
+        </svg>
+
+        {# 图例：每个项目 + 5 维评分明细 #}
+        <div class="radar-legend">
+          {% for p in ph.projects %}
+            <div class="radar-legend-item">
+              <span class="radar-legend-swatch radar-proj-{{ loop.index }}-bg"></span>
+              <div class="radar-legend-content">
+                <div class="radar-legend-name">{{ p.name }}</div>
+                <div class="radar-legend-scores">
+                  <span>活跃 <strong>{{ p.scores.activity }}</strong></span>
+                  <span>完成 <strong>{{ p.scores.completion }}</strong></span>
+                  <span>交接 <strong>{{ p.scores.handoff_quality }}</strong></span>
+                  <span>留言 <strong>{{ p.scores.message_density }}</strong></span>
+                  <span>Agent <strong>{{ p.scores.agent_action }}</strong></span>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      <table class="visually-hidden" aria-label="项目健康度雷达图数据">
+        <thead><tr><th>项目</th><th>状态</th><th>活跃度</th><th>完成率</th><th>交接质量</th><th>留言密度</th><th>Agent 干预</th></tr></thead>
+        <tbody>
+          {% for p in ph.projects %}
+          <tr>
+            <td>{{ p.name }}</td><td>{{ p.status }}</td>
+            <td>{{ p.scores.activity }}</td><td>{{ p.scores.completion }}</td>
+            <td>{{ p.scores.handoff_quality }}</td><td>{{ p.scores.message_density }}</td>
+            <td>{{ p.scores.agent_action }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+
+  {# —— 志愿者贡献榜 —— #}
+  <section class="card">
+    <h2>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      志愿者贡献榜
+      {% if stats.top_owners %}<span class="count-pill">{{ stats.top_owners | length }}</span>{% endif %}
+    </h2>
+    {% if stats.top_owners %}
+    <table class="contrib-table">
+      <thead>
+        <tr>
+          <th scope="col" style="width: 60px;">排名</th>
+          <th scope="col">志愿者</th>
+          <th scope="col" style="text-align: right; width: 100px;">任务数</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for owner in stats.top_owners %}
+        <tr>
+          <td class="num-cell"><span class="rank-badge rank-{{ loop.index }}">{{ loop.index }}</span></td>
+          <td><span class="owner-name">{{ owner.owner_name }}</span></td>
+          <td class="task-count-cell num-cell" style="text-align: right;">{{ owner.task_count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    {# 品牌空榜插画：奖牌/缎带，emerald 色系（P1-DOG-I 令牌化） #}
+    <div class="empty-state v-empty">
+      <div class="empty-illustration">
+        <div class="empty-glow"></div>
+        <svg class="empty-icon" viewBox="0 0 120 120" width="80" height="80" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <!-- 奖牌外圈 -->
+          <circle class="chart-line-2" cx="60" cy="48" r="22" fill="var(--v-chart-area)"/>
+          <!-- 星 -->
+          <path class="chart-line-3-fill" d="M60 36 L63.5 46 L74 46 L65.5 52.5 L69 63 L60 56.5 L51 63 L54.5 52.5 L46 46 L56.5 46 Z" stroke="none"/>
+          <!-- 缎带 -->
+          <path class="chart-line-2-fill" d="M46 65 L40 100 L52 92 L60 100 L68 92 L80 100 L74 65" stroke="none" opacity="0.85"/>
+        </svg>
+      </div>
+      <h3 class="v-empty-title">暂无贡献数据</h3>
+      <p class="v-empty-desc">为任务分配负责人后，这里会显示贡献排行</p>
+    </div>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}

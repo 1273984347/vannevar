@@ -1,0 +1,424 @@
+{% extends "base.html" %}
+
+{% block title %}故事模式 · Bridge{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/story.css">
+{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="brand">
+    <span class="v-logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 6 L12 18 L20 6"/>
+      </svg>
+    </span>
+    <div class="brand-text">
+      <h1>
+        故事模式
+        <span class="scene-icon" aria-hidden="true" title="30 天回放 · 5 章价值叙事">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+        </span>
+      </h1>
+      <p>Bridge · 30 天时间轴回放 · 5 章价值叙事</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <a href="/demo" class="secondary-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      返回演示管理
+    </a>
+    <a href="/admin/stats" class="secondary-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      查看仪表盘
+    </a>
+  </div>
+</header>
+
+<main class="container story-container" id="main-content">
+
+  {# —— 故事舞台：当前帧可视化 —— #}
+  <section class="story-stage" aria-label="当前帧可视化">
+    <div class="story-stage-header">
+      <div class="frame-indicator">
+        <span class="frame-label">第 <strong id="frameIdx">1</strong> / <strong id="frameTotal">30</strong> 帧</span>
+        <span class="frame-date" id="frameDate">—</span>
+        <span class="frame-day" id="frameDay">Day 1</span>
+      </div>
+      <div class="chapter-badge" id="chapterBadge">
+        <span class="chapter-tag" id="chapterTag">kickoff</span>
+        <span class="chapter-title" id="chapterTitle">开局 · 项目档案建立</span>
+      </div>
+    </div>
+
+    <div class="story-kpi-grid">
+      <div class="story-kpi" data-dim="projects">
+        <div class="kpi-icon-wrap">
+          <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <p class="kpi-label">项目</p>
+        <p class="kpi-delta" id="deltaProjects">+0</p>
+        <p class="kpi-cumulative" id="cumProjects">累计 0</p>
+      </div>
+      <div class="story-kpi" data-dim="tasks">
+        <div class="kpi-icon-wrap">
+          <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <p class="kpi-label">任务</p>
+        <p class="kpi-delta" id="deltaTasks">+0</p>
+        <p class="kpi-cumulative" id="cumTasks">累计 0</p>
+      </div>
+      <div class="story-kpi" data-dim="messages">
+        <div class="kpi-icon-wrap">
+          <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <p class="kpi-label">留言</p>
+        <p class="kpi-delta" id="deltaMessages">+0</p>
+        <p class="kpi-cumulative" id="cumMessages">累计 0</p>
+      </div>
+      <div class="story-kpi" data-dim="snapshots">
+        <div class="kpi-icon-wrap">
+          <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <p class="kpi-label">Focus 快照</p>
+        <p class="kpi-delta" id="deltaSnapshots">+0</p>
+        <p class="kpi-cumulative" id="cumSnapshots">累计 0</p>
+      </div>
+      <div class="story-kpi" data-dim="inspirations">
+        <div class="kpi-icon-wrap">
+          <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        </div>
+        <p class="kpi-label">Muse 灵感</p>
+        <p class="kpi-delta" id="deltaInspirations">+0</p>
+        <p class="kpi-cumulative" id="cumInspirations">累计 0</p>
+      </div>
+    </div>
+
+    <div class="story-narrative" id="storyNarrative">
+      <p class="narrative-text" id="narrativeText">点击播放按钮开始 30 天回放</p>
+    </div>
+
+    <div class="story-frame-bar" aria-label="当日活动量">
+      <!-- P2-4 修复（p7-2 DRL）：添加 role="progressbar" + aria-valuenow/min/max，JS 同步更新 -->
+      <div class="frame-bar-fill" id="frameBarFill" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;"></div>
+      <span class="frame-bar-label" id="frameBarLabel">当日 0 条活动</span>
+    </div>
+  </section>
+
+  {# —— 回放控件 —— #}
+  <section class="story-controls" aria-label="回放控件">
+    <div class="control-buttons">
+      <button type="button" class="ctrl-btn" id="btnReset" title="回到第 1 帧" aria-label="回到第 1 帧">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+      </button>
+      <button type="button" class="ctrl-btn" id="btnPrev" title="上一帧" aria-label="上一帧">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <button type="button" class="ctrl-btn ctrl-btn--primary" id="btnPlay" title="播放/暂停" aria-label="播放或暂停">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" id="iconPlay"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" id="iconPause" style="display:none;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+      </button>
+      <button type="button" class="ctrl-btn" id="btnNext" title="下一帧" aria-label="下一帧">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      <button type="button" class="ctrl-btn" id="btnEnd" title="跳到最后一帧" aria-label="跳到最后一帧">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+      </button>
+    </div>
+
+    <div class="seek-bar-wrap">
+      <input type="range" min="0" max="29" value="0" step="1" class="seek-bar" id="seekBar" aria-label="帧进度">
+      <div class="seek-ticks" id="seekTicks" aria-hidden="true"></div>
+    </div>
+
+    <div class="speed-control">
+      <label for="speedSelect">速度</label>
+      <select id="speedSelect" aria-label="播放速度">
+        <option value="2000">0.5×</option>
+        <option value="1200" selected>1×</option>
+        <option value="700">1.5×</option>
+        <option value="400">2×</option>
+      </select>
+    </div>
+  </section>
+
+  {# —— 章节导航 —— #}
+  <section class="story-chapters" aria-label="章节导航">
+    <h2 class="chapters-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      5 章价值叙事
+    </h2>
+    <ul class="chapter-list" id="chapterList">
+      {% for ch in story.chapters %}
+      <li>
+        <button type="button" class="chapter-card" data-start-frame="{{ ch.start_frame }}" data-key="{{ ch.key }}">
+          <div class="chapter-card-head">
+            <span class="chapter-num">第 {{ loop.index }} 章</span>
+            <span class="chapter-range">帧 {{ ch.start_frame + 1 }}–{{ ch.end_frame + 1 }}</span>
+          </div>
+          <h3 class="chapter-card-title">{{ ch.title }}</h3>
+          <p class="chapter-card-narrative">{{ ch.narrative }}</p>
+          <div class="chapter-card-cta">
+            <span class="cta-text">跳转到本章</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </div>
+        </button>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  {# —— 空状态 —— #}
+  {% if not story.frames %}
+  <div class="story-empty v-empty">
+    <p class="v-empty-title">暂无回放数据</p>
+    <p class="v-empty-desc">请先在演示管理页加载演示数据，再返回此处回放 30 天活动</p>
+    <a class="v-empty-cta primary-btn" href="/demo">前往演示管理</a>
+  </div>
+  {% endif %}
+
+</main>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  // Phase 6.L: 故事模式 · 30 帧时间轴回放
+  var FRAMES = {{ story.frames | tojson }};
+  var CHAPTERS = {{ story.chapters | tojson }};
+  var MAX_DAILY = {{ story.max_daily_total }};
+  var MAX_CUM = {{ story.max_cumulative }};
+  var TOTAL = FRAMES.length;
+
+  // DOM 引用
+  var $ = function(id) { return document.getElementById(id); };
+  var elFrameIdx = $('frameIdx');
+  var elFrameTotal = $('frameTotal');
+  var elFrameDate = $('frameDate');
+  var elFrameDay = $('frameDay');
+  var elChapterTag = $('chapterTag');
+  var elChapterTitle = $('chapterTitle');
+  var elDeltaProjects = $('deltaProjects');
+  var elDeltaTasks = $('deltaTasks');
+  var elDeltaMessages = $('deltaMessages');
+  var elDeltaSnapshots = $('deltaSnapshots');
+  var elDeltaInspirations = $('deltaInspirations');
+  var elCumProjects = $('cumProjects');
+  var elCumTasks = $('cumTasks');
+  var elCumMessages = $('cumMessages');
+  var elCumSnapshots = $('cumSnapshots');
+  var elCumInspirations = $('cumInspirations');
+  var elNarrative = $('narrativeText');
+  var elFrameBarFill = $('frameBarFill');
+  var elFrameBarLabel = $('frameBarLabel');
+  var elBtnReset = $('btnReset');
+  var elBtnPrev = $('btnPrev');
+  var elBtnPlay = $('btnPlay');
+  var elBtnNext = $('btnNext');
+  var elBtnEnd = $('btnEnd');
+  var elSeekBar = $('seekBar');
+  var elSeekTicks = $('seekTicks');
+  var elSpeedSelect = $('speedSelect');
+  var elIconPlay = $('iconPlay');
+  var elIconPause = $('iconPause');
+  var elChapterList = $('chapterList');
+
+  var currentIdx = 0;
+  var isPlaying = false;
+  var playTimer = null;
+  var playInterval = 1200;
+
+  if (TOTAL === 0) {
+    // 空状态：禁用所有控件
+    [elBtnReset, elBtnPrev, elBtnPlay, elBtnNext, elBtnEnd, elSeekBar, elSpeedSelect].forEach(function(el) {
+      if (el) el.disabled = true;
+    });
+    return;
+  }
+
+  elFrameTotal.textContent = TOTAL;
+  elSeekBar.max = TOTAL - 1;
+
+  // 渲染 seek ticks（每 5 帧一个刻度）
+  if (elSeekTicks) {
+    var ticksHtml = '';
+    for (var i = 0; i < TOTAL; i += 5) {
+      ticksHtml += '<span class="seek-tick" style="left:' + ((i / (TOTAL - 1)) * 100) + '%"></span>';
+    }
+    elSeekTicks.innerHTML = ticksHtml;
+  }
+
+  function findChapter(idx) {
+    for (var i = 0; i < CHAPTERS.length; i++) {
+      if (idx >= CHAPTERS[i].start_frame && idx <= CHAPTERS[i].end_frame) {
+        return CHAPTERS[i];
+      }
+    }
+    return CHAPTERS[0];
+  }
+
+  function render(idx) {
+    if (idx < 0) idx = 0;
+    if (idx >= TOTAL) idx = TOTAL - 1;
+    currentIdx = idx;
+    var f = FRAMES[idx];
+    var ch = findChapter(idx);
+
+    elFrameIdx.textContent = idx + 1;
+    elFrameDate.textContent = f.date;
+    elFrameDay.textContent = f.day_label;
+    elChapterTag.textContent = ch.key;
+    elChapterTitle.textContent = ch.title;
+
+    elDeltaProjects.textContent = '+' + f.delta.projects;
+    elDeltaTasks.textContent = '+' + f.delta.tasks;
+    elDeltaMessages.textContent = '+' + f.delta.messages;
+    elDeltaSnapshots.textContent = '+' + f.delta.snapshots;
+    elDeltaInspirations.textContent = '+' + f.delta.inspirations;
+
+    elCumProjects.textContent = '累计 ' + f.cumulative.projects;
+    elCumTasks.textContent = '累计 ' + f.cumulative.tasks;
+    elCumMessages.textContent = '累计 ' + f.cumulative.messages;
+    elCumSnapshots.textContent = '累计 ' + f.cumulative.snapshots;
+    elCumInspirations.textContent = '累计 ' + f.cumulative.inspirations;
+
+    // 章节叙事：在第 1 帧或章节起始帧显示完整叙事，其他帧显示当日摘要
+    if (idx === ch.start_frame || idx === 0) {
+      elNarrative.textContent = ch.narrative;
+    } else {
+      elNarrative.textContent = f.day_label + '（' + f.date + '）：新增 ' + f.delta.total + ' 条活动（项目 ' + f.delta.projects + ' / 任务 ' + f.delta.tasks + ' / 留言 ' + f.delta.messages + ' / 快照 ' + f.delta.snapshots + ' / 灵感 ' + f.delta.inspirations + '）';
+    }
+
+    // 当日活动量条
+    var barPct = (f.delta.total / MAX_DAILY) * 100;
+    elFrameBarFill.style.width = barPct + '%';
+    // P2-4 修复（p7-2 DRL）：同步 aria-valuenow，让屏幕阅读器感知进度值
+    elFrameBarFill.setAttribute('aria-valuenow', Math.round(barPct));
+    elFrameBarLabel.textContent = '当日 ' + f.delta.total + ' 条活动';
+
+    elSeekBar.value = idx;
+
+    // 章节卡片高亮
+    if (elChapterList) {
+      var cards = elChapterList.querySelectorAll('.chapter-card');
+      cards.forEach(function(card) {
+        var start = parseInt(card.getAttribute('data-start-frame'), 10);
+        var key = card.getAttribute('data-key');
+        if (key === ch.key) {
+          card.classList.add('is-active');
+        } else {
+          card.classList.remove('is-active');
+        }
+      });
+    }
+
+    // 自动滚动章节卡片到可视区（自动播放时不打断用户查看顶部 KPI）
+    if (!isPlaying) {
+      var activeCard = elChapterList && elChapterList.querySelector('.chapter-card.is-active');
+      if (activeCard && activeCard.scrollIntoView) {
+        try { activeCard.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {}
+      }
+    }
+  }
+
+  function play() {
+    if (isPlaying) return;
+    isPlaying = true;
+    elIconPlay.style.display = 'none';
+    elIconPause.style.display = '';
+    elBtnPlay.setAttribute('aria-label', '暂停');
+    playTimer = setInterval(function() {
+      if (currentIdx >= TOTAL - 1) {
+        pause();
+        return;
+      }
+      render(currentIdx + 1);
+    }, playInterval);
+  }
+
+  function pause() {
+    if (!isPlaying) return;
+    isPlaying = false;
+    elIconPlay.style.display = '';
+    elIconPause.style.display = 'none';
+    elBtnPlay.setAttribute('aria-label', '播放');
+    if (playTimer) {
+      clearInterval(playTimer);
+      playTimer = null;
+    }
+  }
+
+  function togglePlay() {
+    if (isPlaying) pause();
+    else play();
+  }
+
+  function step(delta) {
+    pause();
+    render(currentIdx + delta);
+  }
+
+  function seek(idx) {
+    pause();
+    render(idx);
+  }
+
+  // 事件绑定
+  elBtnPlay.addEventListener('click', togglePlay);
+  elBtnPrev.addEventListener('click', function() { step(-1); });
+  elBtnNext.addEventListener('click', function() { step(1); });
+  elBtnReset.addEventListener('click', function() { seek(0); });
+  elBtnEnd.addEventListener('click', function() { seek(TOTAL - 1); });
+  elSeekBar.addEventListener('input', function(e) {
+    seek(parseInt(e.target.value, 10));
+  });
+  elSpeedSelect.addEventListener('change', function(e) {
+    playInterval = parseInt(e.target.value, 10);
+    if (isPlaying) {
+      pause();
+      play();
+    }
+  });
+
+  // 章节卡片点击
+  if (elChapterList) {
+    elChapterList.addEventListener('click', function(e) {
+      var card = e.target.closest('.chapter-card');
+      if (!card) return;
+      var start = parseInt(card.getAttribute('data-start-frame'), 10);
+      seek(start);
+    });
+  }
+
+  // 键盘快捷键：空格=播放/暂停，←→=步进
+  document.addEventListener('keydown', function(e) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === ' ' || e.code === 'Space') {
+      e.preventDefault();
+      togglePlay();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      step(-1);
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      step(1);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      seek(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      seek(TOTAL - 1);
+    }
+  });
+
+  // 初始化：渲染第 0 帧
+  render(0);
+})();
+</script>
+{% endblock %}

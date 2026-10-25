@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Phase 6.6.6 a11y P2: color-scheme meta — 让浏览器原生 UI(滚动条/form 控件)跟随亮/暗 -->
+  <meta name="color-scheme" content="light dark">
+  <!-- Phase 6.6.6 a11y P1: theme-color 同步案卷纸米色(原 emerald #047857 与新视觉不一致) -->
+  <meta name="theme-color" content="#e8dcc0" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#2a2018" media="(prefers-color-scheme: dark)">
+  <meta name="description" content="Vannevar Bridge — 公益项目交接平台，让志愿团队上下文无缝衔接">
+  <link rel="manifest" href="/static/manifest.json">
+  <title>{% block title %}Vannevar · Bridge{% endblock %}</title>
+  <!-- Phase 7.1 (dogfood P1): 移除 Google Fonts 远程依赖，改用系统字体栈
+       原因：1) CORS 阻塞 LCP 1257ms（Lighthouse P0 瓶颈）
+             2) Basic Auth 凭据污染跨域请求导致字体 401
+             3) 离线/内网友演 demo 环境稳定性 -->
+  <!-- Phase 7.3 (Lighthouse P0): 内联 critical CSS — 首屏令牌 + 布局 + topbar + 按钮 + 跳过链接
+       style.css 2689 行阻塞 FCP 2.2-2.4s，内联约 120 行关键样式后异步加载剩余样式 -->
+  <style>
+  :root {
+    --v-primary: #047857; --v-primary-dark: #065f46; --v-primary-light: #10b981;
+    --v-accent: #0d9488; --v-gradient: linear-gradient(135deg, #047857, #0d9488);
+    --v-success: #10b981; --v-success-bg: #ecfdf5;
+    --v-warning: #f59e0b; --v-danger: #ef4444;
+    --v-bg: #ecfdf5; --v-bg-radial: radial-gradient(circle at 50% 0%, #d1fae5 0%, #ecfdf5 60%);
+    --v-surface: #ffffff; --v-border: #d1fae5;
+    --v-text: #064e3b; --v-text-secondary: #065f46; --v-text-muted: #047857;
+    --v-radius-sm: 8px; --v-radius: 14px; --v-radius-lg: 20px;
+    --v-shadow-sm: 0 1px 2px rgba(4,120,87,0.04), 0 1px 3px rgba(4,120,87,0.06);
+    --v-shadow: 0 2px 4px rgba(4,120,87,0.04), 0 4px 8px rgba(4,120,87,0.06);
+    --v-shadow-md: 0 4px 8px rgba(4,120,87,0.06), 0 8px 16px rgba(4,120,87,0.08);
+    --v-transition: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    --v-transition-fast: 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    --v-glass-bg: rgba(255, 255, 255, 0.72);
+  }
+  :root[data-theme="dark"] {
+    --v-primary: #059669; --v-bg: #022c22;
+    --v-bg-radial: radial-gradient(circle at 50% 0%, #064e3b 0%, #022c22 65%);
+    --v-surface: #064e3b; --v-border: #065f46;
+    --v-text: #ecfdf5; --v-text-secondary: #a7f3d0; --v-text-muted: #6ee7b7;
+    --v-gradient: linear-gradient(135deg, #10b981, #14b8a6);
+    --v-success-bg: rgba(16, 185, 129, 0.15);
+    --v-glass-bg: rgba(6, 78, 59, 0.72);
+    --v-shadow-sm: 0 1px 2px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.4);
+    --v-shadow-md: 0 4px 8px rgba(0,0,0,0.5), 0 8px 16px rgba(0,0,0,0.55);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--v-bg-radial), var(--v-bg);
+    color: var(--v-text); line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .skip-link {
+    position: absolute; top: -100px; left: 0; z-index: 10000;
+    padding: 0.65rem 1rem; background: var(--v-primary); color: #fff;
+    text-decoration: none; border-radius: 0 0 var(--v-radius-sm) 0;
+  }
+  .skip-link:focus, .skip-link:focus-visible { top: 0; }
+  .app { min-height: calc(100vh - 60px); padding: 1.5rem 1rem 3rem; }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; padding: 0.85rem 1.1rem;
+    background: var(--v-glass-bg); backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    border: 1px solid var(--v-border); border-radius: var(--v-radius);
+    box-shadow: var(--v-shadow-sm);
+  }
+  .topbar .brand { display: flex; align-items: center; gap: 0.85rem; }
+  .v-logo {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--v-gradient); color: #fff; flex-shrink: 0;
+  }
+  .v-logo svg { width: 22px; height: 22px; }
+  .topbar .brand-text { display: flex; flex-direction: column; gap: 0.1rem; }
+  .topbar .brand h1, .topbar .brand .app-title {
+    margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--v-text);
+  }
+  .topbar .brand p { margin: 0; font-size: 0.78rem; color: var(--v-text-muted); }
+  .topbar .topbar-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  .card {
+    background: var(--v-surface); border: 1px solid var(--v-border);
+    border-radius: var(--v-radius); padding: 1.5rem; margin-bottom: 1.5rem;
+    box-shadow: var(--v-shadow); position: relative; overflow: hidden;
+  }
+  .primary-btn, .secondary-btn {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.55rem 1rem; border-radius: var(--v-radius-sm);
+    font-size: 0.9rem; font-weight: 500; text-decoration: none;
+    cursor: pointer; border: 1px solid transparent;
+    transition: transform var(--v-transition-fast), box-shadow var(--v-transition-fast), background-color var(--v-transition-fast);
+  }
+  .primary-btn { background: var(--v-gradient); color: #fff; box-shadow: var(--v-shadow-sm); }
+  .primary-btn:hover { transform: translateY(-1px); box-shadow: var(--v-shadow-md); }
+  .secondary-btn { background: var(--v-surface); color: var(--v-text); border-color: var(--v-border); }
+  .secondary-btn:hover { border-color: var(--v-primary); }
+  .theme-toggle {
+    position: fixed; bottom: 1rem; right: 1rem; z-index: 9999;
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 1px solid var(--v-border); background: var(--v-glass-bg);
+    backdrop-filter: blur(12px) saturate(140%); -webkit-backdrop-filter: blur(12px) saturate(140%);
+    color: var(--v-text); cursor: pointer; display: inline-flex;
+    align-items: center; justify-content: center; padding: 0;
+    box-shadow: var(--v-shadow-md);
+  }
+  .v-toast-container {
+    position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+    z-index: 10000; display: flex; flex-direction: column; gap: 0.5rem;
+    pointer-events: none; max-width: calc(100vw - 2rem);
+  }
+  .v-footer { text-align: center; padding: 1.5rem 1rem; color: var(--v-text-muted); font-size: 0.82rem; }
+  .v-footer a { color: var(--v-primary); text-decoration: none; }
+  </style>
+  <!-- Phase 7.3 (Lighthouse P0): style.css 异步加载 — preload + onload 切换为 stylesheet
+       配合上方内联 critical CSS，消除 2689 行阻塞样式表的 FCP 2.2s 瓶颈 -->
+  <link rel="preload" as="style" href="/static/style.css" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="/static/style.css"></noscript>
+  {% block head %}{% endblock %}
+  <!-- Phase 7.1 (dogfood P1): 深色模式初始化 — 在 CSS 加载后、body 渲染前设置 data-theme，避免 FOUC。
+       优先级：localStorage.theme > 系统 prefers-color-scheme。
+       无 JS 时永远亮色（base.html 必定有 JS，可接受）。 -->
+  <script>
+  (function() {
+    try {
+      var stored = localStorage.getItem('bridge-theme');
+      if (stored === 'dark' || stored === 'light') {
+        document.documentElement.setAttribute('data-theme', stored);
+      } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    } catch (e) { /* localStorage 不可用时跟随系统默认亮色 */ }
+  })();
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">跳到主要内容</a>
+  <div class="app">
+    {% block content %}{% endblock %}
+  </div>
+
+  <footer class="v-footer">
+    <p>© 2026 Vannevar · Bridge · 本地优先 · 开源透明 ·
+      <a href="/static/privacy-policy.html" target="_blank" rel="noopener">隐私政策</a>
+    </p>
+  </footer>
+
+  <!-- Toast 容器 -->
+  <div id="toastContainer" class="v-toast-container" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Phase 7.1 (dogfood P1): 深色模式切换按钮 — 浮动右下角，避免破坏各页面 topbar 布局 -->
+  <!-- Phase 6.6.5: 语义叙事化 — "褪色档案/案卷纸"替代"深色/亮色",与 §1.2 褪色档案深色模式色板呼应 -->
+  <button id="themeToggle" type="button" class="theme-toggle" aria-label="切换褪色档案/案卷纸模式" aria-pressed="false" title="切换褪色档案/案卷纸模式 (Shift+D)">
+    <svg class="theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+    <svg class="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </button>
+
+  <script>
+  // Vannevar Logo SVG — 渐变 V 字
+  window.VANNEVAR_LOGO_SVG = '<span class="v-logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6 L12 18 L20 6"/></svg></span>';
+
+  // showToast(message, type='info') — 全局 toast 函数
+  // type: 'success' | 'error' | 'info'
+  window.showToast = function(message, type) {
+    type = type || 'info';
+    if (type === 'warn') type = 'info';
+    var container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    var icons = {
+      success: '<svg class="v-toast-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+      error: '<svg class="v-toast-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+      info: '<svg class="v-toast-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+    };
+
+    var toast = document.createElement('div');
+    toast.className = 'v-toast v-toast--' + type;
+    toast.setAttribute('role', 'status');
+
+    var iconWrap = document.createElement('span');
+    iconWrap.innerHTML = icons[type] || icons.info;
+
+    var msg = document.createElement('span');
+    msg.className = 'v-toast-msg';
+    // 安全：textContent 防止 XSS
+    msg.textContent = message;
+
+    toast.appendChild(iconWrap.firstChild || iconWrap);
+    toast.appendChild(msg);
+    container.appendChild(toast);
+
+    var removeToast = function() {
+      if (!toast.parentNode) return;
+      toast.classList.add('v-toast-out');
+      setTimeout(function() {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 220);
+    };
+
+    toast.addEventListener('click', removeToast);
+    setTimeout(removeToast, 3800);
+  };
+
+  // 全局 showModal(title, body, onConfirm) — 简易 modal 替代 confirm()
+  window.showModal = function(opts) {
+    opts = opts || {};
+    var triggerEl = document.activeElement;
+    var title = opts.title || '确认操作';
+    var body = opts.body || '';
+    var confirmText = opts.confirmText || '确认';
+    var cancelText = opts.cancelText || '取消';
+    var danger = opts.danger === true;
+    var onConfirm = opts.onConfirm || function() {};
+
+    var mask = document.createElement('div');
+    mask.className = 'modal-mask';
+    mask.setAttribute('role', 'dialog');
+    mask.setAttribute('aria-modal', 'true');
+    mask.setAttribute('aria-labelledby', 'modalTitle');
+
+    var modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML =
+      '<h3 id="modalTitle"></h3>' +
+      '<p id="modalBody"></p>' +
+      '<div class="modal-actions">' +
+        '<button type="button" class="secondary-btn" data-act="cancel"></button>' +
+        '<button type="button" class="' + (danger ? 'danger-btn' : 'primary-btn') + '" data-act="confirm"></button>' +
+      '</div>';
+
+    modal.querySelector('#modalTitle').textContent = title;
+    modal.querySelector('#modalBody').textContent = body;
+    modal.querySelector('[data-act="cancel"]').textContent = cancelText;
+    modal.querySelector('[data-act="confirm"]').textContent = confirmText;
+
+    mask.appendChild(modal);
+    document.body.appendChild(mask);
+
+    // NameThatUI 方向 F a11y：modal 焦点陷阱（WAI-ARIA dialog 模式）
+    // Tab/Shift+Tab 循环在 modal 内，防止键盘用户跳出 modal 到背景元素
+    var focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    mask.addEventListener('keydown', function(e) {
+      if (e.key !== 'Tab') return;
+      var focusables = modal.querySelectorAll(focusableSelector);
+      if (focusables.length === 0) return;
+      var first = focusables[0];
+      var last = focusables[focusables.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    });
+
+    var close = function() {
+      if (mask.parentNode) mask.parentNode.removeChild(mask);
+      if (triggerEl && triggerEl.focus) {
+        setTimeout(function() { triggerEl.focus(); }, 0);
+      }
+    };
+    mask.addEventListener('click', function(e) {
+      if (e.target === mask) close();
+    });
+    modal.querySelector('[data-act="cancel"]').addEventListener('click', close);
+    modal.querySelector('[data-act="confirm"]').addEventListener('click', function() {
+      var ret = onConfirm();
+      if (ret && typeof ret.then === 'function') {
+        ret.then(function(ok) { if (ok !== false) close(); });
+      } else {
+        close();
+      }
+    });
+    // Esc 关闭
+    var escHandler = function(e) {
+      if (e.key === 'Escape') {
+        close();
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
+    // 自动聚焦确认/取消按钮
+    setTimeout(function() {
+      var btn = modal.querySelector('[data-act="cancel"]');
+      if (btn) btn.focus();
+    }, 50);
+    return mask;
+  };
+
+  // 兼容老 alert 调用：仅作为防御，不应主动使用
+  window._origAlert = window.alert;
+
+  // Phase 7.1 (dogfood P1): 深色模式切换逻辑
+  // 与 <head> 中的 FOUC 防护脚本配合，这里只负责按钮状态同步与切换。
+  (function() {
+    var toggle = document.getElementById('themeToggle');
+    if (!toggle) return;
+
+    function currentTheme() {
+      var t = document.documentElement.getAttribute('data-theme');
+      if (t === 'dark' || t === 'light') return t;
+      // 未设置时跟随系统 prefers（与 FOUC 脚本逻辑一致）
+      return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+    }
+
+    function applyTheme(t) {
+      document.documentElement.setAttribute('data-theme', t);
+      try { localStorage.setItem('bridge-theme', t); } catch (e) {}
+      updateButton(t);
+    }
+
+    function updateButton(t) {
+      var isDark = t === 'dark';
+      toggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+      // Phase 6.6.5: 叙事化语义 — "褪色档案/案卷纸"替代"深色/亮色"
+      toggle.setAttribute('aria-label', isDark ? '切换到案卷纸模式' : '切换到褪色档案模式');
+      toggle.classList.toggle('theme-toggle--dark', isDark);
+    }
+
+    toggle.addEventListener('click', function() {
+      applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
+    });
+
+    // 快捷键 Shift+D 切换（不拦截浏览器默认行为，仅在 keyup 时触发避免重复）
+    document.addEventListener('keydown', function(e) {
+      if (e.shiftKey && (e.key === 'D' || e.key === 'd') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        var tag = (document.activeElement && document.activeElement.tagName) || '';
+        // 输入框中不触发，避免影响打字
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        e.preventDefault();
+        applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
+      }
+    });
+
+    // 跟随系统变化（仅当用户未显式选择时）
+    if (window.matchMedia) {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+        try { if (!localStorage.getItem('bridge-theme')) updateButton(e.matches ? 'dark' : 'light'); } catch (err) {}
+      });
+    }
+
+    // 初始化按钮状态
+    updateButton(currentTheme());
+  })();
+
+  // 第三批升级：PWA Service Worker 注册（支持时启用，失败静默忽略）
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('/static/sw.js').catch(function() {});
+    });
+  }
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

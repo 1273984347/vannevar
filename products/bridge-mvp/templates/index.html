@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+
+{% block title %}Bridge · 管理后台{% endblock %}
+
+{% block head %}
+<!-- Phase 6.6.1 视觉重设计:案卷纸视觉语言(覆盖 style.css 令牌) -->
+<link rel="stylesheet" href="/static/archive-paper.css">
+<style>
+/* NameThatUI 状态 tab 切换：替代原 select，视觉信息密度更高 + 同族聚合 */
+.status-tabs {
+  display: flex;
+  gap: 0.15rem;
+  border-bottom: 1px solid var(--v-border);
+  margin: 0 0 1.1rem;
+  flex-wrap: wrap;
+}
+.status-tab {
+  padding: 0.55rem 0.95rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--v-text-secondary);
+  font-size: 0.88rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color var(--v-transition-fast), border-color var(--v-transition-fast), background-color var(--v-transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: var(--v-radius-sm) var(--v-radius-sm) 0 0;
+  margin-bottom: -1px;
+  white-space: nowrap;
+}
+.status-tab:hover {
+  color: var(--v-text);
+  background: var(--v-bg);
+}
+.status-tab.is-active {
+  color: var(--v-primary);
+  border-bottom-color: var(--v-primary);
+  font-weight: 600;
+  background: var(--v-success-bg);
+}
+.status-tab:focus-visible {
+  outline: 2px solid var(--v-primary);
+  outline-offset: -2px;
+}
+.status-tab .tab-tag {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--v-text-muted);
+  background: var(--v-bg);
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+.status-tab.is-active .tab-tag {
+  color: #fff;
+  background: var(--v-primary);
+}
+
+/* NameThatUI 第三层：项目卡片口径说明（与 stats.html kpi-hint 同族） */
+.pc-hint {
+  margin-top: 0.6rem;
+  padding-top: 0.55rem;
+  border-top: 1px dashed var(--v-border);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--v-text-muted);
+  font-variant-numeric: tabular-nums;
+  flex-wrap: wrap;
+}
+.pc-hint-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.pc-hint-item.is-positive { color: var(--v-primary); }
+.pc-hint-item.is-neutral { color: var(--v-text-muted); }
+.pc-hint-dot {
+  color: var(--v-text-muted);
+  opacity: 0.45;
+}
+.pc-hint-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.pc-hint-bar {
+  width: 42px;
+  height: 4px;
+  background: var(--v-bg);
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid var(--v-border);
+}
+.pc-hint-bar-fill {
+  height: 100%;
+  background: var(--v-gradient-rail);
+  border-radius: 2px;
+}
+
+/* Empty state CTA 已提取到全局 style.css .v-empty-cta（避免跨模板不一致） */
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="brand">
+    <span class="v-logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 6 L12 18 L20 6"/>
+      </svg>
+    </span>
+    <div class="brand-text">
+      <h1 class="app-title" translate="no">
+        Vannevar · Bridge
+        <span class="scene-icon" aria-hidden="true" title="社会服务 · 公益项目交接">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21h-10a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2z"/>
+            <line x1="12" y1="11" x2="12" y2="11"/>
+            <line x1="8" y1="11" x2="8" y2="11"/>
+            <line x1="16" y1="11" x2="16" y2="11"/>
+          </svg>
+        </span>
+      </h1>
+      <p>公益项目交接平台</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <a href="/admin/stats" class="secondary-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      统计仪表盘
+    </a>
+  </div>
+</header>
+
+<main class="container" id="main-content">
+  <section class="card">
+    <h2>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      新建项目档案
+    </h2>
+    <form id="createProjectForm" class="form">
+      <div class="field">
+        <label for="name">项目名称</label>
+        <input id="name" name="name" type="text" required maxlength="120" placeholder="例如：社区老人关怀计划" autocomplete="off">
+        <span class="field-error" id="nameError" role="alert"></span>
+      </div>
+      <div class="field">
+        <label for="description">项目简介</label>
+        <textarea id="description" name="description" rows="3" placeholder="项目目标、服务对象、关键背景…"></textarea>
+        <span class="field-error" id="descError" role="alert"></span>
+      </div>
+      <div class="field">
+        <span id="tpl-picker-label">交接模板</span>
+        <div class="template-picker" role="radiogroup" aria-labelledby="tpl-picker-label">
+          {% for tpl in templates %}
+          <label class="tpl-card{{ ' is-selected' if tpl.id == 'volunteer' else '' }}" data-template-id="{{ tpl.id }}">
+            <input type="radio" name="template_id" value="{{ tpl.id }}"{{ ' checked' if tpl.id == 'volunteer' else '' }} aria-label="{{ tpl.name }}">
+            <span class="tpl-icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{{ tpl.icon|safe }}</svg>
+            </span>
+            <span class="tpl-body">
+              <span class="tpl-name">{{ tpl.name }}</span>
+              <span class="tpl-desc">{{ tpl.description }}</span>
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="field">
+        <label for="projectStatus">项目状态</label>
+        <select id="projectStatus" name="status" aria-label="项目状态">
+          <option value="active" selected>进行中</option>
+          <option value="archived">已归档</option>
+          <option value="done">已完成</option>
+        </select>
+      </div>
+      <button type="submit" class="primary-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+        创建项目
+      </button>
+      <p id="createStatus" class="status" role="alert" aria-live="assertive"></p>
+    </form>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h2>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        项目列表
+        {% if projects %}<span class="count-pill">{{ projects | length }}</span>{% endif %}
+      </h2>
+      <form action="/" method="get" class="inline-search" role="search" aria-label="搜索项目">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input name="q" type="search" value="{{ q }}" placeholder="搜索项目名称或简介…" aria-label="搜索关键词">
+        {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+        <button type="submit" class="secondary-btn" aria-label="搜索">
+          搜索
+        </button>
+      </form>
+    </div>
+
+    {# NameThatUI 同族对比：状态 tab 替代 select，URL 切换保留 q 搜索词 #}
+    <div class="status-tabs" role="tablist" aria-label="按状态筛选">
+      <a href="?{% if q %}q={{ q | urlencode }}{% endif %}" class="status-tab{% if not status %} is-active{% endif %}" role="tab" aria-selected="{% if not status %}true{% else %}false{% endif %}" tabindex="{% if not status %}0{% else %}-1{% endif %}">
+        全部
+        <span class="tab-tag">All</span>
+      </a>
+      <a href="?{% if q %}q={{ q | urlencode }}&{% endif %}status=active" class="status-tab{% if status == 'active' %} is-active{% endif %}" role="tab" aria-selected="{% if status == 'active' %}true{% else %}false{% endif %}" tabindex="{% if status == 'active' %}0{% else %}-1{% endif %}">
+        进行中
+        <span class="tab-tag">Active</span>
+      </a>
+      <a href="?{% if q %}q={{ q | urlencode }}&{% endif %}status=archived" class="status-tab{% if status == 'archived' %} is-active{% endif %}" role="tab" aria-selected="{% if status == 'archived' %}true{% else %}false{% endif %}" tabindex="{% if status == 'archived' %}0{% else %}-1{% endif %}">
+        已归档
+        <span class="tab-tag">Archived</span>
+      </a>
+      <a href="?{% if q %}q={{ q | urlencode }}&{% endif %}status=done" class="status-tab{% if status == 'done' %} is-active{% endif %}" role="tab" aria-selected="{% if status == 'done' %}true{% else %}false{% endif %}" tabindex="{% if status == 'done' %}0{% else %}-1{% endif %}">
+        已完成
+        <span class="tab-tag">Done</span>
+      </a>
+    </div>
+
+    {% if projects %}
+    <ul class="project-grid">
+      {% for p in projects %}
+      <li>
+        <a class="project-card" href="/admin/projects/{{ p.id }}">
+          <div class="pc-head">
+            <h3 class="pc-name">{{ p.name }}</h3>
+            <time class="pc-time" datetime="{{ p.updated_at.strftime('%Y-%m-%dT%H:%M') }}">{{ p.updated_at.strftime('%Y-%m-%d %H:%M') }}</time>
+          </div>
+          <p class="pc-desc" title="{{ p.description or '暂无简介' }}">{{ p.description or '暂无简介' }}</p>
+          <div class="pc-meta">
+            <span class="pc-meta-item">
+              <svg class="pc-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              {{ p.tasks | length }} 个任务
+            </span>
+            <span class="pc-meta-item">
+              <svg class="pc-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              {{ p.messages | length }} 条留言
+            </span>
+            {% if p.status %}
+            <span class="pc-meta-item">
+              <span class="v-badge v-badge--{{ 'todo' if p.status == 'active' else ('archived' if p.status == 'archived' else 'done') }}">{{ status_labels.get(p.status, p.status) }}</span>
+            </span>
+            {% endif %}
+          </div>
+          {# NameThatUI 第三层：口径说明（完成率 + 进度条）—— 让用户一眼看出项目健康度 #}
+          {% set total_tasks = p.tasks | length %}
+          {% set done_tasks = p.tasks | selectattr('status', 'equalto', 'done') | list | length %}
+          {% if total_tasks > 0 %}
+          {% set pct = (done_tasks / total_tasks * 100) | int %}
+          <div class="pc-hint">
+            <span class="pc-hint-progress">
+              <span class="pc-hint-bar" aria-hidden="true"><span class="pc-hint-bar-fill" style="width: {{ pct }}%"></span></span>
+              <span class="pc-hint-item{% if pct == 100 %} is-positive{% endif %}">{{ pct }}% 已完成</span>
+            </span>
+            <span class="pc-hint-dot" aria-hidden="true">·</span>
+            <span class="pc-hint-item">{{ done_tasks }}/{{ total_tasks }}</span>
+          </div>
+          {% else %}
+          <div class="pc-hint">
+            <span class="pc-hint-item is-neutral">暂未创建任务</span>
+          </div>
+          {% endif %}
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+      {% if not q and not status %}
+      {# 品牌空状态插画：桥梁/连接，emerald 色系 #}
+      <div class="empty-state v-empty">
+        <div class="empty-illustration">
+          <div class="empty-glow"></div>
+          <svg class="empty-icon" viewBox="0 0 120 120" width="80" height="80" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <!-- 桥梁弧线 -->
+            <path d="M20 80 Q60 30 100 80" stroke="#047857" fill="none"/>
+            <!-- 桥塔 -->
+            <line x1="30" y1="80" x2="30" y2="55" stroke="#047857"/>
+            <line x1="90" y1="80" x2="90" y2="55" stroke="#047857"/>
+            <!-- 缆绳 -->
+            <line x1="30" y1="55" x2="40" y2="65" stroke="#0d9488" opacity="0.5"/>
+            <line x1="30" y1="55" x2="50" y2="58" stroke="#0d9488" opacity="0.5"/>
+            <line x1="90" y1="55" x2="80" y2="65" stroke="#0d9488" opacity="0.5"/>
+            <line x1="90" y1="55" x2="70" y2="58" stroke="#0d9488" opacity="0.5"/>
+            <!-- 水面 -->
+            <path d="M15 85 Q30 90 45 85 Q60 80 75 85 Q90 90 105 85" stroke="#0d9488" opacity="0.3" fill="none"/>
+            <!-- 加号 -->
+            <circle cx="60" cy="50" r="12" fill="#047857" stroke="none" opacity="0.9"/>
+            <path d="M55 50 L65 50 M60 45 L60 55" stroke="white" stroke-width="2.5"/>
+          </svg>
+        </div>
+        <h3 class="v-empty-title">还没有项目</h3>
+        <p class="v-empty-desc">创建第一个公益项目，开始管理任务交接</p>
+        <a href="#createProjectForm" class="v-empty-cta primary-btn" aria-label="立即创建项目">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          立即创建
+        </a>
+      </div>
+      {% else %}
+      <div class="v-empty">
+        <svg class="v-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        <h3 class="v-empty-title">没有匹配的项目</h3>
+        <div class="v-empty-desc">换个关键词或状态试试，或清空筛选查看全部</div>
+        <a href="/" class="v-empty-cta secondary-btn" aria-label="清空筛选查看全部项目">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          清空筛选
+        </a>
+      </div>
+      {% endif %}
+    {% endif %}
+  </section>
+</main>
+
+<script>
+// 安全加固：不再向前端注入 Basic Auth 凭据。
+// 管理后台页面本身已由 require_admin 保护，浏览器会缓存 Basic Auth 会话，
+// 同源的 fetch 请求会自动携带缓存的凭据，无需手动设置 Authorization 头。
+// B-SEC-02: 从 Cookie 读取 CSRF token，回传到 X-CSRF-Token 头（双重提交 Cookie 模式）
+function _getCsrfToken() {
+  const match = document.cookie.match(/(?:^|;\s*)bridge_csrf=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : '';
+}
+document.getElementById('createProjectForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const status = document.getElementById('createStatus');
+  const nameError = document.getElementById('nameError');
+  const descError = document.getElementById('descError');
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const form = e.target;
+  const originalText = submitBtn.innerHTML;
+  submitBtn.disabled = true;
+  submitBtn.textContent = '创建中…';
+  status.textContent = '';
+  if (nameError) nameError.textContent = '';
+  if (descError) descError.textContent = '';
+  // P1-3 修复（p7-2 DRL）：提交前清除 aria-invalid，让屏幕阅读器 form 导航模式感知"已就绪"
+  const nameInput = document.getElementById('name');
+  const descInput = document.getElementById('description');
+  if (nameInput) nameInput.removeAttribute('aria-invalid');
+  if (descInput) descInput.removeAttribute('aria-invalid');
+  // 模板选择器：取选中的 template_id，默认 volunteer
+  const checkedTpl = form.querySelector('input[name="template_id"]:checked');
+  const templateId = checkedTpl ? checkedTpl.value : 'volunteer';
+  try {
+    const res = await fetch('/api/projects', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'BridgeAdmin',
+        'X-CSRF-Token': _getCsrfToken()
+      },
+      body: JSON.stringify({
+        name: form.name.value.trim(),
+        description: form.description.value.trim(),
+        status: form.status.value,
+        template_id: templateId
+      })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      window.showToast('项目创建成功', 'success');
+      // 短暂延迟后跳转，让用户看到反馈
+      setTimeout(() => { window.location.href = `/admin/projects/${data.id}`; }, 250);
+    } else {
+      // 字段级错误填充：FastAPI 验证错误为数组，含 loc/msg
+      const detail = data.detail;
+      let summaryMsg = '创建失败：';
+      if (Array.isArray(detail)) {
+        detail.forEach(err => {
+          const loc = err.loc || [];
+          const msg = err.msg || '';
+          if (loc.includes('name') && nameError) {
+            nameError.textContent = msg;
+            if (nameInput) nameInput.setAttribute('aria-invalid', 'true');  // P1-3 修复
+          } else if (loc.includes('description') && descError) {
+            descError.textContent = msg;
+            if (descInput) descInput.setAttribute('aria-invalid', 'true');  // P1-3 修复
+          }
+        });
+        summaryMsg += detail.map(er => er.msg).join('；') || '未知错误';
+      } else {
+        summaryMsg += detail || '未知错误';
+      }
+      status.textContent = summaryMsg;
+      window.showToast(summaryMsg, 'error');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalText;
+    }
+  } catch (err) {
+    const msg = '创建失败：' + err.message;
+    status.textContent = msg;
+    window.showToast(msg, 'error');
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalText;
+  }
+});
+
+// 模板选择器：切换时仅更新选中态（实际 template_id 在表单提交时发送）
+(function setupTemplatePicker() {
+  const picker = document.querySelector('#createProjectForm .template-picker');
+  if (!picker) return;
+  picker.addEventListener('change', (e) => {
+    if (e.target.name !== 'template_id') return;
+    picker.querySelectorAll('.tpl-card').forEach(card => {
+      card.classList.toggle('is-selected', card.dataset.templateId === e.target.value);
+    });
+  });
+})();
+
+// NameThatUI 状态 tab：键盘左右切换 + Home/End 支持（a11y，符合 WAI-ARIA tablist 模式）
+(function setupStatusTabsKeyboard() {
+  const tablist = document.querySelector('.status-tabs');
+  if (!tablist) return;
+  const tabs = Array.from(tablist.querySelectorAll('.status-tab'));
+  tablist.addEventListener('keydown', (e) => {
+    if (e.key === 'Home') { e.preventDefault(); tabs[0].focus(); tabs[0].click(); return; }
+    if (e.key === 'End') { e.preventDefault(); tabs[tabs.length - 1].focus(); tabs[tabs.length - 1].click(); return; }
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const idx = tabs.indexOf(document.activeElement);
+    if (idx === -1) return;
+    const next = e.key === 'ArrowRight' ? (idx + 1) % tabs.length : (idx - 1 + tabs.length) % tabs.length;
+    tabs[next].focus();
+    tabs[next].click();
+  });
+})();
+</script>
+{% endblock %}
