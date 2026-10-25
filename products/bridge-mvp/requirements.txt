@@ -9,8 +9,9 @@ qrcode[pil]==8.2
 httpx==0.28.1  # AI 增强模块（可选，未配置 BRIDGE_AI_* 环境变量时不加载）
 
 # 统一账号体系（阶段1.1）
-passlib==1.7.4
-bcrypt==4.0.1
+# 直接使用 bcrypt 库，不再依赖 passlib —— passlib 1.7.4 读取
+# bcrypt.__about__.__version__ 探测版本，而 bcrypt 5.0 已移除该模块。
+bcrypt==5.0.0
 python-jose[cryptography]==3.3.0
 email-validator==2.3.0
 

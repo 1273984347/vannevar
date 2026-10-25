@@ -8,10 +8,10 @@ import time
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+import bcrypt
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -99,9 +99,7 @@ def require_admin(
 
 # ========== 阶段1.1: JWT 统一账号体系 ==========
 
-# bcrypt 密码哈希（passlib 1.7.4 + bcrypt 4.0.1）
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
+# bcrypt 密码哈希：直接使用 bcrypt 库（不再经由 passlib，理由见 hash_password 文档）
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_DAYS = 7
 # DRL-R1-V23: JWT 增加 aud/iss 声明，防止 token 跨服务误用
@@ -234,16 +232,30 @@ def hash_password(password: str) -> str:
     DRL-R1-V17: 预检密码字节长度 ≤ 72，bcrypt 超过 72 字节会静默截断导致认证异常。
     schemas.py 已限制 max_length=72 字符，但多字节 UTF-8 字符（如中文）可能超 72 字节，
     此处做字节级预检兜底。
+
+    直接调用 bcrypt 库而非经由 passlib：passlib 1.7.4 通过读取
+    `bcrypt.__about__.__version__` 探测版本，而 bcrypt 5.0 已移除该模块，
+    会导致 passlib 在 CryptContext 初始化时直接抛
+    `AttributeError: module 'bcrypt' has no attribute '__about__'`。
+    本项目只用到哈希与校验两个能力，无需引入 passlib 这一层。
     """
     # DRL-R1-V17: bcrypt 限制 72 字节，超长截断会导致认证不匹配
-    if len(password.encode("utf-8")) > 72:
+    raw = password.encode("utf-8")
+    if len(raw) > 72:
         raise ValueError("密码过长（超过 72 字节），请缩短密码")
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(raw, bcrypt.gensalt()).decode("ascii")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    """校验明文密码与 bcrypt 哈希是否匹配。"""
-    return pwd_context.verify(plain, hashed)
+    """校验明文密码与 bcrypt 哈希是否匹配。
+
+    对非法/损坏的哈希返回 False 而非抛异常——避免用畸形哈希值探测时
+    把可预期的输入错误变成 500。
+    """
+    try:
+        return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("ascii"))
+    except (ValueError, TypeError):
+        return False
 
 
 def create_access_token(user_id: int, email: str) -> str:

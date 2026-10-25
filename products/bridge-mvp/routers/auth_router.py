@@ -13,7 +13,6 @@ from auth import (
     create_access_token,
     hash_password,
     invalidate_user_cache,
-    pwd_context,
     require_user,
     verify_password,
 )
@@ -25,7 +24,7 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 # DRL-R1-V14: 防 login 时序攻击——用户不存在时也执行 dummy verify_password
 # 使用固定 dummy hash，避免攻击者通过响应时间差异判断邮箱是否存在
-DUMMY_HASH = pwd_context.hash("dummy-password-for-timing-attack-prevention")
+DUMMY_HASH = hash_password("dummy-password-for-timing-attack-prevention")
 
 
 @router.post("/register", response_model=TokenOut, status_code=201)
