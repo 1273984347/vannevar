@@ -232,7 +232,7 @@ Focus 的同步数据在离开浏览器前即加密：
 # Bridge：全量单元/集成测试（不跑 e2e）
 cd products/bridge-mvp
 py -m pytest tests/ -q --ignore=tests/e2e
-# 基线：430 passed / 9 skipped / 0 failed（用例数随新功能递增）
+# 基线：435 passed / 9 skipped / 0 failed（用例数随新功能递增）
 
 # Focus：端到端加密
 cd products/focus-mvp
@@ -320,10 +320,13 @@ Vannevar/
 ├── demo/                   # 演示素材
 ├── docs/                   # 用户指南、部署指南、OpenAPI、阶段计划
 │   └── opensource/         #   开源发布过程报告
+├── tech/                   # 三产品技术方案
 ├── assets/                 # 一页纸、竞品矩阵等说明材料
 ├── diagrams/               # 架构图（HTML 源文件 + PNG 导出）
 ├── screenshots/            # 产品截图
-├── scripts/                # 打包、截图、链接与对比度检查脚本
+├── scripts/                # 打包、截图、链接、对比度检查与一键验收脚本
+├── QUICKSTART.md           # 30 秒快速上手
+├── LOADING-GUIDE.md        # 扩展加载与本地验证指南
 ├── LICENSE / NOTICE / CONTRIBUTING.md / CODE_OF_CONDUCT.md
 ├── SECURITY.md / CHANGELOG.md / AGENTS.md
 └── .editorconfig / .gitattributes

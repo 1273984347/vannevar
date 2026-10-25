@@ -12,7 +12,7 @@
           "auth"
         ],
         "summary": "Register",
-        "description": "注册新用户，成功即返回 JWT（注册即登录）。",
+        "description": "注册新用户，成功即返回 JWT（注册即登录）。\n\nR2-V4: 邮箱统一存储为小写，查询时用 func.lower() 大小写不敏感匹配。",
         "operationId": "register_api_auth_register_post",
         "requestBody": {
           "content": {
@@ -54,7 +54,7 @@
           "auth"
         ],
         "summary": "Login",
-        "description": "邮箱 + 密码登录，成功返回 JWT。\n\n统一返回\"邮箱或密码错误\"，不泄露邮箱是否存在。",
+        "description": "邮箱 + 密码登录，成功返回 JWT。\n\n统一返回\"邮箱或密码错误\"，不泄露邮箱是否存在。\nR2-V4: 邮箱查询用 func.lower() 大小写不敏感匹配，与 orgs_router 一致。",
         "operationId": "login_api_auth_login_post",
         "requestBody": {
           "content": {
@@ -112,9 +112,91 @@
         },
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ]
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout",
+        "description": "登出当前用户，撤销其所有已签发 JWT。\n\nDRL-R2-V1: 写入 User.token_revoked_at = 当前时间戳，\n使该用户此前签发的 JWT 在 _check_token_revoked 校验中失效（iat < revoked_at）。\nrequire_user 已校验 JWT 合法性，此处 user_id 可信。\ndev 模式虚拟用户（user_id=0）无 DB 记录，直接返回成功。\nR6-BE-4 修复：db.commit() 后主动失效 _user_active_cache 中该用户的缓存条目，\n    避免撤销时间戳在 30s 缓存 TTL 内未生效导致旧 token 仍可用。\nR7-BE-1/R7-BE-2 修复：改用 invalidate_user_cache(user_id) 持锁 pop，\n    与 _get_user_state_cached 的锁纪律一致，消除 commit 与 pop 之间的 TOCTOU 窗口。",
+        "operationId": "logout_api_auth_logout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ]
+      }
+    },
+    "/api/auth/me/recent-task-updates": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Get Recent Task Updates",
+        "description": "Phase 4.1: 获取当前用户最近更新的任务列表（Bridge → Focus 通知通道）。\n\n返回该用户拥有的所有项目中按 updated_at 倒序的最近 N 条任务。\nFocus 扩展定期轮询此端点，对比本地缓存 last_seen_updated_at，\n对新变更的任务通过 chrome.notifications + badge 通知用户。\n\ndev 模式（user_id=0）返回空列表，不报错。",
+        "operationId": "get_recent_task_updates_api_auth_me_recent_task_updates_get",
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "返回的最近任务条数",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "返回的最近任务条数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskUpdateOut"
+                  },
+                  "title": "Response Get Recent Task Updates Api Auth Me Recent Task Updates Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/projects": {
@@ -126,7 +208,7 @@
         "operationId": "list_projects_api_projects_get",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -211,7 +293,7 @@
         "operationId": "create_project_api_projects_post",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "requestBody": {
@@ -290,7 +372,7 @@
         },
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ]
       }
@@ -304,7 +386,7 @@
         "operationId": "get_project_api_projects__project_id__get",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -360,7 +442,7 @@
         "operationId": "update_project_api_projects__project_id__patch",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -415,7 +497,7 @@
         "operationId": "delete_project_api_projects__project_id__delete",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -452,11 +534,11 @@
           "projects"
         ],
         "summary": "Export Project",
-        "description": "P0: 导出项目全量 JSON（含 tasks/handoffs/messages）。\n\n消息通过 task_index 标记关联任务的下标，便于 import 端点重建关联。",
+        "description": "P0: 导出项目全量 JSON（含 tasks/handoffs/messages）。\n\n消息通过 task_index 标记关联任务的下标，便于 import 端点重建关联。\nR5-BE-2: require_admin → require_project_access(\"view\")，支持 JWT 用户访问。",
         "operationId": "export_project_api_projects__project_id__export_get",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -501,7 +583,7 @@
         "operationId": "create_task_api_projects__project_id__tasks_post",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -566,10 +648,11 @@
           "projects"
         ],
         "summary": "Create Handoff",
+        "description": "R5-BE-2: require_admin → require_project_access(\"edit\")，支持 JWT 用户访问。",
         "operationId": "create_handoff_api_projects__project_id__handoffs_post",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -623,11 +706,11 @@
           "projects"
         ],
         "summary": "Auto Generate Handoff",
-        "description": "P0: 基于项目未完成任务 + 近 7 天留言 + 关键时间节点生成交接草稿。",
+        "description": "P0: 基于项目未完成任务 + 近 7 天留言 + 关键时间节点生成交接草稿。\n\nR5-BE-2: require_admin → require_project_access(\"edit\")，支持 JWT 用户访问。",
         "operationId": "auto_generate_handoff_api_projects__project_id__handoffs_auto_generate_post",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -688,11 +771,11 @@
           "projects"
         ],
         "summary": "Stream Generate Handoff",
-        "description": "阶段2.7: 流式生成交接摘要（SSE）。\n\n与 auto_generate_handoff 不同：本端点不落库，仅流式返回文本增量，\n前端订阅 SSE 实时显示生成进度，用户确认后再调用 auto_generate_handoff 落库。\n\n降级策略：\n- AI 未配置/失败 → 流式返回规则引擎生成的完整摘要（一次性 yield）",
+        "description": "阶段2.7: 流式生成交接摘要（SSE）。\n\n与 auto_generate_handoff 不同：本端点不落库，仅流式返回文本增量，\n前端订阅 SSE 实时显示生成进度，用户确认后再调用 auto_generate_handoff 落库。\n\n降级策略：\n- AI 未配置/失败 → 流式返回规则引擎生成的完整摘要（一次性 yield）\n\nR5-BE-2: require_admin → require_project_access(\"edit\")，支持 JWT 用户访问。",
         "operationId": "stream_generate_handoff_api_projects__project_id__handoffs_stream_generate_post",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -751,11 +834,11 @@
           "projects"
         ],
         "summary": "Import Handoff Card",
-        "description": "接收 Context Card JSON，返回解析后的交接背景信息文本。\n\n支持 focus-snapshot / muse-inspiration / bridge-handoff 三类卡片，\n把卡片内容转换为可填入交接摘要 textarea 的多行文本。本端点只解析不写库，\n便于前端在用户确认前预览背景信息。\n\nJSON 解析或卡片格式校验失败返回 422，避免触发全局 500。",
+        "description": "接收 Context Card JSON，返回解析后的交接背景信息文本。\n\n支持 focus-snapshot / muse-inspiration / bridge-handoff 三类卡片，\n把卡片内容转换为可填入交接摘要 textarea 的多行文本。本端点只解析不写库，\n便于前端在用户确认前预览背景信息。\n\nJSON 解析或卡片格式校验失败返回 422，避免触发全局 500。\nR5-BE-2: require_admin → require_project_access(\"edit\")，支持 JWT 用户访问。",
         "operationId": "import_handoff_card_api_projects__project_id__handoffs_import_card_post",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -801,7 +884,7 @@
         "operationId": "confirm_handoff_api_projects__project_id__handoffs__handoff_id__confirm_post",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -878,7 +961,7 @@
         "operationId": "create_message_api_projects__project_id__messages_post",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -943,11 +1026,11 @@
           "projects"
         ],
         "summary": "Soft Delete Message",
-        "description": "管理员软删除留言：仅标记 is_deleted=True，不真正删除数据，保留审计痕迹。\n\n软删除后：管理员视图显示「已删除」灰色样式，志愿者视图不显示。",
+        "description": "管理员软删除留言：仅标记 is_deleted=True，不真正删除数据，保留审计痕迹。\n\n软删除后：管理员视图显示「已删除」灰色样式，志愿者视图不显示。\nR5-BE-2: require_admin → require_project_access(\"admin\")，支持 JWT 用户访问。",
         "operationId": "soft_delete_message_api_projects__project_id__messages__message_id__delete",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -967,6 +1050,322 @@
             "schema": {
               "type": "integer",
               "title": "Message Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/context-snapshots": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Push Context Snapshot",
+        "description": "Phase 4.1: Focus 快照推送到 Bridge 项目档案。\n\n仅推送元数据 + AI 摘要，不含实际标签页内容（隐私优先）。\n幂等：同一 (project_id, snapshot_uuid) 重复推送返回 409。\n权限：require_project_access('edit')。",
+        "operationId": "push_context_snapshot_api_projects__project_id__context_snapshots_post",
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContextSnapshotCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContextSnapshotOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "List Context Snapshots",
+        "description": "Phase 4.1: 列出项目关联的 Focus 快照（按创建时间倒序）。",
+        "operationId": "list_context_snapshots_api_projects__project_id__context_snapshots_get",
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContextSnapshotOut"
+                  },
+                  "title": "Response List Context Snapshots Api Projects  Project Id  Context Snapshots Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/context-snapshots/{snapshot_id}": {
+      "delete": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Delete Context Snapshot",
+        "description": "Phase 4.1: 删除项目关联的 Focus 快照。",
+        "operationId": "delete_context_snapshot_api_projects__project_id__context_snapshots__snapshot_id__delete",
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/context-inspirations": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Push Context Inspiration",
+        "description": "Phase 4.1: Muse 灵感推送到 Bridge 项目档案。\n\n幂等：同一 (project_id, inspiration_uuid) 重复推送返回 409。\n权限：require_project_access('edit')。",
+        "operationId": "push_context_inspiration_api_projects__project_id__context_inspirations_post",
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContextInspirationCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContextInspirationOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "List Context Inspirations",
+        "description": "Phase 4.1: 列出项目关联的 Muse 灵感（按创建时间倒序）。",
+        "operationId": "list_context_inspirations_api_projects__project_id__context_inspirations_get",
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContextInspirationOut"
+                  },
+                  "title": "Response List Context Inspirations Api Projects  Project Id  Context Inspirations Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/context-inspirations/{inspiration_id}": {
+      "delete": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Delete Context Inspiration",
+        "description": "Phase 4.1: 删除项目关联的 Muse 灵感。",
+        "operationId": "delete_context_inspiration_api_projects__project_id__context_inspirations__inspiration_id__delete",
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "inspiration_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Inspiration Id"
             }
           }
         ],
@@ -1007,7 +1406,7 @@
         },
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ]
       }
@@ -1032,7 +1431,7 @@
         },
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ]
       },
@@ -1055,7 +1454,7 @@
         },
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ]
       }
@@ -1070,7 +1469,7 @@
         "operationId": "restore_db_backup_api_backups__backup_name__restore_post",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -1115,7 +1514,7 @@
         "operationId": "get_task_api_tasks__task_id__get",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -1171,7 +1570,7 @@
         "operationId": "update_task_api_tasks__task_id__patch",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -1237,7 +1636,7 @@
         "operationId": "delete_task_api_tasks__task_id__delete",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -1340,7 +1739,7 @@
         "operationId": "admin_index__get",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -1436,7 +1835,7 @@
         },
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ]
       }
@@ -1450,7 +1849,7 @@
         "operationId": "admin_project_detail_admin_projects__project_id__get",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -1607,6 +2006,132 @@
         }
       }
     },
+    "/demo": {
+      "get": {
+        "tags": [
+          "pages"
+        ],
+        "summary": "Demo Page",
+        "description": "Phase 5.3: 演示数据集管理页（仅 BRIDGE_DEBUG=1 可用）。\n\n展示当前数据状态 + 加载/重置按钮 + 跳转到 /admin/stats 仪表盘。",
+        "operationId": "demo_page_demo_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ]
+      }
+    },
+    "/demo/load": {
+      "post": {
+        "tags": [
+          "pages"
+        ],
+        "summary": "Demo Load",
+        "description": "Phase 5.3: 播种演示数据（幂等：已播种则跳过）。\n\nReturns:\n    {\"seeded\": True, \"counts\": {...}} — 新播种\n    {\"skipped\": True, \"reason\": str}   — 已播种跳过",
+        "operationId": "demo_load_demo_load_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ]
+      }
+    },
+    "/demo/reset": {
+      "post": {
+        "tags": [
+          "pages"
+        ],
+        "summary": "Demo Reset",
+        "description": "Phase 5.3: 清空演示数据（按依赖顺序删除子表→父表）。\n\nR1b P2-4 修复：服务端强制校验 payload.confirm=True，防 CSRF 误触发。\n前端 demo.html showModal onConfirm 已传递 confirm=True。",
+        "operationId": "demo_reset_demo_reset_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Payload",
+                "default": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ]
+      }
+    },
+    "/demo/story": {
+      "get": {
+        "tags": [
+          "pages"
+        ],
+        "summary": "Demo Story",
+        "description": "Phase 6.L: 故事模式 + 时间轴回放页（仅 BRIDGE_DEBUG=1 可用）。\n\n复用 compute_stats 的 activity_heatmap 30 天数据作为回放帧，前端 JS 控制播放/暂停/步进。\n章节导航将 30 帧切分为 5 个产品价值点章节，用户可快速跳转。",
+        "operationId": "demo_story_demo_story_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ]
+      }
+    },
     "/api/sync/push": {
       "post": {
         "tags": [
@@ -1649,7 +2174,7 @@
         },
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ]
       }
@@ -1664,7 +2189,7 @@
         "operationId": "sync_pull_api_sync_pull_get",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -1714,7 +2239,7 @@
         "operationId": "list_context_cards_api_context_cards_get",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -1728,6 +2253,29 @@
               "title": "App"
             },
             "description": "按应用过滤：focus / muse"
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
           }
         ],
         "responses": {
@@ -1764,7 +2312,7 @@
         "operationId": "list_suggestions_api_projects__project_id__suggestions_get",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -1812,7 +2360,7 @@
         "operationId": "ack_suggestion_api_projects__project_id__suggestions__sid__ack_post",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -1869,7 +2417,7 @@
         "operationId": "dismiss_suggestion_api_projects__project_id__suggestions__sid__dismiss_post",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -1926,7 +2474,7 @@
         "operationId": "act_suggestion_api_projects__project_id__suggestions__sid__act_post",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -1999,7 +2547,7 @@
         },
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ]
       },
@@ -2044,7 +2592,7 @@
         },
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ]
       }
@@ -2059,7 +2607,7 @@
         "operationId": "get_org_api_orgs__org_id__get",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -2105,7 +2653,7 @@
         "operationId": "update_org_api_orgs__org_id__patch",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -2161,7 +2709,7 @@
         "operationId": "delete_org_api_orgs__org_id__delete",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -2202,7 +2750,7 @@
         "operationId": "create_team_api_orgs__org_id__teams_post",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -2258,7 +2806,7 @@
         "operationId": "list_teams_api_orgs__org_id__teams_get",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -2310,7 +2858,7 @@
         "operationId": "get_team_api_orgs__org_id__teams__team_id__get",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -2365,7 +2913,7 @@
         "operationId": "update_team_api_orgs__org_id__teams__team_id__patch",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -2430,7 +2978,7 @@
         "operationId": "delete_team_api_orgs__org_id__teams__team_id__delete",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -2480,7 +3028,7 @@
         "operationId": "list_org_members_api_orgs__org_id__members_get",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -2532,7 +3080,7 @@
         "operationId": "update_org_member_role_api_orgs__org_id__members__user_id__patch",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -2597,7 +3145,7 @@
         "operationId": "remove_org_member_api_orgs__org_id__members__user_id__delete",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -2647,7 +3195,7 @@
         "operationId": "list_team_members_api_orgs__org_id__teams__team_id__members_get",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -2706,7 +3254,7 @@
         "operationId": "add_team_member_api_orgs__org_id__teams__team_id__members_post",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -2773,7 +3321,7 @@
         "operationId": "update_team_member_role_api_orgs__org_id__teams__team_id__members__user_id__patch",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -2847,7 +3395,7 @@
         "operationId": "remove_team_member_api_orgs__org_id__teams__team_id__members__user_id__delete",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -2906,7 +3454,7 @@
         "operationId": "create_invitation_api_orgs__org_id__invitations_post",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -2962,7 +3510,7 @@
         "operationId": "list_invitations_api_orgs__org_id__invitations_get",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -2973,6 +3521,29 @@
             "schema": {
               "type": "integer",
               "title": "Org Id"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
             }
           }
         ],
@@ -3014,7 +3585,7 @@
         "operationId": "revoke_invitation_api_orgs__org_id__invitations__inv_id__delete",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -3094,7 +3665,7 @@
         },
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ]
       }
@@ -3109,7 +3680,7 @@
         "operationId": "list_project_shares_api_projects__project_id__shares_get",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -3159,7 +3730,7 @@
         "operationId": "create_project_share_api_projects__project_id__shares_post",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -3217,7 +3788,7 @@
         "operationId": "delete_project_share_api_projects__project_id__shares__share_id__delete",
         "security": [
           {
-            "HTTPBearer": []
+            "HTTPBasic": []
           }
         ],
         "parameters": [
@@ -3243,6 +3814,267 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/conversations": {
+      "post": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "Create Conversation",
+        "description": "创建新会话。\n\n每用户每项目限制 MAX_CONVERSATIONS_PER_PROJECT 个活跃会话。",
+        "operationId": "create_conversation_api_projects__project_id__conversations_post",
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ConversationCreate"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "List Conversations",
+        "description": "列出项目下所有活跃会话（按 created_at 倒序）。",
+        "operationId": "list_conversations_api_projects__project_id__conversations_get",
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/conversations/{conversation_id}/messages": {
+      "get": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "List Messages",
+        "description": "列出会话内所有消息（按 id 升序）。",
+        "operationId": "list_messages_api_conversations__conversation_id__messages_get",
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Conversation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMessageListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/conversations/{conversation_id}/ask": {
+      "post": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "Ask Conversation",
+        "description": "SSE 流式回答用户问题。\n\n流程：\n1. 校验会话存在 + 项目存在\n2. 持久化 user 消息\n3. 加载历史消息（最近 10 条）作为 LLM 上下文\n4. 流式 yield assistant 回答\n5. 流式结束后持久化 assistant 消息（含 is_fallback 标记）\n\nSSE 事件格式（与 handoffs/stream-generate 一致）：\n- event: delta  data: {\"delta\": \"...\"}\n- event: done   data: {\"message_id\": N, \"is_fallback\": bool}\n- event: error  data: {\"message\": \"...\"}",
+        "operationId": "ask_conversation_api_conversations__conversation_id__ask_post",
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Conversation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatAskRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/conversations/{conversation_id}": {
+      "delete": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "Delete Conversation",
+        "description": "软删除会话（设置 deleted_at）。",
+        "operationId": "delete_conversation_api_conversations__conversation_id__delete",
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Conversation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -3408,6 +4240,96 @@
         "title": "AgentSuggestionOut",
         "description": "Agent 建议输出。"
       },
+      "ChatAskRequest": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Question"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "question"
+        ],
+        "title": "ChatAskRequest",
+        "description": "向 AI 助手提问请求。\n\nquestion: 用户问题文本\nconversation_id: 可选，不传则新建会话（标题用问题前 30 字截断）"
+      },
+      "ChatMessageListResponse": {
+        "properties": {
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChatMessageOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "count",
+          "items"
+        ],
+        "title": "ChatMessageListResponse",
+        "description": "会话内消息列表响应。"
+      },
+      "ChatMessageOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "conversation_id": {
+            "type": "integer",
+            "title": "Conversation Id"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "is_fallback": {
+            "type": "boolean",
+            "title": "Is Fallback",
+            "default": false
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "conversation_id",
+          "role",
+          "content",
+          "created_at"
+        ],
+        "title": "ChatMessageOut",
+        "description": "单条聊天消息输出。"
+      },
       "ContextCardListResponse": {
         "properties": {
           "count": {
@@ -3477,6 +4399,305 @@
         "title": "ContextCardOut",
         "description": "Context Card v1 格式的同步项（只读视图，从 sync_items 包装）。"
       },
+      "ContextInspirationCreate": {
+        "properties": {
+          "inspiration_uuid": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Inspiration Uuid"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2048,
+            "minLength": 1,
+            "title": "Url"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Note",
+            "default": ""
+          },
+          "mood": {
+            "type": "string",
+            "maxLength": 60,
+            "title": "Mood",
+            "default": ""
+          },
+          "created_at": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "inspiration_uuid",
+          "title",
+          "url",
+          "created_at"
+        ],
+        "title": "ContextInspirationCreate",
+        "description": "Muse 灵感推送到 Bridge 项目。"
+      },
+      "ContextInspirationOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "integer",
+            "title": "Project Id"
+          },
+          "inspiration_uuid": {
+            "type": "string",
+            "title": "Inspiration Uuid"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "mood": {
+            "type": "string",
+            "title": "Mood"
+          },
+          "created_at": {
+            "type": "integer",
+            "title": "Created At"
+          },
+          "pushed_at": {
+            "type": "integer",
+            "title": "Pushed At"
+          },
+          "pushed_by": {
+            "type": "integer",
+            "title": "Pushed By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "inspiration_uuid",
+          "title",
+          "url",
+          "note",
+          "mood",
+          "created_at",
+          "pushed_at",
+          "pushed_by"
+        ],
+        "title": "ContextInspirationOut",
+        "description": "Muse 灵感输出。"
+      },
+      "ContextSnapshotCreate": {
+        "properties": {
+          "snapshot_uuid": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Snapshot Uuid"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Summary",
+            "default": ""
+          },
+          "urls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Urls"
+          },
+          "tab_count": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 0.0,
+            "title": "Tab Count",
+            "default": 0
+          },
+          "created_at": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "snapshot_uuid",
+          "title",
+          "created_at"
+        ],
+        "title": "ContextSnapshotCreate",
+        "description": "Focus 快照推送到 Bridge 项目。"
+      },
+      "ContextSnapshotOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "integer",
+            "title": "Project Id"
+          },
+          "snapshot_uuid": {
+            "type": "string",
+            "title": "Snapshot Uuid"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "urls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Urls"
+          },
+          "tab_count": {
+            "type": "integer",
+            "title": "Tab Count"
+          },
+          "created_at": {
+            "type": "integer",
+            "title": "Created At"
+          },
+          "pushed_at": {
+            "type": "integer",
+            "title": "Pushed At"
+          },
+          "pushed_by": {
+            "type": "integer",
+            "title": "Pushed By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "snapshot_uuid",
+          "title",
+          "summary",
+          "urls",
+          "tab_count",
+          "created_at",
+          "pushed_at",
+          "pushed_by"
+        ],
+        "title": "ContextSnapshotOut",
+        "description": "Focus 快照输出。"
+      },
+      "ConversationCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "default": "新会话"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ConversationCreate",
+        "description": "创建会话请求。"
+      },
+      "ConversationListResponse": {
+        "properties": {
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConversationOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "count",
+          "items"
+        ],
+        "title": "ConversationListResponse",
+        "description": "会话列表响应。"
+      },
+      "ConversationOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "integer",
+            "title": "Project Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "owner_id": {
+            "type": "integer",
+            "title": "Owner Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "title",
+          "owner_id",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ConversationOut",
+        "description": "会话输出。"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3536,7 +4757,7 @@
           "confirmed_by"
         ],
         "title": "HandoffConfirm",
-        "description": "志愿者/管理员确认接收交接。confirmed_by 为请求者姓名。"
+        "description": "志愿者/管理员确认接收交接。confirmed_by 为请求者姓名。\n\nDRL-R1-V25: 本 schema 仅校验字段格式，不校验确认者身份。\n实际身份校验（确认者须为项目的活跃成员/管理员）需在路由层 handoffs 端点实现（不在本次修复范围）。"
       },
       "HandoffCreate": {
         "properties": {
@@ -3775,6 +4996,7 @@
           },
           "author": {
             "type": "string",
+            "maxLength": 60,
             "title": "Author",
             "default": "志愿者"
           },
@@ -4989,6 +6211,56 @@
         "type": "object",
         "title": "TaskUpdate"
       },
+      "TaskUpdateOut": {
+        "properties": {
+          "task_id": {
+            "type": "integer",
+            "title": "Task Id"
+          },
+          "project_id": {
+            "type": "integer",
+            "title": "Project Id"
+          },
+          "project_name": {
+            "type": "string",
+            "title": "Project Name"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "owner_name": {
+            "type": "string",
+            "title": "Owner Name"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "updated_at_iso": {
+            "type": "string",
+            "title": "Updated At Iso"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id",
+          "project_id",
+          "project_name",
+          "title",
+          "status",
+          "owner_name",
+          "updated_at",
+          "updated_at_iso"
+        ],
+        "title": "TaskUpdateOut",
+        "description": "Phase 4.1: Bridge → Focus 任务状态变更通知通道。\n\n返回当前用户最近更新的任务，Focus 扩展轮询此端点检测新变更。\nupdated_at_iso 为 ISO 8601 字符串（UTC，带 'Z' 后缀），\n便于客户端 new Date() 直接解析。"
+      },
       "TeamCreate": {
         "properties": {
           "name": {
@@ -5224,12 +6496,13 @@
         "properties": {
           "email": {
             "type": "string",
+            "maxLength": 255,
             "format": "email",
             "title": "Email"
           },
           "password": {
             "type": "string",
-            "maxLength": 128,
+            "maxLength": 72,
             "minLength": 1,
             "title": "Password"
           }
@@ -5277,12 +6550,13 @@
         "properties": {
           "email": {
             "type": "string",
+            "maxLength": 255,
             "format": "email",
             "title": "Email"
           },
           "password": {
             "type": "string",
-            "maxLength": 128,
+            "maxLength": 72,
             "minLength": 8,
             "title": "Password"
           },
@@ -5300,7 +6574,7 @@
           "password"
         ],
         "title": "UserRegister",
-        "description": "注册请求：email + password + 可选 display_name。"
+        "description": "注册请求：email + password + 可选 display_name。\n\nDRL-R1-V10: 邮箱枚举防护相关——schema 层加 max_length 与 DB 列 String(255) 对齐，\n避免超长邮箱导致 DB 截断或 500 错误（实际枚举防护在 auth_router.py 路由层，不在本次范围）。"
       },
       "ValidationError": {
         "properties": {
@@ -5344,9 +6618,9 @@
       }
     },
     "securitySchemes": {
-      "HTTPBearer": {
+      "HTTPBasic": {
         "type": "http",
-        "scheme": "bearer"
+        "scheme": "basic"
       }
     }
   }

@@ -23,11 +23,17 @@
 
 **请勿通过公开 Issue、公开 Pull Request、社交媒体或聊天工具报告安全问题。** 公开渠道会让漏洞细节提前扩散。
 
-请通过邮件私下联系维护者：
+### 首选通道：GitHub 私密漏洞上报
+
+本仓库在 GitHub 上开启了 **Private vulnerability reporting**（仓库页 → `Security` → `Report a vulnerability`）。通过该入口提交的报告**只有维护者可见**，不会出现在公开 Issue 列表里，且不依赖任何外部邮箱服务。
+
+> 若该入口显示为不可用，请在仓库 `Settings → Code scanning and security → Private vulnerability reporting` 中开启，或改用下面的邮件通道。
+
+### 备选通道：邮件
 
 **security@vannevar.dev**
 
-> ⚠️ **发布前请替换为真实可用的地址。** 上面的邮箱目前是占位地址，正式发布到 GitHub 前必须替换为项目实际使用的收件邮箱，并在本文件中同步更新。
+> ⚠️ **发布前请替换为真实可用的地址。** 上面的邮箱目前是占位地址（该域名**没有 MX 记录，邮件无法投递**），正式发布到 GitHub 前必须替换为项目实际使用的收件邮箱，并在本文件中同步更新。在此之前，请优先使用上面的 GitHub 私密上报入口。
 
 报告中请尽量包含：
 

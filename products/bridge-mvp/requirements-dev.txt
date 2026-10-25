@@ -4,5 +4,9 @@
 # 单元测试
 pytest==8.4.2
 
+# 安全扫描（可选）：配合本目录的 .bandit.yml 使用
+# 安装后运行：bandit -c .bandit.yml -r .
+bandit==1.8.0
+
 # e2e 测试（按需安装：pip install playwright && playwright install chromium）
 # playwright==1.49.0

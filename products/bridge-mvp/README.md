@@ -107,7 +107,7 @@ bridge-mvp/
 cd products/bridge-mvp
 python -m pip install -r requirements.txt -r requirements-dev.txt
 
-# 全量单元测试（当前基线 430 passed / 9 skipped）
+# 全量单元测试（当前基线 435 passed / 9 skipped）
 python -m pytest tests/ -q --ignore=tests/e2e
 
 # 仅数据库备份与恢复回归

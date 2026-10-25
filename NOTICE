@@ -16,7 +16,9 @@ Vannevar 以 MIT 协议发布（见 [LICENSE](LICENSE)）。除 MIT 覆盖的源
 这些文件由 SQL.js（基于 Emscripten 编译的 SQLite）分发而来，**不属于 Vannevar Contributors 的原创代码**，本仓库仅原样引入以支持浏览器端本地数据库。
 
 - SQLite 本身处于**公共领域（public domain）**。
-- sql.js 发行版附带其自身的 MIT 许可与版权声明；使用或再分发这些文件时，请保留 `sql-wasm.js` 内附带的原始版权头与许可条款。
+- sql.js 上游以 **MIT 协议**发布，版权归 *the sql.js authors* 所有（该 MIT 许可条款同时覆盖本仓库引入的 `sql-wasm.js` 与 `sql-wasm.wasm`）。
+- ⚠️ **本仓库引入的这几份文件经过手工模块化处理，文件头部已不含上游原始版权头**（实测：`sql-wasm.js` 与 `sql-wasm.wasm` 中 `Copyright` 字符串命中数均为 0）。因此上游的 MIT 许可与版权归属**以本文件此处的声明为准**，特此补记。若你再分发这些文件，请一并保留本节声明。
+- 两个产品目录中的 `sql-wasm.js` / `sql-wasm.wasm` 字节级完全相同（SHA256 一致），系同一份上游产物的两份拷贝。
 - Vannevar 项目不对这些第三方文件的正确性、安全性或可用性作任何担保；若上游更新，请跟随上游替换并保留其声明。
 
 各产品目录下另有 `lib/sql-wrapper.js`，这是 Vannevar 自研的 sql.js 薄封装（初始化、持久化与表结构管理），属于 MIT 覆盖范围。

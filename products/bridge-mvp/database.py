@@ -646,6 +646,12 @@ def _backup_db_before_migration(current_version: int) -> None:
 
 
 def init_db():
+    # 显式导入模型：models 模块在被导入时才把表注册到 Base.metadata。
+    # 此前依赖 main.py 先 import routers → models 的副作用，导致
+    # 「单独调用 init_db()」会报 no such table: vannevar_meta。
+    # 函数内导入以避免 database ↔ models 的模块级循环依赖。
+    import models  # noqa: F401
+
     Base.metadata.create_all(bind=engine)
     # P2-11: 通过 PRAGMA user_version 追踪迁移版本，增量执行
     if DATABASE_URL.startswith("sqlite"):

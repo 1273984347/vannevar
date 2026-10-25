@@ -122,31 +122,158 @@ def test_restore_keeps_original_corrupt_copy_for_audit(sandbox):
 
 
 def test_restore_removes_stale_wal_sidecars(sandbox):
-    """INV-2：恢复后残留的 -wal 侧车必须被清除。
+    """INV-2：恢复后残留的 -wal / -shm 侧车必须被清除。
 
     侧车属于被替换前的旧数据库；残留时 SQLite 可能用旧 WAL 回放页，
     把刚恢复好的库再次写坏——这正是「恢复报告成功但结果仍损坏」的机制。
-    （-shm 是共享内存映射文件，由 SQLite 自行重建，无需纳入断言。）
+
+    为什么是「伪造」侧车而不是靠 SQLite 自然产生：
+    SQLite 在**最后一个连接关闭**时会 checkpoint 并删除 -wal / -shm。
+    若用「开连接写数据 → 关连接」来造侧车，文件在 restore_db 之前就已经
+    被 SQLite 自己删掉了，断言 `not wal.exists()` 在恢复前便已成立——
+    那样这条测试就分辨不出「清理生效」与「从未存在」，是**假阳性**。
+    因此这里直接落盘伪造的侧车文件，确保 restore_db 面对的确实是残留侧车。
     """
     db = sandbox["db"]
     _make_healthy_db(db)
 
-    # 造出未 checkpoint 的 -wal（保持连接存活以便读取）
-    conn = sqlite3.connect(str(db))
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("CREATE TABLE wal_probe (id INTEGER PRIMARY KEY, v TEXT)")
-    conn.execute("INSERT INTO wal_probe (v) VALUES ('dirty')")
-    conn.commit()
-    wal_path = Path(str(db) + "-wal")
-    assert wal_path.exists(), "前置条件：应存在 .db-wal 侧车文件"
-    conn.close()
-
     good = sandbox["backups"] / "bridge_mvp_20260101_000000.db"
     _make_healthy_db(good)
 
+    # 伪造属于「旧数据库」的侧车文件（restore_db 必须把它们清掉）
+    stale_wal = Path(str(db) + "-wal")
+    stale_shm = Path(str(db) + "-shm")
+    stale_wal.write_bytes(b"\x00" * 4096)
+    stale_shm.write_bytes(b"\x00" * 32768)
+    assert stale_wal.exists() and stale_shm.exists(), "前置条件：应存在伪造的侧车文件"
+
     assert restore_db("bridge_mvp_20260101_000000.db") is True
-    assert not wal_path.exists(), "恢复后不得残留 .db-wal"
-    assert not Path(str(db) + "-shm").exists(), "恢复后不得残留 .db-shm"
+    assert not stale_wal.exists(), "恢复后不得残留 .db-wal"
+    assert not stale_shm.exists(), "恢复后不得残留 .db-shm"
+
+
+def test_sidecar_cleanup_is_actually_exercised(sandbox):
+    """反向校验：若 _clear_sidecars 被移除，本用例必须失败。
+
+    这条用例的意义是防止 INV-2 退化为假阳性——它先断言「侧车存在」，
+    再走一次恢复，然后确认侧车确实被删除。若把 backup.py 里的
+    _clear_sidecars 调用注释掉，本用例会因侧车残留而失败。
+    """
+    db = sandbox["db"]
+    _make_healthy_db(db)
+    good = sandbox["backups"] / "bridge_mvp_20260101_000000.db"
+    _make_healthy_db(good)
+
+    stale_wal = Path(str(db) + "-wal")
+    stale_wal.write_bytes(b"\x00" * 4096)
+    assert stale_wal.exists()
+
+    assert restore_db("bridge_mvp_20260101_000000.db") is True
+    # 关键断言：恢复「之前」侧车存在，恢复「之后」不存在——两者必须不同
+    assert not stale_wal.exists()
+
+
+def test_clear_sidecars_unit(sandbox):
+    """直接锁定 _clear_sidecars 本身的行为。
+
+    为什么必须单独测：SQLite 在打开数据库时会**顺带删除同目录的孤儿
+    -wal / -shm**（实测：主库为非 WAL 模式时，sqlite3.connect + close
+    之后侧车即消失）。因此任何「经由 restore_db 的间接路径」的断言，
+    都分不清侧车是被本项目的 _clear_sidecars 删的，还是被 SQLite 的
+    副作用删的——移除 _clear_sidecars 调用后集成测试依然全绿（假阳性）。
+    只有直接调用被测函数，才能真正锁住它。
+    """
+    db = sandbox["db"]
+    _make_healthy_db(db)
+
+    stale_wal = Path(str(db) + "-wal")
+    stale_shm = Path(str(db) + "-shm")
+    stale_wal.write_bytes(b"\x00" * 4096)
+    stale_shm.write_bytes(b"\x00" * 32768)
+    assert stale_wal.exists() and stale_shm.exists(), "前置条件：侧车应存在"
+
+    backup._clear_sidecars(db)
+
+    assert not stale_wal.exists(), "_clear_sidecars 未删除 .db-wal"
+    assert not stale_shm.exists(), "_clear_sidecars 未删除 .db-shm"
+
+
+# ------------------------------------------------ 关键分支的可观测性锁定
+#
+# 下面三条用例用 spy / 定向 monkeypatch 把「实现里的某个分支」变成
+# 可观测行为，避免出现「移除该分支后测试依然全绿」的假阳性覆盖。
+
+
+def test_restore_invokes_sidecar_cleanup(sandbox, monkeypatch):
+    """restore_db 必须调用 _clear_sidecars（而不只是函数本身正确）。
+
+    若只测 _clear_sidecars 本身，删掉 restore_db 里的调用不会被发现——
+    因为 SQLite 会顺带清掉孤儿侧车，集成路径的断言分辨不出来。
+    这里用 spy 记录调用，直接锁定「恢复流程会走侧车清理」。
+    """
+    db = sandbox["db"]
+    _make_healthy_db(db)
+    good = sandbox["backups"] / "bridge_mvp_20260101_000000.db"
+    _make_healthy_db(good)
+
+    calls = []
+    original = backup._clear_sidecars
+
+    def spy(path):
+        calls.append(path)
+        original(path)
+
+    monkeypatch.setattr(backup, "_clear_sidecars", spy)
+
+    assert restore_db("bridge_mvp_20260101_000000.db") is True
+    assert calls, "restore_db 未调用 _clear_sidecars"
+
+
+def test_restore_fails_when_final_verification_fails(sandbox, monkeypatch):
+    """恢复后的最终复核若判定不通过，restore_db 必须返回失败。
+
+    用定向 monkeypatch 让「对 DB_PATH 的校验」返回 False，
+    模拟恢复产物实际已损坏的情形。
+    """
+    db = sandbox["db"]
+    _make_healthy_db(db)
+    good = sandbox["backups"] / "bridge_mvp_20260101_000000.db"
+    _make_healthy_db(good)
+
+    real_check = backup._file_integrity_ok
+
+    def selective(path):
+        if Path(path) == Path(db):
+            return False          # 对恢复后的主库判定为损坏
+        return real_check(path)
+
+    monkeypatch.setattr(backup, "_file_integrity_ok", selective)
+
+    assert restore_db("bridge_mvp_20260101_000000.db") is False
+
+
+def test_restore_fails_when_staged_copy_is_corrupt(sandbox, monkeypatch):
+    """复制到临时文件后的校验若不通过，必须中止且不破坏当前库。
+
+    校验对象是「临时副本」而非「备份本体」——这两者的区分正是
+    「临时文件 → 校验 → 原子替换」三件套的意义所在。
+    """
+    db = sandbox["db"]
+    _make_healthy_db(db)
+    good = sandbox["backups"] / "bridge_mvp_20260101_000000.db"
+    _make_healthy_db(good)
+
+    real_check = backup._file_integrity_ok
+
+    def selective(path):
+        if ".restore_tmp_" in str(path):
+            return False          # 临时副本校验不通过
+        return real_check(path)
+
+    monkeypatch.setattr(backup, "_file_integrity_ok", selective)
+
+    assert restore_db("bridge_mvp_20260101_000000.db") is False
+    assert _integrity(db) == "ok", "中止恢复后当前库必须仍然可用"
 
 
 # ---------------------------------------------------------------- INV-3

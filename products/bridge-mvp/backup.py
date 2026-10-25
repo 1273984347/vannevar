@@ -16,18 +16,49 @@ import logging
 import os
 import shutil
 import sqlite3
+import threading
 from datetime import datetime
 from pathlib import Path
 
 from sqlalchemy import text
 
-from database import DB_PATH, engine
+from database import DB_PATH as _DEFAULT_DB_PATH, engine
 
 logger = logging.getLogger("bridge.backup")
 
+
+def _resolve_db_path() -> Path:
+    """推导**实际使用**的数据库文件路径。
+
+    开源发布改造（2026-10-25，源自独立盲审 P1-3）：
+    `database.DB_PATH` 只是「默认路径」。当 `BRIDGE_DATABASE_URL` 指向别处时
+    （典型如 Docker 部署的 `sqlite:///data/bridge.db`），备份与完整性检查
+    仍针对默认路径 —— 表现为 backup_db() 静默不备份、list_backups() 恒空，
+    整套备份/恢复体系失效。故此处以 engine 的实际 URL 为准。
+    """
+    try:
+        url = engine.url
+        if url.drivername.startswith("sqlite"):
+            db = url.database
+            # 相对路径按进程工作目录解析（与 SQLite 语义一致）
+            if db and db != ":memory:":
+                return Path(db).expanduser().resolve()
+    except Exception as e:
+        logger.warning("[Backup] 无法从 engine.url 推导数据库路径: %s", e)
+    return Path(_DEFAULT_DB_PATH).resolve()
+
+
+# 实际数据库文件路径（可被测试以 monkeypatch 覆盖）
+DB_PATH = _resolve_db_path()
+# 备份目录：与数据库同级，保证「库可写则备份可写」
+# Docker 部署下库在 /app/data/bridge.db（卷挂载，可写）→ 备份落在 /app/data/backups
 BACKUP_DIR = DB_PATH.parent / "backups"
 # DRL-R1-V18: MAX_BACKUPS 范围校验，限制在 [1, 100]，防止环境变量误配为 0 或极大值
 MAX_BACKUPS = max(1, min(int(os.environ.get("BRIDGE_MAX_BACKUPS", "7")), 100))
+
+# 恢复是「独占」操作：同一时刻只允许一个恢复流程（进程内互斥）。
+# 并发恢复会导致两个流程同时替换同一个库文件。
+_RESTORE_LOCK = threading.Lock()
 
 
 def integrity_check() -> bool:
@@ -93,9 +124,13 @@ def _clear_sidecars(db_path: Path) -> None:
     侧车文件属于「被替换前的旧数据库」。恢复时若不清除，SQLite 可能用旧
     WAL 回放页，把刚恢复好的库再次写坏——这正是「恢复报告成功但结果仍损坏」
     的机制之一。
+
+    注意后缀写法：侧车是在库文件名**之后**追加 `-wal` / `-shm`，
+    即 `bridge_mvp.db-wal`；若写成 `.db-wal` 会拼出 `bridge_mvp.db.db-wal`，
+    永远匹配不到真实文件（该缺陷曾让本函数静默空转）。
     """
-    for suffix in (".db-wal", ".db-shm"):
-        sidecar = db_path.with_name(db_path.name + suffix)
+    for suffix in ("-wal", "-shm"):
+        sidecar = Path(str(db_path) + suffix)
         if sidecar.exists():
             try:
                 sidecar.unlink()
@@ -118,7 +153,13 @@ def backup_db() -> Path | None:
         logger.info("[Backup] 数据库文件不存在，跳过备份")
         return None
 
-    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        # 只读文件系统（如 Docker read_only: true 且备份目录不在可写卷内）
+        # 会让 mkdir 直接抛出未捕获异常，把整个启动流程带崩。
+        logger.error("[Backup] 无法创建备份目录 %s: %s", BACKUP_DIR, e)
+        return None
     # DRL-R1-V12: 备份目录设置 0o700 权限（仅所有者可进入），Windows 下静默忽略
     try:
         os.chmod(BACKUP_DIR, 0o700)
@@ -142,16 +183,24 @@ def backup_db() -> Path | None:
         logger.info("[Backup] 备份成功: %s (%d bytes)", backup_path.name, backup_path.stat().st_size)
     except Exception as e:
         logger.error("[Backup] VACUUM INTO 失败，回退到文件复制: %s", e)
-        # 回退方案：直接文件复制（WAL 模式下需复制 .db + .db-wal + .db-shm）
+        # 回退方案：直接文件复制。
+        # 复制前先把 WAL 事务落盘（wal_checkpoint TRUNCATE）：否则未 checkpoint 的
+        # 事务只存在于 -wal 侧车里，而恢复流程只复制主 .db —— 会静默丢事务
+        # 且 integrity_check 仍返回 ok（不报错），极难察觉。
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("PRAGMA wal_checkpoint(TRUNCATE)"))
+        except Exception as ck_err:
+            logger.warning("[Backup] wal_checkpoint 失败，回退复制可能丢事务: %s", ck_err)
         try:
             shutil.copy2(DB_PATH, backup_path)
-            wal_path = DB_PATH.with_suffix(".db-wal")
+            wal_path = Path(str(DB_PATH) + "-wal")
             if wal_path.exists():
-                shutil.copy2(wal_path, backup_path.with_suffix(".db-wal"))
+                shutil.copy2(wal_path, Path(str(backup_path) + "-wal"))
             # DRL-R1-V19: 同时复制 .db-shm 文件（WAL 共享内存映射），缺失会导致恢复后首次打开异常
-            shm_path = DB_PATH.with_suffix(".db-shm")
+            shm_path = Path(str(DB_PATH) + "-shm")
             if shm_path.exists():
-                shutil.copy2(shm_path, backup_path.with_suffix(".db-shm"))
+                shutil.copy2(shm_path, Path(str(backup_path) + "-shm"))
             # DRL-R1-V12: 备份文件设置 0o600 权限
             try:
                 os.chmod(backup_path, 0o600)
@@ -190,7 +239,12 @@ def _cleanup_old_backups() -> None:
 
 
 def list_backups() -> list[dict]:
-    """列出所有可用备份，按时间倒序排列。"""
+    """列出所有可用备份，按时间倒序排列。
+
+    开源发布改造（2026-10-25，源自独立盲审 P2-3）：原先每项都带服务器上的
+    **绝对路径**，而该列表经 `/api/backups` 端点原样返回给前端 —— 等于把
+    服务器目录结构泄露出去。现只返回文件名、大小与时间。
+    """
     if not BACKUP_DIR.exists():
         return []
     backups = []
@@ -199,7 +253,6 @@ def list_backups() -> list[dict]:
             stat = f.stat()
             backups.append({
                 "name": f.name,
-                "path": str(f),
                 "size": stat.st_size,
                 "mtime": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
                 "_ts": stat.st_mtime,
@@ -228,6 +281,19 @@ def restore_db(backup_name: str) -> bool:
     Returns:
         True 表示恢复成功且恢复后的数据库通过完整性检查
     """
+    # 恢复是独占操作：并发恢复会让两个流程同时替换同一个库文件。
+    # 进程内互斥 + 非阻塞：已有恢复在跑时立即拒绝，而不是排队挂起请求。
+    if not _RESTORE_LOCK.acquire(blocking=False):
+        logger.error("[Restore] 已有恢复流程在进行中，拒绝并发恢复")
+        return False
+    try:
+        return _restore_db_locked(backup_name)
+    finally:
+        _RESTORE_LOCK.release()
+
+
+def _restore_db_locked(backup_name: str) -> bool:
+    """restore_db 的实际实现（调用方需持有 _RESTORE_LOCK）。"""
     backup_path = BACKUP_DIR / backup_name
     if not backup_path.exists():
         logger.error("[Restore] 备份文件不存在: %s", backup_name)
