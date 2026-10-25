@@ -11,6 +11,8 @@
 
 ## [0.1.0] - 2026-10-25
 
+> 发布说明与可下载产物：<https://github.com/1273984347/vannevar/releases/tag/v0.1.0>
+
 首个公开版本。三个产品（Focus / Muse / Bridge）以同一套内核完成首次完整发布。
 
 ### Added
