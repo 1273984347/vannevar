@@ -1,8 +1,17 @@
 // sync.js — 阶段1.5 Muse 数据同步（push/pull to Bridge）
 // 需先登录（auth.js），未登录时抛错。
 // 同步两类数据：inspiration + mood，各维护 client_uuid 映射表。
-import { getAuthToken, getBridgeUrl, clearAuthToken } from './auth.js';
+import { getAuthToken, getBridgeUrl, getBridgeHeaders, clearAuthToken } from './auth.js';
 import { exportInspirations, importInspirations, getMoods, addMood } from './muse.js';
+// Phase 4.4 收尾：Muse 同步端到端加密（与 Focus 共用 shared/vannevar-crypto.js）
+import {
+  isCryptoEnabled,
+  isCryptoReady,
+  encryptData,
+  decryptData,
+  isEncryptedData,
+} from './crypto.js';
+import { ensureRemoteProfile } from './crypto-profile.js';
 
 const SYNC_APP = 'muse';
 const UUID_MAP_INSPIRATION_KEY = 'vannevar_muse_sync_uuids_insp';
@@ -77,6 +86,13 @@ export async function pushSync() {
     throw new Error('未登录，请先登录后再同步');
   }
 
+  // Phase 4.4 收尾：加密已启用但未解锁（SW 重启后 key 丢失）→ 抛友好错误，
+  // 避免明文与密文混推到服务端。
+  const cryptoEnabled = await isCryptoEnabled();
+  if (cryptoEnabled && !isCryptoReady()) {
+    throw new Error('E2E 加密已启用但未解锁，请到设置页输入 passphrase 解锁后再同步');
+  }
+
   const exportData = await exportInspirations();
   const inspirations = exportData.inspirations || [];
   const moods = exportData.moods || [];
@@ -89,24 +105,26 @@ export async function pushSync() {
   const items = [];
 
   for (const insp of inspirations) {
+    // Phase 4.4 收尾：明文先构造为独立对象，加密启用时整体加密为密文容器
+    const plainData = {
+      title: insp.title,
+      url: insp.url,
+      note: insp.note,
+      mood: insp.mood,
+      selectedText: insp.selectedText,
+      createdAt: insp.createdAt,
+      pinned: insp.pinned,
+      // Phase 4.2: 媒体元数据参与云同步（向后兼容：旧客户端忽略这些字段）
+      mediaType: insp.mediaType || null,
+      mediaArtist: insp.mediaArtist || null,
+      mediaAlbum: insp.mediaAlbum || null,
+      mediaArtworkUrl: insp.mediaArtworkUrl || null,
+    };
     items.push({
       app: SYNC_APP,
       item_type: 'inspiration',
       client_uuid: inspUuidMap[String(insp.id)],
-      data: {
-        title: insp.title,
-        url: insp.url,
-        note: insp.note,
-        mood: insp.mood,
-        selectedText: insp.selectedText,
-        createdAt: insp.createdAt,
-        pinned: insp.pinned,
-        // Phase 4.2: 媒体元数据参与云同步（向后兼容：旧客户端忽略这些字段）
-        mediaType: insp.mediaType || null,
-        mediaArtist: insp.mediaArtist || null,
-        mediaAlbum: insp.mediaAlbum || null,
-        mediaArtworkUrl: insp.mediaArtworkUrl || null,
-      },
+      data: cryptoEnabled ? await encryptData(plainData) : plainData,
       client_created_at: insp.createdAt,
       client_updated_at: insp.updatedAt || insp.createdAt, // R5-FE-1: 修改后 updatedAt 变化，LWW 才会同步
     });
@@ -118,32 +136,46 @@ export async function pushSync() {
     // 注意：0 是合法的稳定时间戳（兜底 MOODS），需用 != null 判断而非 ||
     const moodCreated = mood.createdAt != null ? mood.createdAt : Date.now();
     const moodUpdated = mood.updatedAt != null ? mood.updatedAt : moodCreated;
+    const plainMoodData = {
+      name: mood.name,
+      color: mood.color,
+      sortOrder: mood.sortOrder,
+    };
     items.push({
       app: SYNC_APP,
       item_type: 'mood',
       client_uuid: moodUuidMap[String(mood.id)],
-      data: {
-        name: mood.name,
-        color: mood.color,
-        sortOrder: mood.sortOrder,
-      },
+      data: cryptoEnabled ? await encryptData(plainMoodData) : plainMoodData,
       client_created_at: moodCreated,
       client_updated_at: moodUpdated,
     });
   }
 
   if (items.length === 0) {
+    // 即使没有数据也要同步加密档案：老版本已在本地启用加密、但云端尚无档案时，
+    // 这里（及正常推送路径）是自动补齐的时机 —— 否则没有数据变化，档案永远补不上。
+    if (cryptoEnabled) {
+      try {
+        await ensureRemoteProfile();
+      } catch (_) { /* 档案同步失败不影响同步结果 */ }
+    }
     return { pushed: 0, created: 0, updated: 0, skipped: 0 };
   }
 
   const bridgeUrl = await getBridgeUrl();
+  // Phase 4.4 收尾修复：Bridge 的写端点强制校验 X-CSRF-Token（须等于 JWT.csrf_jti），
+  // 缺失会直接 403。统一走 getBridgeHeaders() 注入（与 Focus 侧保持一致）。
+  const headers = await getBridgeHeaders();
+  if (!headers) {
+    throw new Error('未登录，请先登录后再同步');
+  }
   let res;
   try {
     res = await fetch(`${bridgeUrl}/api/sync/push`, {
       method: 'POST',
       headers: {
+        ...headers,
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authData.token}`,
       },
       body: JSON.stringify({ items }),
     });
@@ -159,12 +191,39 @@ export async function pushSync() {
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail || `推送失败（${res.status}）`);
+    const detail = body.detail;
+    // 服务端的 detail 可能是字符串，也可能是 {code, message} 对象
+    // （如 csrf_token_missing）；直接 new Error(object) 会显示成 [object Object]
+    const msg = (detail && typeof detail === 'object')
+      ? (detail.message || detail.code || `推送失败（${res.status}）`)
+      : (detail || `推送失败（${res.status}）`);
+    throw new Error(msg);
   }
 
   const result = await res.json();
   await setLastSyncAt(Date.now());
+  // 跨设备支持：确保云端存在与本地一致的加密档案（老用户首次同步时自动补齐）。
+  // 失败不阻断本次同步——加解密本身不依赖这一步。
+  if (cryptoEnabled) {
+    try {
+      await ensureRemoteProfile();
+    } catch (_) { /* 档案同步失败不影响同步结果 */ }
+  }
   return result;
+}
+
+// Phase 4.4 收尾：解密单条同步条目的 data。
+// 旧明文数据原样返回；密文解密失败（passphrase 错误 / 数据损坏）返回 null，
+// 由调用方跳过该条而非让整次拉取失败。
+async function decryptItemData(item) {
+  if (!isEncryptedData(item.data)) return item.data;
+  try {
+    const plain = await decryptData(item.data);
+    return plain || null;
+  } catch (err) {
+    console.warn('[Sync] 跳过无法解密的记录 uuid=', item.client_uuid, err.message);
+    return null;
+  }
 }
 
 // 从 Bridge 拉取数据并合并到本地
@@ -176,13 +235,16 @@ export async function pullSync() {
   }
 
   const bridgeUrl = await getBridgeUrl();
+  // Phase 4.4 收尾修复：统一用 getBridgeHeaders()（含 Authorization + X-CSRF-Token）
+  const headers = await getBridgeHeaders();
+  if (!headers) {
+    throw new Error('未登录，请先登录后再同步');
+  }
   let res;
   try {
     res = await fetch(`${bridgeUrl}/api/sync/pull?app=${SYNC_APP}`, {
       method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${authData.token}`,
-      },
+      headers,
     });
   } catch (err) {
     throw new Error('无法连接到 Bridge 服务器，请确认后端已启动');
@@ -196,13 +258,24 @@ export async function pullSync() {
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail || `拉取失败（${res.status}）`);
+    const detail = body.detail;
+    // 服务端的 detail 可能是字符串，也可能是 {code, message} 对象
+    const msg = (detail && typeof detail === 'object')
+      ? (detail.message || detail.code || `拉取失败（${res.status}）`)
+      : (detail || `拉取失败（${res.status}）`);
+    throw new Error(msg);
   }
 
   const result = await res.json();
   const remoteItems = result.items || [];
   if (remoteItems.length === 0) {
     return { pulled: 0, importedInspirations: 0, importedMoods: 0 };
+  }
+
+  // Phase 4.4 收尾：云端存在密文条目而本地未解锁 → 抛友好错误
+  const hasEncrypted = remoteItems.some(item => isEncryptedData(item.data));
+  if (hasEncrypted && !isCryptoReady()) {
+    throw new Error('云端存在加密灵感，请到设置页启用/解锁加密（使用与其它设备相同的 passphrase）后再拉取');
   }
 
   // 分离 inspiration 和 mood
@@ -219,8 +292,11 @@ export async function pullSync() {
       const moodUuidMap = await getUuidMap(UUID_MAP_MOOD_KEY);
       let moodMapChanged = false;
       for (const item of remoteMoods) {
-        const name = item.data?.name;
-        const color = item.data?.color;
+        // Phase 4.4 收尾：氛围标签同样可能是密文
+        const plain = await decryptItemData(item);
+        if (!plain) continue;
+        const name = plain.name;
+        const color = plain.color;
         if (!name || localMoodNames.has(name)) continue;
         try {
           const inserted = await addMood(name, color || '#c2410c');
@@ -251,21 +327,28 @@ export async function pullSync() {
     }
 
     const newItems = [];
+    // Phase 4.4 收尾：记录解密后的 createdAt ↔ client_uuid 对应关系，
+    // 供下方补充 uuid 映射时使用（密文条目的 item.data.createdAt 不可直读）。
+    const createdAtByUuid = new Map();
     for (const item of remoteInspirations) {
       if (!reverseMap[item.client_uuid]) {
+        const plain = await decryptItemData(item);
+        if (!plain) continue;
+        const createdAt = plain.createdAt || item.client_created_at || Date.now();
+        createdAtByUuid.set(item.client_uuid, createdAt);
         newItems.push({
-          title: item.data.title || '未命名灵感',
-          url: item.data.url || '',  // V10 修复：默认值改为空字符串，避免 example.com 误导
-          note: item.data.note || '',
-          mood: item.data.mood || '',
-          selectedText: item.data.selectedText || '',
-          createdAt: item.data.createdAt || item.client_created_at || Date.now(),
-          pinned: item.data.pinned || false,
+          title: plain.title || '未命名灵感',
+          url: plain.url || '',  // V10 修复：默认值改为空字符串，避免 example.com 误导
+          note: plain.note || '',
+          mood: plain.mood || '',
+          selectedText: plain.selectedText || '',
+          createdAt,
+          pinned: plain.pinned || false,
           // Phase 4.2: 拉取时也带回媒体元数据
-          mediaType: item.data.mediaType || null,
-          mediaArtist: item.data.mediaArtist || null,
-          mediaAlbum: item.data.mediaAlbum || null,
-          mediaArtworkUrl: item.data.mediaArtworkUrl || null,
+          mediaType: plain.mediaType || null,
+          mediaArtist: plain.mediaArtist || null,
+          mediaAlbum: plain.mediaAlbum || null,
+          mediaArtworkUrl: plain.mediaArtworkUrl || null,
         });
       }
     }
@@ -283,9 +366,14 @@ export async function pullSync() {
         const newCreatedAts = new Set(newItems.map(i => i.createdAt));
         for (const insp of updatedExport.inspirations || []) {
           if (newCreatedAts.has(insp.createdAt) && !updatedMap[String(insp.id)]) {
-            const remoteItem = remoteInspirations.find(ri => ri.data.createdAt === insp.createdAt);
-            if (remoteItem) {
-              updatedMap[String(insp.id)] = remoteItem.client_uuid;
+            // Phase 4.4 收尾：密文条目的 item.data.createdAt 不可直读，
+            // 改用解密阶段建立的 createdAt ↔ client_uuid 映射。
+            let remoteUuid = null;
+            for (const [uuid, ca] of createdAtByUuid) {
+              if (ca === insp.createdAt) { remoteUuid = uuid; break; }
+            }
+            if (remoteUuid) {
+              updatedMap[String(insp.id)] = remoteUuid;
             }
           }
         }
@@ -295,6 +383,12 @@ export async function pullSync() {
   }
 
   await setLastSyncAt(Date.now());
+  // 跨设备支持：确保云端存在与本地一致的加密档案
+  if (await isCryptoEnabled()) {
+    try {
+      await ensureRemoteProfile();
+    } catch (_) { /* 档案同步失败不影响同步结果 */ }
+  }
   return {
     pulled: remoteItems.length,
     importedInspirations,

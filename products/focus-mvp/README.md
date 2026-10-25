@@ -30,6 +30,7 @@ focus-mvp/
 ├── sync.js                # 云端同步（push/pull + LWW）
 ├── auto-sync.js           # 自动同步调度（alarm + 去抖）
 ├── crypto.js              # Phase 4.4 E2E 加密（AES-GCM-256 + PBKDF2）
+├── crypto-profile.js      # Phase 4.4 加密档案同步（跨设备解密）
 ├── auth.js                # JWT 鉴权
 ├── agent.js               # Agent 主动建议
 ├── ai.js / ai-router.js / local-model.js  # AI 推理
@@ -42,6 +43,7 @@ focus-mvp/
 ├── lib/
 │   ├── sql-wasm.js / sql-wasm.wasm     # sql.js
 │   ├── sql-wrapper.js
+│   ├── vannevar-crypto.js  # Phase 4.4 E2E 加密核心（与 shared/ 源字节一致，门禁校验）
 │   └── vannevar-context-card.js
 ├── icons/
 └── tests/
@@ -80,6 +82,18 @@ focus-mvp/
 
 如果恢复成功，说明 SQLite 存储、标签页捕获、标签页恢复三条链路都通了。
 
+## E2E 加密同步
+
+设置页（Options）提供「E2E 加密同步」卡片（`options.html` / `options.js`），可为云端同步启用端到端加密。
+
+- **算法与参数**：AES-GCM-256 加密内容；PBKDF2-SHA256 派生密钥，迭代 100,000 次；随机 16 字节 salt + 12 字节 nonce
+- **加密时机**：启用后，快照在**本地加密完成后**才上传，Bridge 只存得到 `ciphertext` + `nonce`，永远看不到明文
+- **passphrase 处理**：仅存在于内存，不写入 `chrome.storage`、不上传 Bridge、不参与任何网络请求；扩展 / Service Worker 重启后密钥即丢失，需重新输入 passphrase 解锁
+- **跨设备解密**：在另一台设备上登录同一账号后，用**同一个 passphrase** 解锁，即可解密该设备拉取的、此前由本机推送的密文 —— PBKDF2 的 salt 是**公开参数（不是密钥）**，经 Bridge 档案端点 `GET/PUT /api/auth/me/crypto-profile` 同步；档案另含 verification 密文，用于反验 passphrase 是否一致。**passphrase 永不落盘、永不上云**，服务端既无法反推 passphrase，也无法解密任何同步内容
+- **不可恢复**：passphrase 遗忘后云端密文**无法恢复**，请自行存入密码管理器或离线介质
+
+> 加密核心与 Muse 共用同一份实现：共享层源文件 `shared/vannevar-crypto.js`，Focus 运行副本 `products/focus-mvp/lib/vannevar-crypto.js`，由 `scripts/check_shared_sync.py` 门禁校验三者字节一致（STRICT 级，漂移即阻断）。
+
 ## 测试
 
 ### 端到端测试（Playwright + Python）
@@ -96,16 +110,21 @@ python tests/e2e/test_focus.py
 # crypto.js 单测：AES-GCM-256 加密 / PBKDF2 派生 / 密钥不出边界
 # crypto.js 是真实模块，不需要 mock 重定向 → 不带 --import
 node tests/test_crypto.mjs
+# 实测：16 通过 / 0 失败
 
 # sync.js + crypto.js 集成测试：加密锁定时跳过 push / pullSync 解密 / 跨上下文 unlock
+# / push 成功后把加密档案同步到 Bridge（跨设备前提）
 # 必须带 --import ./tests/loader.mjs
 node --import ./tests/loader.mjs tests/test_sync_crypto.mjs
+# 实测：12 通过 / 0 失败
 ```
 
 > `test_crypto.mjs` **不带** `--import` 即可（实测 16 通过 / 0 失败）；而 `test_sync_crypto.mjs`
 > 与 Muse 的 `test_media_session.mjs` **必须**带 `--import ./tests/loader.mjs`——否则 mock 缺失，
 > 加载真实 `lib/sql-wrapper.js` 时会抛 `ReferenceError: self is not defined`（Node 没有浏览器全局 `self`），
 > 导致大量用例失败。
+> `test_sync_crypto.mjs` 的 12 条用例中，最后一条为「B-P1-4: push 成功后把加密档案同步到 Bridge（跨设备前提）」，
+> 覆盖上文「E2E 加密同步」所述的跨设备解密前提（salt 档案上云）。
 
 ESM resolver（`tests/loader-hooks.mjs`）把 `sync.js` 内部的 `./auth.js` / `./db.js` 重定向到 `tests/mocks/`，避免加载 SQLite WASM 和真实 auth 模块。crypto.js 保持原样加载（真实模块，需 WebCrypto API）。
 
@@ -150,6 +169,6 @@ ESM resolver（`tests/loader-hooks.mjs`）把 `sync.js` 内部的 `./auth.js` / 
 
 - 接入大模型生成更智能的 session 摘要（Resume 进阶）
 - 支持保存本地文件路径（配合桌面端）
-- 支持端到端加密的云端同步
+- 端到端加密的**密钥轮换**：更换 passphrase 时目前会生成新 salt，历史密文因此永久不可解密；理想做法是保留旧 salt 的解密能力（多密钥并存）
 - 新增 onboarding 引导与删除撤销
 - 支持标签页分组与跨窗口管理

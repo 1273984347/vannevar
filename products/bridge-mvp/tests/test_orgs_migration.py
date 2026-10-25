@@ -18,13 +18,13 @@ client = TestClient(app)
 
 # ---------- 迁移版本 ----------
 
-def test_target_schema_version_is_11():
-    """TARGET_SCHEMA_VERSION 应为 11（Phase 4.1 新增 v11：跨产品联动表）。"""
-    assert TARGET_SCHEMA_VERSION == 11
+def test_target_schema_version_is_12():
+    """TARGET_SCHEMA_VERSION 应为 12（Phase 4.4 收尾新增 v12：加密档案表）。"""
+    assert TARGET_SCHEMA_VERSION == 12
 
 
-def test_migration_sets_user_version_to_11():
-    """init_db 后 PRAGMA user_version 应为 11。"""
+def test_migration_sets_user_version_to_12():
+    """init_db 后 PRAGMA user_version 应为 12。"""
     with engine.begin() as conn:
         dbapi_conn = conn.connection
         from database import _ensure_schema_version
@@ -33,7 +33,7 @@ def test_migration_sets_user_version_to_11():
         cur.execute("PRAGMA user_version")
         row = cur.fetchone()
         cur.close()
-        assert row[0] == 11
+        assert row[0] == 12
 
 
 # ---------- 6 张新表存在性 ----------

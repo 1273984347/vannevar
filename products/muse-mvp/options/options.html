@@ -235,6 +235,60 @@
       </div>
     </section>
 
+    <!-- Phase 4.4 收尾: E2E 加密同步 -->
+    <section class="card" aria-labelledby="cryptoTitle">
+      <h2 class="card-title" id="cryptoTitle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        E2E 加密同步
+      </h2>
+      <div class="card-desc">启用后，灵感在本地用 AES-GCM-256 加密后再上传，Bridge 服务器永远无法看到明文。passphrase 仅保存在内存，浏览器或扩展重启后需重新输入。</div>
+      <div class="card-desc">
+        <strong>忘记 passphrase 将无法恢复云端密文。</strong>请将 passphrase 保存在密码管理器或离线介质中。多设备使用请保持 <strong>同一个 passphrase</strong>——加密档案（salt 与校验密文）会同步到 Bridge，用于让其它设备派生同一把密钥。
+      </div>
+      <p id="cryptoStatus" class="ai-status" role="status" aria-live="polite"></p>
+
+      <!-- 启用 passphrase 表单（未启用时显示） -->
+      <form id="cryptoEnableForm" class="ai-form" autocomplete="off" style="display:none;">
+        <label class="ai-form-field">
+          <span class="ai-form-label">设置 passphrase（至少 8 位）</span>
+          <input id="cryptoPassphraseInput" type="password" minlength="8" required autocomplete="new-password" placeholder="********">
+        </label>
+        <label class="ai-form-field">
+          <span class="ai-form-label">确认 passphrase</span>
+          <input id="cryptoPassphraseConfirmInput" type="password" minlength="8" required autocomplete="new-password" placeholder="********">
+        </label>
+        <div class="ai-form-actions">
+          <button id="cryptoEnableBtn" class="primary-btn" type="submit" data-loading-text="启用中…">
+            <span class="btn-label">启用加密</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- 已启用：解锁 / 锁定 / 禁用 操作区 -->
+      <div id="cryptoManagePanel" class="ai-form" style="display:none;">
+        <form id="cryptoUnlockForm" class="ai-form" autocomplete="off">
+          <label class="ai-form-field">
+            <span class="ai-form-label">passphrase</span>
+            <input id="cryptoUnlockPassphraseInput" type="password" minlength="8" required autocomplete="current-password" placeholder="********">
+          </label>
+          <div class="ai-form-actions">
+            <button id="cryptoUnlockBtn" class="primary-btn" type="submit" data-loading-text="解锁中…">
+              <span class="btn-label">解锁</span>
+            </button>
+            <button id="cryptoLockBtn" class="secondary-btn" type="button">锁定</button>
+          </div>
+        </form>
+        <div class="btn-row" style="margin-top: 12px;">
+          <button id="cryptoDisableBtn" class="danger-btn" type="button" data-loading-text="禁用中…">
+            <span class="btn-label">禁用加密（需验证 passphrase）</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
     <!-- Phase 4.1: Bridge 项目关联 -->
     <section class="card" aria-labelledby="bridgeLinkTitle">
       <h2 class="card-title" id="bridgeLinkTitle">
@@ -244,7 +298,7 @@
         </svg>
         Bridge 项目关联
       </h2>
-      <div class="card-desc">选择一个 Bridge 项目作为推送目标。在弹出页中点击「推送到 Bridge」按钮时，灵感将归档到此项目。</div>
+      <div class="card-desc">选择一个 Bridge 项目作为推送目标。在弹出页中点击「推送到 Bridge」按钮时，灵感将归档到此项目。<br><strong>加密边界：</strong>「数据同步」走端到端加密（Bridge 只存密文），但「推送到 Bridge 项目档案」<strong>不加密</strong> —— Bridge 需要读取标题、链接与摘要来生成交接摘要和统计图表。</div>
       <p id="bridgeLinkStatus" class="ai-status" role="status" aria-live="polite"></p>
       <form id="bridgeLinkForm" class="ai-form" autocomplete="off">
         <label class="ai-form-field">

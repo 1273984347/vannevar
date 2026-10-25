@@ -12,6 +12,7 @@ import {
   decryptData,
   isEncryptedData,
 } from './crypto.js';
+import { ensureRemoteProfile } from './crypto-profile.js';
 
 const SYNC_APP = 'focus';
 const SYNC_ITEM_TYPE = 'snapshot';
@@ -99,6 +100,13 @@ export async function pushSync() {
   const exportData = await exportSnapshots();
   const snapshots = exportData.snapshots || [];
   if (snapshots.length === 0) {
+    // 即使没有数据也要同步加密档案：老版本已在本地启用加密、但云端尚无档案时，
+    // 这里（及正常推送路径）是自动补齐的时机 —— 否则没有数据变化，档案永远补不上。
+    if (cryptoEnabled) {
+      try {
+        await ensureRemoteProfile();
+      } catch (_) { /* 档案同步失败不影响同步结果 */ }
+    }
     return { pushed: 0, created: 0, updated: 0, skipped: 0 };
   }
 
@@ -151,11 +159,24 @@ export async function pushSync() {
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail || `推送失败（${res.status}）`);
+    const detail = body.detail;
+    // 服务端的 detail 可能是字符串，也可能是 {code, message} 对象
+    // （如 csrf_token_missing）；直接 new Error(object) 会显示成 [object Object]
+    const msg = (detail && typeof detail === 'object')
+      ? (detail.message || detail.code || `推送失败（${res.status}）`)
+      : (detail || `推送失败（${res.status}）`);
+    throw new Error(msg);
   }
 
   const result = await res.json();
   await setLastSyncAt(Date.now());
+  // 跨设备支持：确保云端存在与本地一致的加密档案（老用户首次同步时自动补齐）。
+  // 失败不阻断本次同步——加解密本身不依赖这一步。
+  if (cryptoEnabled) {
+    try {
+      await ensureRemoteProfile();
+    } catch (_) { /* 档案同步失败不影响同步结果 */ }
+  }
   return result;
 }
 
@@ -193,7 +214,12 @@ export async function pullSync() {
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail || `拉取失败（${res.status}）`);
+    const detail = body.detail;
+    // 服务端的 detail 可能是字符串，也可能是 {code, message} 对象
+    const msg = (detail && typeof detail === 'object')
+      ? (detail.message || detail.code || `拉取失败（${res.status}）`)
+      : (detail || `拉取失败（${res.status}）`);
+    throw new Error(msg);
   }
 
   const result = await res.json();
@@ -205,7 +231,7 @@ export async function pullSync() {
   // Phase 4.4: 检查是否有密文条目；如启用但未解锁 → 抛友好错误
   const hasEncrypted = remoteItems.some(item => isEncryptedData(item.data));
   if (hasEncrypted && !isCryptoReady()) {
-    throw new Error('云端存在加密快照，请到设置页输入 passphrase 解锁后再拉取');
+    throw new Error('云端存在加密快照，请到设置页启用/解锁加密（使用与其它设备相同的 passphrase）后再拉取');
   }
 
   // 读取本地数据，建立 client_uuid → local id 的反向映射
@@ -271,6 +297,12 @@ export async function pullSync() {
   }
 
   await setLastSyncAt(Date.now());
+  // 跨设备支持：确保云端存在与本地一致的加密档案
+  if (await isCryptoEnabled()) {
+    try {
+      await ensureRemoteProfile();
+    } catch (_) { /* 档案同步失败不影响同步结果 */ }
+  }
   return { pulled: remoteItems.length, imported };
 }
 

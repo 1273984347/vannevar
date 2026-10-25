@@ -186,6 +186,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           const ok = await unlockCrypto(request.passphrase);
           if (ok) {
             resetCryptoLockedNotification();
+            // 解锁后补推：SW 重启期间因「未解锁」被挂起的 push（pendingPush=true）
+            // 必须在这里补上，否则用户解锁后未变更的数据永远不会被推送。
+            resumePendingPush().catch((e) => console.warn('[BG] 解锁后补推失败:', e.message));
           }
           sendResponse({ ok, unlocked: ok });
         } catch (e) {

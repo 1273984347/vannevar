@@ -70,7 +70,7 @@
 | 桌面端 | Tauri（Rust + WebView）或 Electron | `[规划中]` |
 | 本地存储 | SQLite + IndexedDB | `[已实现 — sql.js（SQLite WASM）+ chrome.storage.local]` |
 | AI 摘要 | 调用本地小模型或 OpenAI API（用户可选） | `[已实现 — 支持 OpenAI/Anthropic/DeepSeek 等多模型]` |
-| 同步（可选） | 端到端加密云存储 | `[规划中]` |
+| 同步（可选） | 端到端加密云存储 | `[已实现 — Focus 与 Muse 均已支持 AES-GCM-256 + PBKDF2-SHA256 100,000 次迭代的端到端加密；salt（公开参数，非密钥）经 Bridge 档案端点 /api/auth/me/crypto-profile 上云以支持跨设备解密，passphrase 永不落盘、永不上云]` |
 
 ### 1.6 MVP 范围
 

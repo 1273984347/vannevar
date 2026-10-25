@@ -22,6 +22,7 @@ SCRIPTS = Path(__file__).parent.resolve()
 
 # 步骤定义：(key, 描述, 命令列表, 是否默认启用)
 STEPS = [
+    ("shared_sync", "共享层副本一致性", [sys.executable, str(SCRIPTS / "check_shared_sync.py")], True),
     ("pack_mvps", "打包三个 MVP 分包", [sys.executable, str(SCRIPTS / "pack_mvps.py")], True),
     ("pack_final", "打包总提交包", [sys.executable, str(SCRIPTS / "pack_final.py")], True),
     ("verify_loading", "MVP zip 完整性 + JS/CSS 语法", [sys.executable, str(SCRIPTS / "verify_loading.py")], True),

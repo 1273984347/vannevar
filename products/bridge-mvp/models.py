@@ -144,6 +144,31 @@ class User(Base):
     token_revoked_at = Column(Integer, nullable=True)
 
 
+class UserCryptoProfile(Base):
+    """Phase 4.4 收尾: 用户的端到端加密档案（跨设备解密支持）。
+
+    本表只存「公开参数」与「密文」，不含任何密钥材料：
+      - salt: PBKDF2 盐值（公开参数，不是密钥）
+      - iterations / kdf: 派生参数
+      - verification_ciphertext / verification_nonce: 固定明文的密文，
+        用于在另一台设备上反验 passphrase 是否一致
+
+    passphrase 本身永不落库、永不上云。服务端拿到档案既无法反推 passphrase，
+    也无法解密任何同步内容（同步密文只有客户端能解）。
+    """
+    __tablename__ = "user_crypto_profiles"
+
+    user_id = Column(Integer, primary_key=True, index=True)
+    salt = Column(String(64), nullable=False)
+    iterations = Column(Integer, nullable=False, default=100000)
+    kdf = Column(String(40), nullable=False, default="PBKDF2-SHA256-100000")
+    salt_fingerprint = Column(String(16), nullable=False, default="")
+    verification_ciphertext = Column(String(512), nullable=False)
+    verification_nonce = Column(String(64), nullable=False)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now, onupdate=_now)
+
+
 class VannevarMeta(Base):
     """B-P2-1: key-value 元数据表，用于标记种子数据是否已播种。
 

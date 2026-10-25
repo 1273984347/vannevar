@@ -45,7 +45,7 @@ CI 徽章请在 GitHub Actions 首次成功运行后，从 Actions 页面复制�
 | 产品 | 形态 | 典型场景 | 核心能力 | 目录 |
 |---|---|---|---|---|
 | **Focus** | Chrome MV3 扩展 | 深度工作、多线并行研究、临时中断恢复 | 标签页快照与恢复、AI 上下文标签、本地加密同步到 Bridge | [`products/focus-mvp/`](products/focus-mvp/) |
-| **Muse** | Chrome MV3 扩展 | 灵感捕捉、素材归档、创作回顾 | 选中片段捕获、氛围标签与分组、Dashboard 时间线、媒体元数据 | [`products/muse-mvp/`](products/muse-mvp/) |
+| **Muse** | Chrome MV3 扩展 | 灵感捕捉、素材归档、创作回顾 | 选中片段捕获、氛围标签与分组、Dashboard 时间线、媒体元数据、端到端加密同步 | [`products/muse-mvp/`](products/muse-mvp/) |
 | **Bridge** | FastAPI Web 服务 | 公益团队协作、志愿者交接、跨人接力 | 项目看板与任务、Basic Auth + RBAC、AI 交接摘要、SSE 实时推送、扫码接力 | [`products/bridge-mvp/`](products/bridge-mvp/) |
 
 技术形态一览：
@@ -187,7 +187,7 @@ python3 main.py
 
 ### 端到端加密（扩展侧）
 
-Focus 的同步数据在离开浏览器前即加密：
+Focus 与 Muse 的同步数据在离开浏览器前即加密：
 
 - 算法：**AES-GCM-256**
 - 密钥派生：**PBKDF2-SHA256，100,000 次迭代**（随机 salt，固定复用）
@@ -195,6 +195,16 @@ Focus 的同步数据在离开浏览器前即加密：
 - **用户口令本身不落盘、不上传**；服务端只见到密文、nonce 与 salt
 
 因此 Bridge 无法读取未解密的上行内容；忘记口令即无法恢复（这是设计取舍，不是缺陷）。
+
+> Muse 的同步此前是明文上传，且其 push 请求缺少 Bridge 写端点强制校验的 `X-CSRF-Token`（生产模式下必然 403）。两处均已修复，现在 Muse 与 Focus 走同一条加密链路。
+
+### 跨设备解密
+
+加密逻辑由共享层 `shared/vannevar-crypto.js` 统一提供（Focus 与 Muse 使用同一份实现，副本一致性由 `scripts/check_shared_sync.py` 门禁保证）。
+
+- **PBKDF2 salt 是公开参数，不是密钥**：它随加密档案经 `GET/PUT /api/auth/me/crypto-profile` 同步到 Bridge，供其它设备派生同一把密钥。
+- **口令永不上云、永不落盘**：档案里另存一份 verification 密文，用于在另一台设备上反验口令是否一致。
+- 因此在设备 B 输入**同一个口令**即可解密设备 A 推送的密文；口令不一致会被明确拒绝，而不是推出一堆解不开的数据。
 
 ---
 
@@ -210,7 +220,9 @@ Focus 的同步数据在离开浏览器前即加密：
 | 扩展 URL 处理 | URL scheme 白名单，仅允许 `http:` / `https:`，显式排除 `javascript:` / `data:` / 浏览器内部 scheme |
 | 扩展渲染 | 富文本统一走 HTML 转义，防 XSS |
 | 扩展权限 | `host_permissions` 为空，按需申请 `activeTab`；CSP 限制脚本源为 `'self'` |
-| 本地数据 | 扩展侧 SQLite 存于 `chrome.storage.local`；同步内容端到端加密（见上） |
+| 本地数据 | 扩展侧 SQLite 存于 `chrome.storage.local`；**Focus 与 Muse** 的同步内容均端到端加密（见上） |
+| 加密档案 | PBKDF2 salt（公开参数，非密钥）经 `/api/auth/me/crypto-profile` 同步，用于跨设备派生同一密钥；口令与派生密钥永不出现在服务端 |
+| 加密边界 | 端到端加密覆盖的是**数据同步**（`/api/sync/*`）。「推送到 Bridge 项目档案」（`/api/projects/{id}/context-*`）**不加密** —— Bridge 需要读取标题、链接与摘要来生成交接摘要与统计图表 |
 | 密钥与口令 | 依赖不落盘（仅 `chrome.storage.local` / 环境变量），仓库内不提交任何密钥 |
 
 发现问题请按 [SECURITY.md](SECURITY.md) 的流程私下上报，不要开公开 Issue。
@@ -233,7 +245,7 @@ Focus 的同步数据在离开浏览器前即加密：
 # Bridge：全量单元/集成测试（不跑 e2e）
 cd products/bridge-mvp
 py -m pytest tests/ -q --ignore=tests/e2e
-# 基线：435 passed / 9 skipped / 0 failed（用例数随新功能递增）
+# 基线：447 passed / 9 skipped / 0 failed（用例数随新功能递增）
 
 # Focus：端到端加密
 cd products/focus-mvp
@@ -242,10 +254,18 @@ node tests/test_crypto.mjs
 
 # Focus：同步链路加密
 node --import ./tests/loader.mjs tests/test_sync_crypto.mjs
-# 结果：11 通过 / 0 失败
+# 结果：12 通过 / 0 失败
+
+# Muse：端到端加密
+cd products/muse-mvp
+node tests/test_crypto.mjs
+# 结果：24 通过 / 0 失败（不触碰 SQLite WASM，无需 loader）
+
+# Muse：同步链路加密
+node --import ./tests/loader.mjs tests/test_sync_crypto.mjs
+# 结果：14 通过 / 0 失败
 
 # Muse：媒体会话
-cd products/muse-mvp
 node --import ./tests/loader.mjs tests/test_media_session.mjs
 # 结果：18 通过 / 0 失败
 ```
@@ -278,7 +298,9 @@ python scripts/qa_all.py --full       # 含存储压力测试
 python scripts/qa_all.py --only links # 只跑某一环
 ```
 
-当前状态：**5/5 通过**（`pack_mvps` / `pack_final` / `verify_loading` / `contrast` / `links`）。
+当前状态：**6/6 通过**（`shared_sync` / `pack_mvps` / `pack_final` / `verify_loading` / `contrast` / `links`）。
+
+其中 `shared_sync` 是共享层副本一致性门禁：校验 `shared/vannevar-crypto.js` 与两个产品目录副本**字节完全一致**（漂移即阻断），同时如实报告历史遗留的设计令牌与 Bridge 侧运行时副本漂移（不阻断，留待专项批次处理）。
 
 打包产物统一输出到仓库内的 `dist/`（该目录已加入 `.gitignore`，不入库）。
 
@@ -291,14 +313,15 @@ Vannevar/
 ├── products/
 │   ├── focus-mvp/          # Focus · Chrome MV3 扩展（捕捉）
 │   │   ├── background.js   #   Service Worker
-│   │   ├── crypto.js       #   AES-GCM-256 + PBKDF2-SHA256
+│   │   ├── crypto.js       #   E2E 加密（薄封装，核心见 shared/vannevar-crypto.js）
+│   │   ├── crypto-profile.js # 加密档案同步（跨设备解密）
 │   │   ├── db.js           #   sql.js 本地库
 │   │   ├── sync.js         #   与 Bridge 的 push/pull 同步
 │   │   ├── options.html    #   设置页（AI 增强等）
-│   │   ├── lib/            #   第三方 SQL.js WASM 运行时
+│   │   ├── lib/            #   第三方 SQL.js WASM 运行时 + 共享层副本
 │   │   └── tests/          #   node:test 用例
 │   ├── muse-mvp/           # Muse · Chrome MV3 扩展（整理）
-│   │   ├── core/           #   muse.js / db.js / sync.js / ai*.js
+│   │   ├── core/           #   muse.js / db.js / sync.js / ai*.js / crypto*.js
 │   │   ├── dashboard/      #   Dashboard 时间线回顾
 │   │   ├── popup/          #   扩展弹窗
 │   │   ├── options/        #   设置页
@@ -316,6 +339,7 @@ Vannevar/
 ├── shared/                 # 三产品共享层
 │   ├── vannevar-brand.css  #   设计令牌
 │   ├── vannevar-context-card.js  # .vcf 上下文卡片格式
+│   ├── vannevar-crypto.js  #   端到端加密核心（Focus / Muse 共用）
 │   ├── media/              #   品牌海报与演示视频
 │   └── privacy-policy.html #   隐私政策页
 ├── demo/                   # 演示素材
@@ -333,7 +357,7 @@ Vannevar/
 └── .editorconfig / .gitattributes
 ```
 
-代码体量（实测，按产品目录源码文件统计）：focus-mvp 35 文件 / 9,772 行，muse-mvp 38 文件 / 11,887 行，bridge-mvp 62 文件 / 30,850 行，合计 135 文件 / 52,509 行。
+代码体量（实测，按产品目录源码文件统计）：focus-mvp 37 文件 / 10,312 行，muse-mvp 45 文件 / 13,935 行，bridge-mvp 63 文件 / 31,554 行，合计 145 文件 / 55,801 行。
 
 ---
 

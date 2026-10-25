@@ -117,12 +117,12 @@ class ProjectContextInspiration(Base):
 
 ### 2.4 验收标准
 
-- [ ] Focus 登录后，popup 显示"推送到 Bridge"按钮
-- [ ] 推送快照后，Bridge 项目详情页"关联上下文"标签可见
-- [ ] Muse 登录后，popup 显示"关联到 Bridge 项目"按钮
-- [ ] Bridge 任务状态变更时，Focus 收到通知
-- [ ] 权限校验：非项目成员无法推送/查看
-- [ ] 测试：新增 test_cross_product.py，覆盖推送/查询/权限/删除
+- [x] Focus 登录后，popup 显示"推送到 Bridge"按钮（`products/focus-mvp/popup.js:renderDetailActions` 渲染于详情面板顶部；登录态在点击时校验，未登录则 toast 提示并跳转设置页）
+- [x] 推送快照后，Bridge 项目详情页"关联上下文"标签可见（`products/bridge-mvp/templates/project_detail.html:493` 标签入口 + `:804` 渲染区块；数据由 `GET /api/projects/{id}/context-snapshots` 拉取）
+- [x] Muse 登录后，popup 显示"关联到 Bridge 项目"按钮（实际文案为"推送到 Bridge"，aria-label 为"推送到 Bridge 项目档案"，`products/muse-mvp/popup/popup.js:348` 渲染于最近灵感列表项；登录态同样在点击时校验）
+- [x] Bridge 任务状态变更时，Focus 收到通知（`products/focus-mvp/task-watcher.js:160`：轮询 `/api/auth/me/recent-task-updates` 后 `chrome.notifications.create` 弹出"任务状态变更：{状态}"）
+- [x] 权限校验：非项目成员无法推送/查看（Bridge 侧 `require_project_access`；`products/bridge-mvp/tests/test_cross_product.py` 的 `test_non_owner_push_rejected` / `test_push_inspiration_non_owner_rejected` 断言 403）
+- [x] 测试：新增 test_cross_product.py，覆盖推送/查询/权限/删除（`products/bridge-mvp/tests/test_cross_product.py`，800+ 行：推送/幂等 409/列表/删除/未认证 401/非成员 403/缺 `X-CSRF-Token` 403/项目删除级联/SSE 事件）
 
 ---
 
@@ -167,7 +167,7 @@ class ProjectContextInspiration(Base):
 - [x] 无音乐播放时，music 字段为空，不影响保存 — `saveInspiration` 默认参数 `mediaType/mediaArtist/mediaAlbum/mediaArtworkUrl = null`，旧数据 `ALTER TABLE` 增列后 NULL 兜底
 - [x] 灵感博物馆"按音乐分组"视图可用 — `dashboard.html` 新增 `viewTabMusic` 视图切换按钮，`dashboard.js:renderMusicView` 渲染分组，纯函数逻辑提取到 `core/media-group.js` 便于单元测试
 - [x] 同步：music 字段跨设备同步 — `sync.js` pushSync/pullSync 已附带 4 个 media 字段，Bridge `SyncItem.payload` JSON 直接存储
-- [x] 测试：手动验证 + JS 语法检查 — `tests/test_media_session.mjs` 16/16 PASSED（saveInspiration 字段写入/NULL 兜底 + getInspirations 字段映射 + captureMediaMetadata 4 类 URL 推断 + groupByMusic 7 项纯函数测试），JS 语法检查 7 文件全通过
+- [x] 测试：手动验证 + JS 语法检查 — `tests/test_media_session.mjs` 18/18 PASSED（saveInspiration 字段写入/NULL 兜底 + getInspirations 字段映射 + captureMediaMetadata 4 类 URL 推断 + groupByMusic 7 项纯函数测试），JS 语法检查 7 文件全通过
 
 ---
 
@@ -270,12 +270,28 @@ tech-spec 1.5 "端到端加密云存储"落地：快照内容客户端加密，B
 
 ### 5.3 验收标准
 
-- [ ] 启用 E2E 加密后，pushSync 推送密文
-- [ ] Bridge 数据库中 urls 字段为密文（无法直接读取）
-- [ ] pullSync 能正确解密
-- [ ] 未启用加密时，兼容旧明文格式
-- [ ] 密钥跨设备同步：设备 B 能解密设备 A 加密的快照
-- [ ] 测试：test_crypto.py 覆盖加密/解密/兼容性
+- [x] 启用 E2E 加密后，pushSync 推送密文（`shared/vannevar-crypto.js` 写入 `{encrypted:true, alg:"AES-GCM-256", kdf:"PBKDF2-SHA256-100000", ciphertext, nonce, v:1}`；Focus `products/focus-mvp/sync.js`、Muse `products/muse-mvp/core/sync.js`）
+- [x] Bridge 数据库中 urls 字段为密文（无法直接读取）（密文存于 SyncItem 的 `data` JSON，服务端只见 `ciphertext`/`nonce`；服务端既无 passphrase 也无派生密钥，无法解密任何同步内容）
+- [x] pullSync 能正确解密（Focus `tests/test_crypto.mjs` 16/16 + `tests/test_sync_crypto.mjs` 12/12；Muse `tests/test_crypto.mjs` 24/24 + `tests/test_sync_crypto.mjs` 14/14）
+- [x] 未启用加密时，兼容旧明文格式（pull 时以 `data.encrypted` 字段区分密文与明文，旧明文按原样处理，不做破坏性迁移）
+- [x] 密钥跨设备同步：设备 B 能解密设备 A 加密的快照（本批落地：salt 作为公开参数经 `GET/PUT /api/auth/me/crypto-profile` 上云，档案另含 verification 密文用于在另一台设备反验 passphrase 是否一致；passphrase 永不上云）
+- [x] 测试：加密/解密/兼容性 —— 实际为 `tests/test_crypto.mjs`（16）、`tests/test_sync_crypto.mjs`（12）、`tests/test_crypto_profile.py`（Bridge 端点）
+
+### 5.4 实施偏差说明
+
+**(a) 加密档案落库形态：用户配置表 → 独立表 + 独立端点**
+
+- 原计划（§5.2.4）：「用户首次启用 E2E 加密时，生成 salt 并同步到 Bridge（用户配置表）」。
+- 实际实现：独立表 `user_crypto_profiles`（用户 ↔ 档案 1:1，`products/bridge-mvp/models.py:147` 的 `class UserCryptoProfile`，`__tablename__` 在 `:159`）+ 独立端点 `GET/PUT /api/auth/me/crypto-profile`（`products/bridge-mvp/routers/auth_router.py:129` / `:157`），数据库迁移 `PRAGMA user_version` v11 → v12（`products/bridge-mvp/database.py:92` 的 `TARGET_SCHEMA_VERSION = 12`，迁移函数 `_run_migration_v12` 在 `:443`）。
+- 理由：加密档案与账号 1:1，且未来可能扩展字段（KDF 参数、verification 版本、档案轮换历史等），独立表不污染 `users` 表，也便于后续做档案轮换与审计。
+- 上云内容仅含公开参数：`salt`（PBKDF2 公开盐值，**不是密钥**）、`iterations`、`kdf`、`salt_fingerprint`、`verification`（密文 + nonce，仅用于在另一台设备上反验 passphrase 是否一致）。
+
+**(b) 原计划未提及 Muse —— Muse 的端到端加密在本批补齐**
+
+- 此前只有 Focus 有端到端加密实现：Muse 侧加密相关代码为零，云同步为明文上传，根 README 与 CHANGELOG 中「Muse 支持端到端加密」的声称当时并不成立；本批已补齐实现，该声称现在成立。
+- Muse 新增 `core/crypto.js`（加密模块薄封装）、`core/crypto-profile.js`（档案同步层）、`shared/vannevar-crypto.js`（共享核心副本），设置页新增「E2E 加密同步」卡片（`products/muse-mvp/options/options.html` / `options.js`）。
+- **顺带修复的真实缺陷**：Muse 的同步 push 此前不带 `X-CSRF-Token` 头，而 Bridge 写端点强制校验该头（须等于 JWT 的 `csrf_jti`），因此 Muse 云同步在生产模式下必然 403；本批改为统一使用 `getBridgeHeaders()` 注入（Focus 侧此前已有该修复并有专门用例覆盖）。
+- 加密核心上收到共享层 `shared/vannevar-crypto.js`，以 `createCryptoModule({storeKey, verificationPlaintext})` 工厂导出参数化实现，Focus 与 Muse 共用同一份代码；运行副本分别为 `products/focus-mvp/lib/vannevar-crypto.js` 与 `products/muse-mvp/shared/vannevar-crypto.js`，由 `scripts/check_shared_sync.py` 门禁（STRICT 级，字节不一致即阻断）校验三者一致，并已接入 `scripts/qa_all.py`（shared_sync → pack_mvps → pack_final → verify_loading → contrast → links，共 6 步）。
 
 ---
 
@@ -283,14 +299,16 @@ tech-spec 1.5 "端到端加密云存储"落地：快照内容客户端加密，B
 
 ### 6.1 功能验收
 
-- Phase 4.1：跨产品联动 4 条链路全部可用
-- Phase 4.2：媒体会话捕获 + 按音乐分组
-- Phase 4.3：仪表盘 4 类图表
-- Phase 4.4：E2E 加密 + 跨设备解密
+- Phase 4.1：跨产品联动 4 条链路全部可用（验收项 6/6 已勾选，见 §2.4）
+- Phase 4.2：媒体会话捕获 + 按音乐分组（验收项 5/5 已勾选，见 §3.3）
+- Phase 4.3：仪表盘 4 类图表（验收项 6/6 已勾选，见 §4.3）
+- Phase 4.4：E2E 加密 + 跨设备解密（验收项 6/6 已勾选，见 §5.3；跨设备 salt 上云于本批完成，实施偏差见 §5.4）
 
 ### 6.2 质量验收
 
-- 全量测试通过（303 + 新增测试）
+- 全量测试通过（Bridge 全量基线见根 README 开发与测试章节）
+- 扩展侧测试基线（本批实测）：Focus `node tests/test_crypto.mjs` 16 通过 / 0 失败；Focus `node --import ./tests/loader.mjs tests/test_sync_crypto.mjs` 12 通过 / 0 失败；Muse `node tests/test_crypto.mjs` 24 通过 / 0 失败；Muse `node --import ./tests/loader.mjs tests/test_sync_crypto.mjs` 14 通过 / 0 失败；Muse `node --import ./tests/loader.mjs tests/test_media_session.mjs` 18 / 18 PASSED
+- 共享层一致性门禁：`scripts/check_shared_sync.py`（STRICT）校验 `shared/vannevar-crypto.js` 与两份运行副本字节一致，已接入 `scripts/qa_all.py`（shared_sync → pack_mvps → pack_final → verify_loading → contrast → links，共 6 步）
 - JS 语法检查通过
 - Python 语法检查通过
 - DRL 真循环收敛（连续 N 轮无新问题）

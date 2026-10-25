@@ -7,7 +7,42 @@
 
 ## [Unreleased]
 
-暂无。尚未发布的改动将在合并到 `main` 后归入此节。
+### Added
+
+**共享层**
+
+- 新增 `shared/vannevar-crypto.js`：参数化的端到端加密核心（`createCryptoModule` 工厂），Focus 与 Muse 共用同一份实现，避免两套加密代码各自演化。
+
+**Muse —— 补齐端到端加密**
+
+- Muse 的灵感与氛围标签现在经 **AES-GCM-256 + PBKDF2-SHA256（100,000 次）** 加密后再上传，Bridge 服务端只能看到密文。
+- Muse 设置页新增「E2E 加密同步」区：启用 / 解锁 / 锁定 / 禁用；加密已启用但未解锁时，自动同步会暂停并通过系统通知提醒，而不是推送明文或反复失败。
+
+**跨设备解密**
+
+- 新增加密档案端点 `GET` / `PUT` `/api/auth/me/crypto-profile` 与数据表 `user_crypto_profiles`（数据库迁移 `user_version` v11 → v12）。PBKDF2 salt 作为**公开参数**随档案同步，使另一台设备用**同一个口令**即可解密历史密文；口令本身永不上云、永不落盘。
+- Focus 与 Muse 的设置页均支持「采用 Bridge 上的加密档案」解锁，并在 push / pull 成功后自动补齐云端档案（老用户首次同步即自动完成）。
+
+### Fixed
+
+- **Muse 的云同步在生产模式下必然 403**：Muse 的 push 请求此前不带 `X-CSRF-Token` 头，而 Bridge 的写端点强制校验该头（须等于 JWT 的 `csrf_jti`）。现已统一通过 `getBridgeHeaders()` 注入；Focus 侧此前已修复并有专门用例覆盖，Muse 侧本批补齐。
+- **文档与实现失真**：`docs/phase4-plan.md` 中 Phase 4.1 的 6 条验收项实际早已实现（后端端点、扩展接入、UI、800+ 行测试齐备）却从未回填，显示为「未完成」；`tech/tech-spec.md` 的端到端加密云存储仍标为「规划中」；`demo/designs/visual-redesign-spec.md` 状态仍为「待实施」（实际已落地）。以上均已校准。
+- 说明：`0.1.0` 发布说明中「Muse —— 与 Bridge 的双向同步，同样支持端到端加密」一句，在当时的实现下并不成立（Muse 同步实为明文）。按发布记录不追溯改写的惯例，此处在 `Unreleased` 留痕，实际能力于本次补齐。
+
+### Security
+
+- Muse 同步内容由明文改为密文上行，消除「用户以为数据已加密、实际服务端可直接读取」的隐私缺口；此前状态违反 `AGENTS.md` §2.3「同步内容必须经端到端加密」。
+
+### Testing
+
+- 新增 `products/muse-mvp/tests/test_crypto.mjs`（24 条，含两个独立模块实例互解的跨设备用例）、`products/muse-mvp/tests/test_sync_crypto.mjs`（14 条）、`products/bridge-mvp/tests/test_crypto_profile.py`（12 条）。
+- 新增门禁 `scripts/check_shared_sync.py`（共享层副本一致性，已接入 `scripts/qa_all.py`，强约束副本组漂移即阻断）。
+- 测试基线：Bridge **447 passed / 9 skipped / 0 failed**；Focus 16 + 12；Muse 24 + 14 + 18。
+
+### Documentation
+
+- 根 `README.md` 补齐跨设备解密说明、加密档案的安全边界、修正后的测试基线与代码体量统计。
+- `products/muse-mvp/README.md` 与 `products/focus-mvp/README.md` 补齐 E2E 加密与跨设备解密章节。
 
 ## [0.1.0] - 2026-10-25
 

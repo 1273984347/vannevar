@@ -4,6 +4,16 @@ import { getAIConfig, setAIConfig, clearAIConfig, testAIConnection, getDemoMode,
 import { getAuthState, login, register, logout } from '../core/auth.js';
 import { pushSync, pullSync, getSyncState } from '../core/sync.js';
 import { listBridgeProjects, getBridgeLinkConfig, setBridgeLinkConfig } from '../core/bridge-link.js';
+// Phase 4.4 收尾: Muse 端到端加密（核心实现见 shared/vannevar-crypto.js）
+import {
+  getCryptoState,
+  enableCrypto,
+  disableCrypto,
+  unlockCrypto,
+  lockCrypto,
+  adoptRemoteProfile,
+} from '../core/crypto.js';
+import { fetchRemoteProfile, pushRemoteProfile } from '../core/crypto-profile.js';
 import { showToast } from '../shared/toast.js';
 
 const exportBtn = document.getElementById('exportBtn');
@@ -202,6 +212,243 @@ function setSyncStatus(message, type) {
   if (!syncStatusEl) return;
   syncStatusEl.textContent = message;
   syncStatusEl.dataset.type = type || 'muted';
+}
+
+// ---------- Phase 4.4 收尾: E2E 加密同步 ----------
+const cryptoStatusEl = document.getElementById('cryptoStatus');
+const cryptoEnableForm = document.getElementById('cryptoEnableForm');
+const cryptoManagePanel = document.getElementById('cryptoManagePanel');
+const cryptoPassphraseInput = document.getElementById('cryptoPassphraseInput');
+const cryptoPassphraseConfirmInput = document.getElementById('cryptoPassphraseConfirmInput');
+const cryptoEnableBtn = document.getElementById('cryptoEnableBtn');
+const cryptoUnlockForm = document.getElementById('cryptoUnlockForm');
+const cryptoUnlockPassphraseInput = document.getElementById('cryptoUnlockPassphraseInput');
+const cryptoUnlockBtn = document.getElementById('cryptoUnlockBtn');
+const cryptoLockBtn = document.getElementById('cryptoLockBtn');
+const cryptoDisableBtn = document.getElementById('cryptoDisableBtn');
+
+if (cryptoEnableForm && cryptoManagePanel) {
+  cryptoEnableForm.addEventListener('submit', handleCryptoEnable);
+  cryptoUnlockForm.addEventListener('submit', handleCryptoUnlock);
+  cryptoLockBtn.addEventListener('click', handleCryptoLock);
+  cryptoDisableBtn.addEventListener('click', handleCryptoDisable);
+  loadCryptoState();
+}
+
+function setCryptoStatus(message, type) {
+  if (!cryptoStatusEl) return;
+  cryptoStatusEl.textContent = message;
+  cryptoStatusEl.dataset.type = type || 'muted';
+}
+
+async function loadCryptoState(suffix = '') {
+  if (!cryptoStatusEl) return;
+  try {
+    const state = await getCryptoState();
+    if (!state.enabled) {
+      cryptoEnableForm.style.display = '';
+      cryptoManagePanel.style.display = 'none';
+      setCryptoStatus('未启用加密 — 当前推送为明文上传到 Bridge', 'muted');
+    } else if (state.ready) {
+      cryptoEnableForm.style.display = 'none';
+      cryptoManagePanel.style.display = '';
+      cryptoUnlockForm.style.display = 'none';
+      setCryptoStatus(`已启用并已解锁 · PBKDF2 迭代 ${state.iterations.toLocaleString()} 次 · salt 指纹 ${state.saltFingerprint}${suffix}`, 'ok');
+    } else {
+      cryptoEnableForm.style.display = 'none';
+      cryptoManagePanel.style.display = '';
+      cryptoUnlockForm.style.display = '';
+      setCryptoStatus(`已启用但未解锁 · 请输入 passphrase 解锁后才能 push/pull 加密灵感 · salt 指纹 ${state.saltFingerprint}`, 'muted');
+    }
+  } catch (err) {
+    setCryptoStatus('读取加密状态失败：' + err.message, 'error');
+  }
+}
+
+async function handleCryptoEnable(evt) {
+  if (evt) evt.preventDefault();
+  const passphrase = cryptoPassphraseInput.value;
+  const passphraseConfirm = cryptoPassphraseConfirmInput.value;
+  if (passphrase.length < 8) {
+    setCryptoStatus('passphrase 至少 8 位', 'error');
+    return;
+  }
+  if (passphrase !== passphraseConfirm) {
+    setCryptoStatus('两次输入的 passphrase 不一致', 'error');
+    return;
+  }
+  cryptoEnableBtn.disabled = true;
+  setCryptoStatus('启用中…（PBKDF2 派生 key，约 1-2 秒）', 'muted');
+  try {
+    // 跨设备：若 Bridge 上已有加密档案，复用其 salt，使本设备与其它设备派生同一把密钥。
+    // 云端不可达时降级为本地新建（不影响本机加密）。
+    let remoteProfile = null;
+    try {
+      const state = await fetchRemoteProfile();
+      // 只有确认云端「确实有档案」才复用其 salt。
+      // 状态未知（网络/鉴权失败）时不能假设云端为空 —— 否则随后的上传会覆盖另一台设备的档案。
+      if (state && state.status === 'ok') remoteProfile = state.profile;
+    } catch (_) { /* 云端不可达 → 本地新建（且不会上传） */ }
+
+    const result = await enableCrypto(passphrase, remoteProfile ? { remoteProfile } : {});
+
+    // 同步解锁 SW 的 crypto.js 模块（options 页与 SW 是独立 JS 上下文）
+    let swUnlockOk = true;
+    try {
+      const resp = await chrome.runtime.sendMessage({ action: 'CRYPTO_UNLOCK', passphrase });
+      if (!resp || !resp.ok || !resp.unlocked) {
+        swUnlockOk = false;
+        console.warn('[Options] SW unlock 返回失败:', resp);
+      }
+    } catch (e) {
+      swUnlockOk = false;
+      console.warn('[Options] 通知 SW 解锁失败（自动同步将无法加密推送）:', e);
+    }
+
+    // 把加密档案同步到 Bridge（跨设备解密的前提）。失败不影响本机加密。
+    let profileSynced = false;
+    try {
+      const pushResult = await pushRemoteProfile();
+      profileSynced = !!(pushResult && pushResult.synced);
+    } catch (_) { /* 档案同步失败不影响本机加密 */ }
+
+    cryptoEnableForm.style.display = 'none';
+    cryptoManagePanel.style.display = '';
+    cryptoUnlockForm.style.display = '';
+    cryptoPassphraseInput.value = '';
+    cryptoPassphraseConfirmInput.value = '';
+
+    if (swUnlockOk) {
+      const crossDevice = result.reusedRemoteSalt
+        ? ' · 已采用 Bridge 上的加密档案（可解密其它设备的数据）'
+        : '';
+      const profileNote = profileSynced ? '' : ' · ⚠ 加密档案未同步到 Bridge，跨设备解密暂不可用';
+      setCryptoStatus(`已启用 E2E 加密 · salt 指纹 ${result.saltFingerprint}${crossDevice}${profileNote}`, profileSynced ? 'ok' : 'muted');
+      showToast('E2E 加密已启用', 'success');
+    } else {
+      // options 页已启用（key 已装载），但 SW 未解锁——auto-sync 无法加密推送
+      setCryptoStatus(`已启用 E2E 加密 · salt 指纹 ${result.saltFingerprint} · ⚠ SW 未解锁，自动同步将跳过加密推送，请到扩展弹窗或重启浏览器后重新解锁`, 'error');
+      showToast('E2E 加密已启用，但 SW 解锁失败——自动同步将暂停', 'error');
+    }
+  } catch (err) {
+    setCryptoStatus('启用失败：' + err.message, 'error');
+    showToast('启用失败：' + err.message, 'error');
+  } finally {
+    cryptoEnableBtn.disabled = false;
+  }
+}
+
+async function handleCryptoUnlock(evt) {
+  if (evt) evt.preventDefault();
+  const passphrase = cryptoUnlockPassphraseInput.value;
+  if (passphrase.length < 8) {
+    setCryptoStatus('passphrase 至少 8 位', 'error');
+    return;
+  }
+  cryptoUnlockBtn.disabled = true;
+  setCryptoStatus('解锁中…', 'muted');
+  try {
+    const state = await getCryptoState();
+    let ok = false;
+    let adoptedRemote = false;
+
+    if (state.enabled) {
+      // 本机已有加密档案：用本地 salt 派生
+      ok = await unlockCrypto(passphrase);
+    } else {
+      // 跨设备首次使用：本机没有加密档案，尝试采用 Bridge 上的档案（设备 B）
+      const state = await fetchRemoteProfile();
+      if (state.status === 'error') {
+        setCryptoStatus('无法连接 Bridge 获取加密档案，请检查网络后重试', 'error');
+        showToast('无法连接 Bridge', 'error');
+        cryptoUnlockBtn.disabled = false;
+        return;
+      }
+      if (state.status === 'absent') {
+        setCryptoStatus('本机未启用加密，且 Bridge 上没有加密档案 —— 请先点「启用加密」', 'error');
+        showToast('本机未启用加密', 'error');
+        cryptoUnlockBtn.disabled = false;
+        return;
+      }
+      const adopted = await adoptRemoteProfile(passphrase, state.profile);
+      if (!adopted.ok) {
+        setCryptoStatus('passphrase 与其它设备不一致，无法用同一密钥解密历史数据', 'error');
+        cryptoUnlockBtn.disabled = false;
+        return;
+      }
+      ok = true;
+      adoptedRemote = true;
+    }
+
+    if (!ok) {
+      setCryptoStatus('passphrase 错误，请重试', 'error');
+      cryptoUnlockBtn.disabled = false;
+      return;
+    }
+
+    // 同步解锁 SW 的 crypto.js 模块（让 auto-sync 也能加解密）
+    let swUnlockOk = true;
+    try {
+      const resp = await chrome.runtime.sendMessage({ action: 'CRYPTO_UNLOCK', passphrase });
+      if (!resp || !resp.ok || !resp.unlocked) {
+        swUnlockOk = false;
+      }
+    } catch (e) {
+      swUnlockOk = false;
+      console.warn('[Options] 通知 SW 解锁失败:', e);
+    }
+
+    cryptoUnlockPassphraseInput.value = '';
+    if (swUnlockOk) {
+      const suffix = adoptedRemote ? ' · 已采用 Bridge 上的加密档案，可解密其它设备推送的密文' : '';
+      setCryptoStatus(`解锁成功${suffix} · 现在可以 push/pull 加密灵感`, 'ok');
+      showToast('解锁成功', 'success');
+      await loadCryptoState(suffix);
+    } else {
+      setCryptoStatus('options 页已解锁，但 SW 解锁失败 · auto-sync 仍无法加密推送，请重试或重启浏览器', 'error');
+      showToast('options 页已解锁，但 SW 解锁失败', 'error');
+    }
+  } catch (err) {
+    setCryptoStatus('解锁失败：' + err.message, 'error');
+  } finally {
+    cryptoUnlockBtn.disabled = false;
+  }
+}
+
+async function handleCryptoLock() {
+  try {
+    lockCrypto();
+    try {
+      await chrome.runtime.sendMessage({ action: 'CRYPTO_LOCK' });
+    } catch (_) { /* SW 不可达时忽略 */ }
+    setCryptoStatus('已锁定 · 需重新输入 passphrase 才能加解密', 'muted');
+    await loadCryptoState();
+  } catch (err) {
+    setCryptoStatus('锁定失败：' + err.message, 'error');
+  }
+}
+
+async function handleCryptoDisable() {
+  const passphrase = cryptoUnlockPassphraseInput.value || prompt('请输入当前 passphrase 以确认禁用加密：');
+  if (!passphrase) {
+    setCryptoStatus('需输入 passphrase 才能禁用加密', 'error');
+    return;
+  }
+  cryptoDisableBtn.disabled = true;
+  setCryptoStatus('禁用中…', 'muted');
+  try {
+    await disableCrypto(passphrase);
+    try {
+      await chrome.runtime.sendMessage({ action: 'CRYPTO_DISABLE_SW' });
+    } catch (_) { /* SW 不可达时忽略 */ }
+    cryptoUnlockPassphraseInput.value = '';
+    setCryptoStatus('加密已禁用 · 后续推送将以明文形式上传', 'muted');
+    await loadCryptoState();
+  } catch (err) {
+    setCryptoStatus('禁用失败：' + err.message, 'error');
+  } finally {
+    cryptoDisableBtn.disabled = false;
+  }
 }
 
 // ---------- Phase 4.1: Bridge 项目关联 ----------

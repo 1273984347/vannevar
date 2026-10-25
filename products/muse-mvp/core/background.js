@@ -19,7 +19,7 @@ import {
   searchInspirations
 } from './muse.js';
 import { generateInspirationResume } from './resume.js';
-import { schedulePushSync, syncOnStartup, schedulePeriodicPull, handleAlarm, resumePendingPush } from './auto-sync.js';
+import { schedulePushSync, syncOnStartup, schedulePeriodicPull, handleAlarm, resumePendingPush, resetCryptoLockedNotification } from './auto-sync.js';
 import { removeInspirationUuid, removeMoodUuid } from './sync.js';
 import { initAgent, handleAgentAlarm, refreshAgentBadge } from './agent.js';
 
@@ -244,6 +244,42 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const imported = await importInspirations(request.data);
         schedulePushSync(); // 阶段1.6: 导入后去抖自动推送
         sendResponse({ ok: true, imported });
+      } else if (request.action === 'CRYPTO_UNLOCK') {
+        // Phase 4.4 收尾：options 页把 passphrase 转发给 SW，让 SW 的 crypto.js 模块
+        // 也派生 key 装载到内存，这样 auto-sync 调用 sync.js 时 isCryptoReady() 为 true。
+        // passphrase 仅在扩展内部消息通道传输，不持久化、不出扩展边界。
+        try {
+          const { unlockCrypto } = await import('./crypto.js');
+          const ok = await unlockCrypto(request.passphrase);
+          if (ok) {
+            resetCryptoLockedNotification();
+            // 解锁后补推：SW 重启期间因「未解锁」被挂起的 push（pendingPush=true）
+            // 必须在这里补上，否则用户解锁后未变更的数据永远不会被推送。
+            resumePendingPush().catch((e) => console.warn('[BG] 解锁后补推失败:', e.message));
+          }
+          sendResponse({ ok, unlocked: ok });
+        } catch (e) {
+          sendResponse({ ok: false, error: String(e && e.message || e) });
+        }
+      } else if (request.action === 'CRYPTO_LOCK') {
+        // Phase 4.4 收尾：options 页锁定时同步锁定 SW 的 crypto.js 模块
+        try {
+          const { lockCrypto } = await import('./crypto.js');
+          lockCrypto();
+          sendResponse({ ok: true });
+        } catch (e) {
+          sendResponse({ ok: false, error: String(e && e.message || e) });
+        }
+      } else if (request.action === 'CRYPTO_DISABLE_SW') {
+        // Phase 4.4 收尾：options 页禁用加密时同步清理 SW 内存 key
+        try {
+          const { lockCrypto } = await import('./crypto.js');
+          lockCrypto();
+          resetCryptoLockedNotification();
+          sendResponse({ ok: true });
+        } catch (e) {
+          sendResponse({ ok: false, error: String(e && e.message || e) });
+        }
       } else {
         sendResponse({ ok: false, error: '未知操作' });
       }

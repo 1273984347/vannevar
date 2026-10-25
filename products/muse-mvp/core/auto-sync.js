@@ -1,8 +1,11 @@
 // auto-sync.js — 阶段1.6 Context Card 账号级自动同步（Muse 版）
 // 数据变化时去抖 push（5s 批量），启动时 + 定时（30min）自动 pull。
 // 全部静默执行：未登录时跳过，出错只 console.warn，不干扰主流程。
+// Phase 4.4 收尾：启用 E2E 加密但未解锁时，跳过自动同步（避免误推明文或反复失败），
+//                通过 chrome.notifications 提醒用户去 options 页解锁。
 import { getAuthToken } from './auth.js';
 import { pushSync, pullSync } from './sync.js';
+import { isCryptoEnabled, isCryptoReady } from './crypto.js';
 
 const ALARM_NAME = 'vannevar-muse-auto-sync';
 const ALARM_INTERVAL_MIN = 30; // 每 30 分钟定时 pull
@@ -10,6 +13,8 @@ const PUSH_DEBOUNCE_MS = 5000; // 数据变化后 5s 去抖 push
 // V4 修复：推送失败指数退避重试配置
 const MAX_PUSH_RETRIES = 3;
 const PUSH_RETRY_BASE_MS = 30000; // 30s 起步，按 2^count 递增
+// Phase 4.4 收尾：加密未解锁提醒节流（同一会话不重复提醒，避免 spam）
+let _cryptoLockedNotified = false;
 
 let pushTimer = null;
 let isSyncing = false; // 防止 push/pull 并发冲突
@@ -25,6 +30,38 @@ async function isLoggedIn() {
   } catch (_) {
     return false;
   }
+}
+
+// Phase 4.4 收尾：检查加密状态。返回 true 表示可以继续同步；false 表示应跳过本次。
+// 启用但未解锁时：通过 chrome.notifications 提醒一次（节流），不重复打扰用户。
+async function isCryptoSyncable() {
+  try {
+    const enabled = await isCryptoEnabled();
+    if (!enabled) return true;            // 未启用：可同步
+    if (isCryptoReady()) return true;     // 已启用且已解锁：可同步
+    // 已启用但未解锁 → 提醒用户
+    if (!_cryptoLockedNotified) {
+      _cryptoLockedNotified = true;
+      _notifyCryptoLocked();
+    }
+    return false;
+  } catch (_) {
+    return true;  // 检查失败时不阻塞同步（最坏情况 sync.js 会再次抛错）
+  }
+}
+
+function _notifyCryptoLocked() {
+  try {
+    if (chrome.notifications) {
+      chrome.notifications.create('vannevar-muse-crypto-locked', {
+        type: 'basic',
+        iconUrl: 'icons/icon-128.png',
+        title: 'Muse 自动同步已暂停',
+        message: 'E2E 加密已启用但未解锁。请打开设置页输入 passphrase 解锁后，自动同步将恢复。',
+        priority: 1,
+      });
+    }
+  } catch (_) { /* 通知失败不影响主流程 */ }
 }
 
 // 去抖推送：数据变化后延迟 5s 执行，期间多次变化合并为一次
@@ -62,6 +99,13 @@ async function doPushSync() {
   isSyncing = true; // R5-FE-2: 先设置标志，避免 await isLoggedIn 间隙并发进入
   try {
     if (!(await isLoggedIn())) return; // 未登录跳过
+    if (!(await isCryptoSyncable())) {
+      // Phase 4.4 收尾：加密未解锁，跳过本次 push。
+      // 不清除 pendingPush——保留 true，让用户解锁后 SW 重启或下次数据变化时恢复推送
+      // （清掉会导致用户解锁后未变化的数据永远不被推送）。
+      // isCryptoSyncable 内部已通过 _cryptoLockedNotified 节流提醒，不会 spam 通知。
+      return;
+    }
     const result = await pushSync();
     console.log(`[AutoSync] push 完成：新增 ${result.created}，更新 ${result.updated}，跳过 ${result.skipped}`);
     // V4 修复：成功后重置重试计数
@@ -106,6 +150,7 @@ export async function syncOnStartup() {
   isSyncing = true;
   try {
     if (!(await isLoggedIn())) return;
+    if (!(await isCryptoSyncable())) return;  // Phase 4.4 收尾：加密未解锁，跳过 pull
     const result = await pullSync();
     if (result.importedInspirations > 0 || result.importedMoods > 0) {
       console.log(`[AutoSync] 启动 pull 完成：灵感 ${result.importedInspirations} 条，氛围 ${result.importedMoods} 个`);
@@ -130,6 +175,7 @@ export async function handleAlarm(alarm) {
   isSyncing = true; // R5-FE-2: 先设置标志，避免 await isLoggedIn 间隙并发进入
   try {
     if (!(await isLoggedIn())) return;
+    if (!(await isCryptoSyncable())) return;  // Phase 4.4 收尾：加密未解锁，跳过 pull
     const result = await pullSync();
     if (result.importedInspirations > 0 || result.importedMoods > 0) {
       console.log(`[AutoSync] 定时 pull 完成：灵感 ${result.importedInspirations} 条，氛围 ${result.importedMoods} 个`);
@@ -139,4 +185,10 @@ export async function handleAlarm(alarm) {
   } finally {
     isSyncing = false;
   }
+}
+
+// Phase 4.4 收尾：用户在 options 页解锁后调用，重置通知节流标志，让后续同步可恢复。
+// 应在 crypto.unlockCrypto 成功后通过 chrome.runtime.sendMessage 触发。
+export function resetCryptoLockedNotification() {
+  _cryptoLockedNotified = false;
 }

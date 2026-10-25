@@ -364,6 +364,49 @@ class TokenOut(BaseModel):
     user: UserOut
 
 
+# ---------- Phase 4.4 收尾: 端到端加密档案（跨设备解密） ----------
+
+class CryptoVerificationIn(BaseModel):
+    """加密档案中的 verification 密文。
+
+    内容是「固定明文」的密文，用于在另一台设备上反验 passphrase 是否一致。
+    服务端无法用它反推 passphrase。
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    ciphertext: str = Field(..., min_length=1, max_length=512)
+    nonce: str = Field(..., min_length=1, max_length=64)
+
+
+class CryptoProfileIn(BaseModel):
+    """客户端上报的加密档案。
+
+    salt 是 PBKDF2 的**公开盐值**（不是密钥），可以安全上云；
+    passphrase 永不上行、永不落盘。
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    salt: str = Field(..., min_length=1, max_length=64)
+    iterations: int = Field(..., ge=1000, le=1_000_000)
+    kdf: str = Field(..., min_length=1, max_length=40)
+    salt_fingerprint: str = Field(default="", max_length=16)
+    verification: CryptoVerificationIn
+
+
+class CryptoProfileOut(BaseModel):
+    """加密档案输出（结构与 CryptoProfileIn 对称）。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    salt: str
+    iterations: int
+    kdf: str
+    salt_fingerprint: str
+    verification: CryptoVerificationIn
+
+
 # ---------- 阶段1.5: 数据同步 ----------
 ALLOWED_SYNC_APPS = {"focus", "muse"}
 ALLOWED_SYNC_ITEM_TYPES = {"snapshot", "inspiration", "mood"}

@@ -49,7 +49,25 @@ let _fetchMock = async (url, opts) => {
     headers: { 'Content-Type': 'application/json' },
   });
 };
-globalThis.fetch = (url, opts) => _fetchMock(url, opts);
+// Phase 4.4 收尾：push/pull 成功后会自动同步加密档案（跨设备解密的前提）。
+// 档案端点单独分流，避免污染同步请求的 body/header 捕获变量。
+let _profileCalls = [];
+let _profilePutBody = null;
+globalThis.fetch = (url, opts) => {
+  if (String(url).includes('/api/auth/me/crypto-profile')) {
+    _profileCalls.push({ method: opts.method, url: String(url) });
+    if (opts.method === 'PUT') {
+      _profilePutBody = JSON.parse(opts.body);
+      return Promise.resolve(new Response(JSON.stringify(_profilePutBody), {
+        status: 200, headers: { 'Content-Type': 'application/json' },
+      }));
+    }
+    return Promise.resolve(new Response(JSON.stringify({ detail: '尚未设置加密档案' }), {
+      status: 404, headers: { 'Content-Type': 'application/json' },
+    }));
+  }
+  return _fetchMock(url, opts);
+};
 
 // mock btoa/atob（Node 18+ 已有，但保险）
 if (typeof globalThis.btoa !== 'function') {
@@ -102,6 +120,8 @@ function resetAll() {
   _storage.clear();
   authMock._resetAuthState();
   dbMock._resetDbState();
+  _profileCalls = [];
+  _profilePutBody = null;
   _fetchMock = async () => new Response(JSON.stringify({ created: 0, updated: 0, skipped: 0 }), {
     status: 200, headers: { 'Content-Type': 'application/json' },
   });
@@ -358,6 +378,98 @@ await test('B-P1-3-e: push 时 fetch headers 含 X-CSRF-Token（CSRF 头修复�
   assert.ok(capturedHeaders['Authorization']?.startsWith('Bearer '), '应有 Authorization Bearer 头');
   assert.ok(capturedHeaders['X-CSRF-Token'], '应有 X-CSRF-Token 头（CSRF 修复）');
   assert.equal(capturedHeaders['Content-Type'], 'application/json');
+});
+
+await test('B-P1-4: push 成功后把加密档案同步到 Bridge（跨设备前提）', async () => {
+  resetAll();
+  authMock._simulateLogin();
+  dbMock._seedSnapshots([
+    { id: 1, title: '快照', tabs: [], createdAt: 1718000000000 },
+  ]);
+  await enableCrypto('profile-push-pass-123');
+
+  await pushSync();
+
+  const putCalls = _profileCalls.filter((c) => c.method === 'PUT');
+  assert.equal(putCalls.length, 1, '应向 /api/auth/me/crypto-profile 发起 1 次 PUT');
+  assert.ok(_profilePutBody, '应捕获档案内容');
+  assert.equal(typeof _profilePutBody.salt, 'string');
+  assert.equal(_profilePutBody.iterations, 100000);
+  assert.ok(_profilePutBody.verification.ciphertext, '档案应含 verification 密文');
+  // 档案里绝不能出现 passphrase 明文
+  assert.ok(!JSON.stringify(_profilePutBody).includes('profile-push-pass-123'), '档案不得包含 passphrase');
+});
+
+await test('B-P1-5: 云端状态未知（GET 500）→ 不上传档案（避免误覆盖另一台设备的档案）', async () => {
+  resetAll();
+  authMock._simulateLogin();
+  dbMock._seedSnapshots([
+    { id: 1, title: '快照', tabs: [], createdAt: 1718000000000 },
+  ]);
+  await enableCrypto('unknown-state-pass-123');
+
+  let putCount = 0;
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = (url, opts) => {
+    if (String(url).includes('/api/auth/me/crypto-profile') && opts.method === 'PUT') {
+      putCount++;
+      return Promise.resolve(new Response('{}', {
+        status: 200, headers: { 'Content-Type': 'application/json' },
+      }));
+    }
+    if (String(url).includes('/api/auth/me/crypto-profile')) {
+      // GET 失败：云端状态**未知**（不能当作「云端没有档案」）
+      return Promise.resolve(new Response('{"detail":"server error"}', {
+        status: 500, headers: { 'Content-Type': 'application/json' },
+      }));
+    }
+    return origFetch(url, opts);
+  };
+
+  try {
+    await pushSync();
+  } finally {
+    globalThis.fetch = origFetch;
+  }
+  assert.equal(putCount, 0, '云端状态未知时不得上传档案（否则会覆盖另一台设备的 salt，历史密文永久不可解）');
+});
+
+await test('B-P1-6: 云端已有其它设备的档案（salt 不同）→ 不覆盖，保留远端', async () => {
+  resetAll();
+  authMock._simulateLogin();
+  dbMock._seedSnapshots([
+    { id: 1, title: '快照', tabs: [], createdAt: 1718000000000 },
+  ]);
+  await enableCrypto('mismatch-remote-pass-123');
+
+  let putCount = 0;
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = (url, opts) => {
+    if (String(url).includes('/api/auth/me/crypto-profile') && opts.method === 'PUT') {
+      putCount++;
+      return Promise.resolve(new Response('{}', {
+        status: 200, headers: { 'Content-Type': 'application/json' },
+      }));
+    }
+    if (String(url).includes('/api/auth/me/crypto-profile')) {
+      // GET 返回**另一台设备**的档案（salt 不同）
+      return Promise.resolve(new Response(JSON.stringify({
+        salt: 'YW5vdGhlci1kZXZpY2Utc2FsdC12YWx1ZQ==',
+        iterations: 100000,
+        kdf: 'PBKDF2-SHA256-100000',
+        salt_fingerprint: 'ffffffff',
+        verification: { ciphertext: 'eA==', nonce: 'eQ==' },
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    }
+    return origFetch(url, opts);
+  };
+
+  try {
+    await pushSync();
+  } finally {
+    globalThis.fetch = origFetch;
+  }
+  assert.equal(putCount, 0, '不得覆盖其它设备的档案');
 });
 
 console.log('-----------------------------------');

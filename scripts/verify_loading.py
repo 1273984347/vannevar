@@ -94,12 +94,12 @@ def check_focus():
         "popup.html", "popup.js", "popup.css",
         "options.html", "options.js", "options.css",
         "db.js", "snapshot.js", "ai.js", "resume.js",
-        "crypto.js", "sync.js", "auto-sync.js",
+        "crypto.js", "crypto-profile.js", "sync.js", "auto-sync.js",
         "bridge-link.js", "agent.js", "local-model.js",
         "ai-router.js", "auth.js", "task-watcher.js",
         # 三方库
         "lib/sql-wasm.js", "lib/sql-wasm.wasm", "lib/sql-wrapper.js",
-        "lib/vannevar-context-card.js",
+        "lib/vannevar-context-card.js", "lib/vannevar-crypto.js",
         # 共享
         "shared/toast.js", "shared/vannevar-shared.js",
         # 图标
@@ -117,10 +117,10 @@ def check_focus():
     syntax_errors = []
     syntax_errors += _check_js_syntax(d, [
         "background.js", "db.js", "snapshot.js", "ai.js", "resume.js",
-        "crypto.js", "sync.js", "auto-sync.js", "popup.js", "options.js",
+        "crypto.js", "crypto-profile.js", "sync.js", "auto-sync.js", "popup.js", "options.js",
         "bridge-link.js", "agent.js", "local-model.js", "ai-router.js",
         "auth.js", "task-watcher.js",
-        "lib/sql-wrapper.js", "lib/vannevar-context-card.js",
+        "lib/sql-wrapper.js", "lib/vannevar-context-card.js", "lib/vannevar-crypto.js",
         "shared/toast.js", "shared/vannevar-shared.js",
     ], "Focus")
 
@@ -143,7 +143,7 @@ def check_muse():
         "core/ai.js", "core/resume.js", "core/bridge-link.js",
         "core/sync.js", "core/auto-sync.js", "core/agent.js",
         "core/local-model.js", "core/ai-router.js", "core/auth.js",
-        "core/media-group.js",
+        "core/media-group.js", "core/crypto.js", "core/crypto-profile.js",
         # popup
         "popup/popup.html", "popup/popup.js", "popup/popup.css",
         # dashboard
@@ -155,7 +155,7 @@ def check_muse():
         # 共享
         "shared/vannevar-brand.css", "shared/vannevar-shared.js",
         "shared/vannevar-context-card.js", "shared/toast.js",
-        "shared/escape.js", "shared/moderation.js",
+        "shared/escape.js", "shared/moderation.js", "shared/vannevar-crypto.js",
         # 图标
         "icons/icon16.png", "icons/icon48.png", "icons/icon128.png",
         # 文档
@@ -174,10 +174,11 @@ def check_muse():
         "core/resume.js", "core/bridge-link.js", "core/sync.js",
         "core/auto-sync.js", "core/agent.js", "core/local-model.js",
         "core/ai-router.js", "core/auth.js", "core/media-group.js",
+        "core/crypto.js", "core/crypto-profile.js",
         "popup/popup.js", "dashboard/dashboard.js", "options/options.js",
         "lib/sql-wrapper.js", "shared/vannevar-context-card.js",
         "shared/vannevar-shared.js", "shared/toast.js",
-        "shared/escape.js", "shared/moderation.js",
+        "shared/escape.js", "shared/moderation.js", "shared/vannevar-crypto.js",
     ], "Muse")
 
     # Phase 6.6 / DRL R2 F1 修复：Muse CSS 大括号配对检查

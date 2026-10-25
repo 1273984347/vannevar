@@ -62,17 +62,23 @@
 # Bridge：全量单元/集成测试（内存库，不污染本地数据）
 cd products/bridge-mvp
 py -m pytest tests/ -q --ignore=tests/e2e
-# 基线：435 passed / 9 skipped / 0 failed
+# 基线：447 passed / 9 skipped / 0 failed
 
 # Focus：端到端加密
 cd products/focus-mvp
 node tests/test_crypto.mjs                 # 16 / 0
 
 # Focus：同步链路加密
-node --import ./tests/loader.mjs tests/test_sync_crypto.mjs   # 11 / 0
+node --import ./tests/loader.mjs tests/test_sync_crypto.mjs   # 12 / 0
+
+# Muse：端到端加密
+cd products/muse-mvp
+node tests/test_crypto.mjs                 # 24 / 0（不需要 loader）
+
+# Muse：同步链路加密
+node --import ./tests/loader.mjs tests/test_sync_crypto.mjs   # 14 / 0
 
 # Muse：媒体会话
-cd products/muse-mvp
 node --import ./tests/loader.mjs tests/test_media_session.mjs  # 18 / 0
 ```
 

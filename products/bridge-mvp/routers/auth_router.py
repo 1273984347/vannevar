@@ -17,8 +17,17 @@ from auth import (
     verify_password,
 )
 from database import get_db
-from models import Project, Task, User
-from schemas import TaskUpdateOut, TokenOut, UserLogin, UserOut, UserRegister
+from models import Project, Task, User, UserCryptoProfile
+from schemas import (
+    CryptoProfileIn,
+    CryptoProfileOut,
+    CryptoVerificationIn,
+    TaskUpdateOut,
+    TokenOut,
+    UserLogin,
+    UserOut,
+    UserRegister,
+)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -115,6 +124,81 @@ def logout(user_id: int = Depends(require_user), db: Session = Depends(get_db)):
             # R7-BE-1/R7-BE-2: 持锁 pop，消除 TOCTOU 窗口
             invalidate_user_cache(user_id)
     return {"message": "已登出"}
+
+
+@router.get("/me/crypto-profile", response_model=CryptoProfileOut)
+def get_crypto_profile(
+    user_id: int = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    """取回当前用户的端到端加密档案（跨设备解密用）。
+
+    档案内容 = PBKDF2 salt（**公开参数**，不是密钥）+ 派生参数 + verification 密文。
+    服务端既无法反推 passphrase，也无法解密任何同步内容。
+    尚未设置档案时返回 404；dev 模式虚拟用户（user_id=0）同样返回 404。
+    """
+    if user_id == 0:
+        raise HTTPException(status_code=404, detail="dev 模式无加密档案")
+    profile = db.query(UserCryptoProfile).filter(UserCryptoProfile.user_id == user_id).first()
+    if profile is None:
+        raise HTTPException(status_code=404, detail="尚未设置加密档案")
+    return CryptoProfileOut(
+        salt=profile.salt,
+        iterations=profile.iterations,
+        kdf=profile.kdf,
+        salt_fingerprint=profile.salt_fingerprint,
+        verification=CryptoVerificationIn(
+            ciphertext=profile.verification_ciphertext,
+            nonce=profile.verification_nonce,
+        ),
+    )
+
+
+@router.put("/me/crypto-profile", response_model=CryptoProfileOut)
+def put_crypto_profile(
+    payload: CryptoProfileIn,
+    user_id: int = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    """写入 / 更新当前用户的端到端加密档案。
+
+    幂等：同一 salt 重复提交等价于覆盖同一份数据，不产生重复行。
+    salt 变化时覆盖旧档案（用户主动更换 passphrase 或在新设备上复用远端 salt）。
+
+    写端点受 require_user 的 per-session CSRF 校验保护（X-CSRF-Token 须等于 JWT.csrf_jti）。
+    """
+    if user_id == 0:
+        raise HTTPException(status_code=404, detail="dev 模式无加密档案")
+    profile = db.query(UserCryptoProfile).filter(UserCryptoProfile.user_id == user_id).first()
+    if profile is None:
+        profile = UserCryptoProfile(user_id=user_id)
+        db.add(profile)
+    elif profile.salt != payload.salt:
+        # 冲突检测：已有档案的 salt 与本次不同 ⇒ 来自另一台设备（或另一套密钥）。
+        # 覆盖会毁掉那台设备的历史密文（它是用旧 salt 加密的），因此拒绝。
+        # 客户端侧亦有同样的守卫（不覆盖他人档案），这里是服务端侧的纵深防御。
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "crypto_profile_conflict", "message": "已有其它加密档案，不能覆盖"},
+        )
+    profile.salt = payload.salt
+    profile.iterations = payload.iterations
+    profile.kdf = payload.kdf
+    profile.salt_fingerprint = payload.salt_fingerprint
+    profile.verification_ciphertext = payload.verification.ciphertext
+    profile.verification_nonce = payload.verification.nonce
+    db.commit()
+    db.refresh(profile)
+    return CryptoProfileOut(
+        salt=profile.salt,
+        iterations=profile.iterations,
+        kdf=profile.kdf,
+        salt_fingerprint=profile.salt_fingerprint,
+        verification=CryptoVerificationIn(
+            ciphertext=profile.verification_ciphertext,
+            nonce=profile.verification_nonce,
+        ),
+    )
 
 
 @router.get("/me/recent-task-updates", response_model=List[TaskUpdateOut])

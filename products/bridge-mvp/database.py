@@ -88,7 +88,8 @@ def get_db(request: Request = None):
 # P2-11: 迁移版本管理采用 PRAGMA user_version，比 schema_version 表更轻量。
 # 每个版本号对应一批迁移；新迁移通过追加 _run_migration_vN 函数并提升 TARGET_VERSION 即可。
 # DRL-R1-V7: v10 新增 users.token_revoked_at 列（JWT 撤销机制）
-TARGET_SCHEMA_VERSION = 11
+# Phase 4.4 收尾: v12 新增 user_crypto_profiles 表（加密档案，跨设备解密）
+TARGET_SCHEMA_VERSION = 12
 
 
 def _column_exists(dbapi_conn, table: str, column: str) -> bool:
@@ -439,6 +440,30 @@ def _run_migration_v11(dbapi_conn) -> None:
         )
 
 
+def _run_migration_v12(dbapi_conn) -> None:
+    """v12: Phase 4.4 收尾 — 加密档案表（跨设备解密支持）。
+
+    存储 PBKDF2 salt（公开参数）、派生参数与 verification 密文。
+    **不含任何密钥材料**：passphrase 永不落库，档案也无法反推 passphrase。
+
+    CREATE TABLE IF NOT EXISTS 保证幂等（与 create_all 互补）。
+    """
+    if not _table_exists(dbapi_conn, "user_crypto_profiles"):
+        dbapi_conn.execute("""
+            CREATE TABLE user_crypto_profiles (
+                user_id INTEGER PRIMARY KEY,
+                salt VARCHAR(64) NOT NULL,
+                iterations INTEGER NOT NULL DEFAULT 100000,
+                kdf VARCHAR(40) NOT NULL DEFAULT 'PBKDF2-SHA256-100000',
+                salt_fingerprint VARCHAR(16) NOT NULL DEFAULT '',
+                verification_ciphertext VARCHAR(512) NOT NULL,
+                verification_nonce VARCHAR(64) NOT NULL,
+                created_at DATETIME,
+                updated_at DATETIME
+            )
+        """)
+
+
 _MIGRATIONS = {
     1: _run_migration_v1,
     2: _run_migration_v2,
@@ -451,6 +476,7 @@ _MIGRATIONS = {
     9: _run_migration_v9,
     10: _run_migration_v10,
     11: _run_migration_v11,
+    12: _run_migration_v12,
 }
 
 

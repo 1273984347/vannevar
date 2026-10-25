@@ -81,12 +81,18 @@ node tests/test_crypto.mjs
 # Focus：同步链路加密
 node --import ./tests/loader.mjs tests/test_sync_crypto.mjs
 
-# Muse：媒体会话
+# Muse：端到端加密
 cd products/muse-mvp
+node tests/test_crypto.mjs
+
+# Muse：同步链路加密
+node --import ./tests/loader.mjs tests/test_sync_crypto.mjs
+
+# Muse：媒体会话
 node --import ./tests/loader.mjs tests/test_media_session.mjs
 ```
 
-当前基线：Bridge 435 passed / 9 skipped / 0 failed；Focus 16/16 与 11/11；Muse 18/18。
+当前基线：Bridge 447 passed / 9 skipped / 0 failed；Focus 16/16 与 12/12；Muse 24/24、14/14 与 18/18。
 
 Bridge 的 pytest 使用内存数据库（`sqlite:///:memory:`），不会写入你本地的 `bridge_mvp.db`。
 
