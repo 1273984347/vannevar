@@ -63,8 +63,8 @@ jobs:
         # 判据（不随代码变动）：0 failed。
         # 用例数会随新用例增加而漂移，因此除「0 failed」外的任何数量都不作为失败条件，
         # 只在下方标注截至 2026-10-25 的实测值供人工对照：
-        #   435 passed / 9 skipped / 0 failed
-        #   （2026-10-25 实测，Windows / Python 3.12.10，耗时约 112 秒）
+        #   449 passed / 9 skipped / 0 failed
+        #   （2026-10-25 实测，Windows / Python 3.12.10，耗时约 110 秒）
         # 9 个 skipped 全部有据：7 个来自 tests/test_performance.py（需 --run-slow），
         # 2 个为标注「V26 自指测试」的待重构用例。
         # 其中 tests/test_backup_recovery.py 是数据库恢复流程的回归测试，
@@ -92,10 +92,24 @@ jobs:
         run: node tests/test_crypto.mjs
 
       - name: Focus · test_sync_crypto.mjs
-        # 本地实测基线：11 通过 / 0 失败
+        # 本地实测基线：14 通过 / 0 失败
         # 必须带 --import ./tests/loader.mjs：loader 把 sync.js 的 '../db.js'/'../auth.js'
         # 重定向到 tests/mocks/，绕开 lib/sql-wasm.js 的 UMD 挂载（Node 无浏览器全局 self）。
         working-directory: products/focus-mvp
+        run: node --import ./tests/loader.mjs tests/test_sync_crypto.mjs
+
+      - name: Muse · test_crypto.mjs
+        # 本地实测基线：24 通过 / 0 失败
+        # 不需要 loader：core/crypto.js 只用 WebCrypto + chrome.storage，不触碰 SQLite WASM。
+        # 覆盖加密核心契约 + 两个独立模块实例互解的跨设备用例。
+        working-directory: products/muse-mvp
+        run: node tests/test_crypto.mjs
+
+      - name: Muse · test_sync_crypto.mjs
+        # 本地实测基线：16 通过 / 0 失败
+        # 必须带 --import ./tests/loader.mjs：loader 把 core/sync.js 的 './muse.js'/'./auth.js'
+        # 重定向到 tests/mocks/，绕开 lib/sql-wasm.js 的 UMD 挂载。
+        working-directory: products/muse-mvp
         run: node --import ./tests/loader.mjs tests/test_sync_crypto.mjs
 
       - name: Muse · test_media_session.mjs
@@ -106,6 +120,28 @@ jobs:
         # 那是运行方式不对，不是缺陷——测试文件头部注释给出的用法即为带 loader。
         working-directory: products/muse-mvp
         run: node --import ./tests/loader.mjs tests/test_media_session.mjs
+
+  # ------------------------------------------------- 共享层副本一致性（门禁）
+  shared-sync:
+    name: Shared layer · copy consistency gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Check shared/ copies are byte-identical
+        # shared/ 为源、产品目录内放副本的发布方式下，副本一旦漂移，
+        # 三个产品的行为会**静默分叉**（同样的功能在 A 产品能用、B 产品不能）——
+        # 这类缺陷不报错，只在运行时暴露，因此需要机器门禁在提交前卡住。
+        #
+        # 判据（不随代码变动）：STRICT 副本组必须字节一致（漂移即失败）。
+        # REPORT 组是历史遗留漂移，只如实报告差异行数与哈希、不阻断，
+        # 交由专项批次处理（合并漂移会改变产品实际渲染，属需单独评估的决策）。
+        run: python3 scripts/check_shared_sync.py
 
   # ----------------------------------------------------------- JS 语法检查
   js-syntax:
