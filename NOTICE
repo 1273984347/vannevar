@@ -36,7 +36,7 @@ Vannevar 以 MIT 协议发布（见 [LICENSE](LICENSE)）。除 MIT 覆盖的源
 |---|---|
 | `shared/media/` | 品牌海报与产品海报（`vannevar-brand-poster.png`、`poster-focus.png`、`poster-muse.png`、`poster-bridge.png`） |
 | `shared/media/vannevar-brand-intro.mp4`、`vannevar-brand-intro-extended.mp4` | 演示视频 |
-| `shared/frames-extended/` | 由上述演示视频抽取的 250 张视频抽帧图片（`frame-0000.png` … `frame-0249.png`）。该目录体积较大，**已随过程资产迁往独立归档仓，不随主仓分发**；素材本身仍属项目自有，遵循 MIT 协议 |
+| `shared/frames-extended/` | 由上述演示视频抽取的 250 张视频抽帧图片（`frame-0000.png` … `frame-0249.png`）。该目录体积较大，**已随过程资产迁出主仓，保留在本地工作副本中，不随主仓分发**；素材本身仍属项目自有，遵循 MIT 协议 |
 | `shared/brand-showcase.html`、`shared/brand-showcase-extended.html`、`shared/poster-*.html` | 品牌展示页源文件 |
 | `shared/privacy-policy.html` | 隐私政策页 |
 | `diagrams/` | 架构图源文件与导出图片 |
