@@ -1,0 +1,60 @@
+# Vannevar Bridge 一键部署
+# 用法：
+#   1. 复制 .env.example 为 .env，修改密码和密钥
+#   2. docker-compose up -d
+#   3. 访问 http://localhost:8000
+# P0-2 修复：默认绑定 127.0.0.1，需显式配置才暴露公网
+# P1-5 修复：添加资源限制，防止进程异常拖垮宿主机
+version: "3.8"
+
+services:
+  bridge:
+    build: ./products/bridge-mvp
+    container_name: vannevar-bridge
+    ports:
+      # 默认仅绑定本地回环，生产环境需公网访问时设置为 0.0.0.0:8000:8000
+      - "${BRIDGE_BIND_ADDR:-127.0.0.1}:${BRIDGE_PORT:-8000}:8000"
+    volumes:
+      - bridge-data:/app/data
+    environment:
+      - BRIDGE_DEBUG=0
+      # R2-V9 修复：read_only 文件系统下禁止 Python 写 .pyc，避免启动报错
+      - PYTHONDONTWRITEBYTECODE=1
+      - BRIDGE_DATABASE_URL=sqlite:///data/bridge.db
+      - BRIDGE_ADMIN_USER=${BRIDGE_ADMIN_USER:-admin}
+      - BRIDGE_ADMIN_PASS=${BRIDGE_ADMIN_PASS:?必须在 .env 中设置 BRIDGE_ADMIN_PASS}
+      - BRIDGE_JWT_SECRET=${BRIDGE_JWT_SECRET:?必须在 .env 中设置 BRIDGE_JWT_SECRET}
+      - BRIDGE_JWT_EXPIRE_DAYS=${BRIDGE_JWT_EXPIRE_DAYS:-7}
+      # AI 配置（可选）
+      - BRIDGE_AI_BASE_URL=${BRIDGE_AI_BASE_URL:-}
+      - BRIDGE_AI_API_KEY=${BRIDGE_AI_API_KEY:-}
+      - BRIDGE_AI_MODEL=${BRIDGE_AI_MODEL:-}
+    restart: unless-stopped
+    # 资源限制：防止内存泄漏拖垮宿主机
+    mem_limit: ${BRIDGE_MEM_LIMIT:-512m}
+    cpus: ${BRIDGE_CPUS:-1.0}
+    # V5 修复：Docker 日志轮转配置，防止单文件日志无限增长撑满磁盘
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    # 安全加固
+    security_opt:
+      - no-new-privileges:true
+    # V18 修复：read_only: true 限制容器文件系统只读；
+    # /app/data 通过 bridge-data 卷挂载可写（SQLite 数据写入）；
+    # /tmp 通过 tmpfs 提供临时可写空间
+    read_only: true
+    tmpfs:
+      - /tmp
+
+volumes:
+  bridge-data:
+    driver: local

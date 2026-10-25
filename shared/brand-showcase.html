@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vannevar · 三产品品牌展示</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --v-text: #1e293b;
+      --v-text-secondary: #64748b;
+      --v-text-muted: #94a3b8;
+      --v-surface: #ffffff;
+      --v-border: #e2e8f0;
+      --v-radius: 14px;
+      --v-radius-lg: 20px;
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f8fafc;
+      color: var(--v-text);
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+    }
+
+    /* 背景装饰光斑 */
+    .bg-orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.35;
+      animation: float 12s ease-in-out infinite;
+      pointer-events: none;
+    }
+    .bg-orb--1 { width: 420px; height: 420px; background: #3b82f6; top: -120px; left: -80px; animation-delay: 0s; }
+    .bg-orb--2 { width: 360px; height: 360px; background: #f97316; bottom: -80px; right: -60px; animation-delay: -4s; }
+    .bg-orb--3 { width: 300px; height: 300px; background: #10b981; top: 40%; left: 60%; animation-delay: -8s; }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0); }
+      33% { transform: translate(30px, -30px); }
+      66% { transform: translate(-20px, 20px); }
+    }
+
+    /* 品牌头部 */
+    .brand-header {
+      text-align: center;
+      margin-bottom: 56px;
+      opacity: 0;
+      will-change: opacity, transform;
+    }
+
+    .brand-logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 72px;
+      height: 72px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #1e293b, #3b82f6);
+      color: white;
+      margin-bottom: 24px;
+      box-shadow: 0 12px 32px -8px rgba(59, 130, 246, 0.35);
+      animation: breathe 4s ease-in-out infinite;
+    }
+    @keyframes breathe {
+      0%, 100% { transform: scale(1); box-shadow: 0 12px 32px -8px rgba(59, 130, 246, 0.35); }
+      50% { transform: scale(1.04); box-shadow: 0 16px 40px -6px rgba(59, 130, 246, 0.45); }
+    }
+    .brand-logo svg { width: 40px; height: 40px; }
+
+    .brand-title {
+      font-size: clamp(2.25rem, 6vw, 3.5rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #1e293b 0%, #3b82f6 50%, #0d9488 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .brand-subtitle {
+      font-size: 1.125rem;
+      color: var(--v-text-secondary);
+      max-width: 560px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* 产品卡片网格 */
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 28px;
+      width: 100%;
+      max-width: 1080px;
+    }
+
+    .product-card {
+      position: relative;
+      background: var(--v-surface);
+      border: 1px solid var(--v-border);
+      border-radius: var(--v-radius);
+      padding: 32px;
+      overflow: hidden;
+      opacity: 0;
+      will-change: opacity, transform;
+      transition: transform 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out);
+    }
+    .product-card::before {
+      content: '';
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 4px;
+      background: var(--card-accent);
+    }
+    .product-card:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--card-shadow);
+    }
+
+    .product-card.focus { --card-accent: linear-gradient(90deg, #1e293b, #3b82f6, #334155); --card-shadow: 0 16px 40px -8px rgba(59, 130, 246, 0.22); }
+    .product-card.muse { --card-accent: linear-gradient(90deg, #c2410c, #f59e0b, #b45309); --card-shadow: 0 16px 40px -8px rgba(249, 115, 22, 0.22); }
+    .product-card.bridge { --card-accent: linear-gradient(90deg, #047857, #0d9488, #10b981); --card-shadow: 0 16px 40px -8px rgba(16, 185, 129, 0.22); }
+
+    .product-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      color: white;
+      box-shadow: 0 8px 20px -4px rgba(0,0,0,0.18);
+    }
+    .product-card.focus .product-icon { background: linear-gradient(135deg, #1e293b, #334155); }
+    .product-card.muse .product-icon { background: linear-gradient(135deg, #c2410c, #b45309); }
+    .product-card.bridge .product-icon { background: linear-gradient(135deg, #047857, #0d9488); }
+    .product-icon svg { width: 28px; height: 28px; }
+
+    .product-name {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+    .product-tagline {
+      font-size: 0.95rem;
+      color: var(--v-text-secondary);
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    .product-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .product-pill {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 99px;
+      background: var(--pill-bg);
+      color: var(--pill-fg);
+    }
+    .product-card.focus .product-pill { --pill-bg: #eff6ff; --pill-fg: #1d4ed8; }
+    .product-card.muse .product-pill { --pill-bg: #fff7ed; --pill-fg: #c2410c; }
+    .product-card.bridge .product-pill { --pill-bg: #ecfdf5; --pill-fg: #047857; }
+
+    .footer-line {
+      margin-top: 56px;
+      font-size: 0.875rem;
+      color: var(--v-text-muted);
+      opacity: 0;
+      will-change: opacity;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-orb bg-orb--1"></div>
+  <div class="bg-orb bg-orb--2"></div>
+  <div class="bg-orb bg-orb--3"></div>
+
+  <header class="brand-header">
+    <div class="brand-logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 6 L12 18 L20 6"/>
+      </svg>
+    </div>
+    <h1 class="brand-title">Vannevar</h1>
+    <p class="brand-subtitle">三个产品，一种思路：让信息在恰当的时机，出现在恰当的地方。</p>
+  </header>
+
+  <main class="products-grid">
+    <article class="product-card focus">
+      <div class="product-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </div>
+      <h2 class="product-name">Focus</h2>
+      <p class="product-tagline">保存与恢复浏览器上下文，让工作流在切换中保持完整。</p>
+      <div class="product-meta">
+        <span class="product-pill">效率工具</span>
+        <span class="product-pill">浏览器扩展</span>
+      </div>
+    </article>
+
+    <article class="product-card muse">
+      <div class="product-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M12 2v10"/></svg>
+      </div>
+      <h2 class="product-name">Muse</h2>
+      <p class="product-tagline">随手捕捉网页灵感，按氛围归类，构建个人灵感博物馆。</p>
+      <div class="product-meta">
+        <span class="product-pill">生活娱乐</span>
+        <span class="product-pill">浏览器扩展</span>
+      </div>
+    </article>
+
+    <article class="product-card bridge">
+      <div class="product-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21h-10a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2z"/><line x1="12" y1="11" x2="12" y2="11"/><line x1="8" y1="11" x2="8" y2="11"/><line x1="16" y1="11" x2="16" y2="11"/></svg>
+      </div>
+      <h2 class="product-name">Bridge</h2>
+      <p class="product-tagline">公益项目交接平台，让志愿者与管理者之间的信息无缝传递。</p>
+      <div class="product-meta">
+        <span class="product-pill">社会服务</span>
+        <span class="product-pill">Web 应用</span>
+      </div>
+    </article>
+  </main>
+
+  <footer class="footer-line">Vannevar · 上下文管理产品族</footer>
+
+  <script>
+    (function() {
+      // JS 驱动入场动画，支持外部精确控制时间轴（录制视频用）
+      const header = document.querySelector('.brand-header');
+      const cards = Array.from(document.querySelectorAll('.product-card'));
+      const footer = document.querySelector('.footer-line');
+
+      function easeOut(t) {
+        // cubic-bezier(0.16, 1, 0.3, 1) 近似
+        return 1 - Math.pow(1 - t, 3);
+      }
+
+      function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+      function updateAt(seconds) {
+        const t = seconds;
+
+        // header: 0.0-0.2 隐藏，0.2-1.0 淡入上滑
+        const headerP = clamp((t - 0.2) / 0.8, 0, 1);
+        const headerE = easeOut(headerP);
+        header.style.opacity = headerE;
+        header.style.transform = `translateY(${24 * (1 - headerE)}px)`;
+
+        // cards: 每张延迟 0.15s，duration 0.6s，从 0.5s 开始
+        cards.forEach((card, i) => {
+          const start = 0.5 + i * 0.15;
+          const p = clamp((t - start) / 0.6, 0, 1);
+          const e = easeOut(p);
+          card.style.opacity = e;
+          card.style.transform = `translateY(${32 * (1 - e)}px)`;
+        });
+
+        // footer: 1.2-1.6 淡入
+        const footerP = clamp((t - 1.2) / 0.4, 0, 1);
+        footer.style.opacity = easeOut(footerP);
+      }
+
+      // 暴露全局控制接口给 Playwright
+      window.__brandTime = 0;
+      window.__brandManual = false;
+      window.__updateBrandFrame = function() { updateAt(window.__brandTime); };
+
+      // 正常浏览时自动播放；被外部接管时暂停自动推进
+      let startTime = null;
+      function loop(ts) {
+        if (!window.__brandManual) {
+          if (!startTime) startTime = ts;
+          const elapsed = (ts - startTime) / 1000;
+          window.__brandTime = elapsed;
+          updateAt(elapsed);
+        }
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>

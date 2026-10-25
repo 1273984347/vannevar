@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vannevar · Bridge 主视觉海报</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --c-bg: #022c22;
+      --c-surface: #064e3b;
+      --c-primary: #10b981;
+      --c-primary-light: #34d399;
+      --c-text: #ecfdf5;
+      --c-text-secondary: #6ee7b7;
+      --c-accent: #047857;
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 1200px;
+      height: 1600px;
+      font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--c-bg);
+      color: var(--c-text);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bg-radial {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 20%, rgba(16, 185, 129, 0.12) 0%, transparent 55%);
+    }
+
+    .glow {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .glow--1 { width: 560px; height: 560px; background: #10b981; top: -180px; right: -120px; }
+    .glow--2 { width: 420px; height: 420px; background: #0d9488; bottom: -120px; left: -100px; opacity: 0.4; }
+
+    .poster {
+      position: relative;
+      z-index: 2;
+      height: 100%;
+      padding: 80px 96px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .brand-logo {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #047857, #10b981);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 12px 32px -8px rgba(16, 185, 129, 0.35);
+    }
+    .brand-logo svg { width: 32px; height: 32px; }
+    .brand-name { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; color: var(--c-text-secondary); }
+
+    .hero { margin-top: 48px; }
+    .product-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 99px;
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--c-primary-light);
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+    .product-title {
+      font-size: 5.5rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, #ecfdf5 0%, #34d399 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .tagline {
+      font-size: 1.75rem;
+      color: var(--c-text-secondary);
+      line-height: 1.6;
+      max-width: 720px;
+    }
+
+    .ui-preview {
+      position: relative;
+      margin-top: 56px;
+      height: 560px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, rgba(6, 78, 59, 0.7), rgba(2, 44, 34, 0.9));
+      border: 1px solid rgba(16, 185, 129, 0.15);
+      box-shadow: 0 32px 80px -24px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .ui-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .ui-qr {
+      width: 72px;
+      height: 72px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      grid-template-rows: repeat(5, 1fr);
+      gap: 4px;
+      padding: 8px;
+    }
+    .qr-cell { background: rgba(16, 185, 129, 0.4); border-radius: 2px; }
+    .qr-cell:nth-child(2),
+    .qr-cell:nth-child(4),
+    .qr-cell:nth-child(6),
+    .qr-cell:nth-child(8),
+    .qr-cell:nth-child(10),
+    .qr-cell:nth-child(12),
+    .qr-cell:nth-child(14),
+    .qr-cell:nth-child(16),
+    .qr-cell:nth-child(18),
+    .qr-cell:nth-child(20),
+    .qr-cell:nth-child(22),
+    .qr-cell:nth-child(24) { opacity: 0.4; }
+    .ui-header-text {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .ui-header-line {
+      height: 14px;
+      width: 240px;
+      border-radius: 7px;
+      background: rgba(236, 253, 245, 0.1);
+    }
+    .ui-header-line.short { width: 140px; opacity: 0.6; }
+
+    .ui-board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      flex: 1;
+    }
+    .ui-col {
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(16, 185, 129, 0.1);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .ui-col-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--c-text-secondary);
+      margin-bottom: 4px;
+    }
+    .ui-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .ui-dot.todo { background: #94a3b8; }
+    .ui-dot.doing { background: #f59e0b; }
+    .ui-dot.done { background: var(--c-primary); }
+    .ui-task {
+      padding: 14px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(16, 185, 129, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .ui-task-line {
+      height: 10px;
+      border-radius: 5px;
+      background: rgba(236, 253, 245, 0.1);
+    }
+    .ui-task-line.short { width: 55%; }
+    .ui-task-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .ui-avatar {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.6rem;
+      color: var(--c-primary-light);
+    }
+    .ui-task-line.micro { width: 50px; height: 8px; }
+
+    .features {
+      margin-top: 48px;
+      display: flex;
+      gap: 32px;
+    }
+    .feature {
+      flex: 1;
+      padding: 24px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(16, 185, 129, 0.1);
+    }
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: rgba(16, 185, 129, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--c-primary-light);
+      margin-bottom: 16px;
+    }
+    .feature-icon svg { width: 22px; height: 22px; }
+    .feature-title { font-size: 1.125rem; font-weight: 700; margin-bottom: 8px; }
+    .feature-desc { font-size: 0.95rem; color: var(--c-text-secondary); line-height: 1.6; }
+
+    .footer {
+      margin-top: auto;
+      padding-top: 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--c-text-secondary);
+      font-size: 0.95rem;
+    }
+    .footer-slogan {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--c-text);
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-radial"></div>
+  <div class="glow glow--1"></div>
+  <div class="glow glow--2"></div>
+
+  <div class="poster">
+    <div class="brand-row">
+      <div class="brand-logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6 L12 18 L20 6"/></svg>
+      </div>
+      <div class="brand-name">Vannevar</div>
+    </div>
+
+    <div class="hero">
+      <div class="product-label">社会服务 · Web 应用</div>
+      <h1 class="product-title">Bridge</h1>
+      <p class="tagline">公益项目交接平台，让志愿者扫码即可了解前情、更新任务、留下协作留言。</p>
+
+      <div class="ui-preview" aria-hidden="true">
+        <div class="ui-header">
+          <div class="ui-qr">
+            <div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div>
+            <div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div>
+            <div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div>
+            <div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div>
+            <div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div>
+          </div>
+          <div class="ui-header-text">
+            <div class="ui-header-line"></div>
+            <div class="ui-header-line short"></div>
+          </div>
+        </div>
+        <div class="ui-board">
+          <div class="ui-col">
+            <div class="ui-col-header"><span class="ui-dot todo"></span>待办</div>
+            <div class="ui-task">
+              <div class="ui-task-line"></div>
+              <div class="ui-task-line short"></div>
+              <div class="ui-task-meta"><div class="ui-avatar">李</div><div class="ui-task-line micro"></div></div>
+            </div>
+            <div class="ui-task">
+              <div class="ui-task-line"></div>
+              <div class="ui-task-line short"></div>
+            </div>
+          </div>
+          <div class="ui-col">
+            <div class="ui-col-header"><span class="ui-dot doing"></span>进行中</div>
+            <div class="ui-task">
+              <div class="ui-task-line"></div>
+              <div class="ui-task-line short"></div>
+              <div class="ui-task-meta"><div class="ui-avatar">王</div><div class="ui-task-line micro"></div></div>
+            </div>
+          </div>
+          <div class="ui-col">
+            <div class="ui-col-header"><span class="ui-dot done"></span>已完成</div>
+            <div class="ui-task">
+              <div class="ui-task-line"></div>
+              <div class="ui-task-line short"></div>
+              <div class="ui-task-meta"><div class="ui-avatar">张</div><div class="ui-task-line micro"></div></div>
+            </div>
+            <div class="ui-task">
+              <div class="ui-task-line"></div>
+              <div class="ui-task-line short"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="features">
+      <div class="feature">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><line x1="14" y1="14" x2="14" y2="14.01"/><line x1="20" y1="14" x2="20" y2="14.01"/><line x1="17" y1="17" x2="17" y2="17.01"/><line x1="14" y1="20" x2="14" y2="20.01"/><line x1="20" y1="20" x2="20" y2="20.01"/></svg>
+        </div>
+        <div class="feature-title">二维码交接</div>
+        <div class="feature-desc">无需注册登录，扫码即可查看项目上下文。</div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        </div>
+        <div class="feature-title">任务看板</div>
+        <div class="feature-desc">三列看板直观展示待办、进行中、已完成。</div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        </div>
+        <div class="feature-title">协作留言</div>
+        <div class="feature-desc">志愿者可留言协作，形成异步沟通闭环。</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="footer-slogan">让信息在恰当的时机，出现在恰当的地方。</div>
+      <div>Vannevar · 上下文管理产品族</div>
+    </div>
+  </div>
+</body>
+</html>

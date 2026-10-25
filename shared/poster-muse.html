@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vannevar · Muse 主视觉海报</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --c-bg: #431407;
+      --c-surface: #7c2d12;
+      --c-primary: #f97316;
+      --c-primary-light: #fb923c;
+      --c-text: #fff7ed;
+      --c-text-secondary: #fdba74;
+      --c-accent: #c2410c;
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 1200px;
+      height: 1600px;
+      font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--c-bg);
+      color: var(--c-text);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bg-dots {
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(rgba(249, 115, 22, 0.12) 1px, transparent 1px);
+      background-size: 36px 36px;
+      mask-image: radial-gradient(circle at 50% 30%, black 0%, transparent 70%);
+      -webkit-mask-image: radial-gradient(circle at 50% 30%, black 0%, transparent 70%);
+    }
+
+    .glow {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .glow--1 { width: 560px; height: 560px; background: #f97316; top: -180px; left: -120px; }
+    .glow--2 { width: 420px; height: 420px; background: #c2410c; bottom: -120px; right: -100px; opacity: 0.4; }
+
+    .poster {
+      position: relative;
+      z-index: 2;
+      height: 100%;
+      padding: 80px 96px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .brand-logo {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #c2410c, #f97316);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 12px 32px -8px rgba(249, 115, 22, 0.35);
+    }
+    .brand-logo svg { width: 32px; height: 32px; }
+    .brand-name { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; color: var(--c-text-secondary); }
+
+    .hero { margin-top: 48px; }
+    .product-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 99px;
+      background: rgba(249, 115, 22, 0.15);
+      color: var(--c-primary-light);
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+    .product-title {
+      font-size: 5.5rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, #fff7ed 0%, #fb923c 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .tagline {
+      font-size: 1.75rem;
+      color: var(--c-text-secondary);
+      line-height: 1.6;
+      max-width: 720px;
+    }
+
+    .ui-preview {
+      position: relative;
+      margin-top: 56px;
+      height: 560px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, rgba(124, 45, 18, 0.6), rgba(67, 20, 7, 0.85));
+      border: 1px solid rgba(249, 115, 22, 0.18);
+      box-shadow: 0 32px 80px -24px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .ui-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .ui-title {
+      height: 24px;
+      width: 160px;
+      border-radius: 8px;
+      background: rgba(255, 247, 237, 0.12);
+    }
+    .ui-filters {
+      display: flex;
+      gap: 10px;
+    }
+    .ui-filter {
+      padding: 8px 16px;
+      border-radius: 99px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .ui-filter.active { background: rgba(249, 115, 22, 0.25); color: var(--c-primary-light); }
+    .ui-filter:not(.active) { background: rgba(255, 247, 237, 0.06); color: var(--c-text-secondary); }
+
+    .ui-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      flex: 1;
+    }
+    .ui-card {
+      border-radius: 16px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(251, 146, 60, 0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .ui-card:nth-child(2) { transform: translateY(16px); }
+    .ui-card:nth-child(5) { transform: translateY(16px); }
+    .ui-card-img {
+      height: 90px;
+      border-radius: 12px;
+      background: rgba(249, 115, 22, 0.12);
+    }
+    .ui-line {
+      height: 10px;
+      border-radius: 5px;
+      background: rgba(255, 247, 237, 0.1);
+    }
+    .ui-line.short { width: 50%; }
+    .ui-mood {
+      display: flex;
+      gap: 8px;
+      margin-top: auto;
+    }
+    .ui-mood-pill {
+      padding: 5px 10px;
+      border-radius: 99px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      background: rgba(249, 115, 22, 0.15);
+      color: var(--c-primary-light);
+    }
+
+    .features {
+      margin-top: 48px;
+      display: flex;
+      gap: 32px;
+    }
+    .feature {
+      flex: 1;
+      padding: 24px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(251, 146, 60, 0.1);
+    }
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: rgba(249, 115, 22, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--c-primary-light);
+      margin-bottom: 16px;
+    }
+    .feature-icon svg { width: 22px; height: 22px; }
+    .feature-title { font-size: 1.125rem; font-weight: 700; margin-bottom: 8px; }
+    .feature-desc { font-size: 0.95rem; color: var(--c-text-secondary); line-height: 1.6; }
+
+    .footer {
+      margin-top: auto;
+      padding-top: 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--c-text-secondary);
+      font-size: 0.95rem;
+    }
+    .footer-slogan {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--c-text);
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-dots"></div>
+  <div class="glow glow--1"></div>
+  <div class="glow glow--2"></div>
+
+  <div class="poster">
+    <div class="brand-row">
+      <div class="brand-logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6 L12 18 L20 6"/></svg>
+      </div>
+      <div class="brand-name">Vannevar</div>
+    </div>
+
+    <div class="hero">
+      <div class="product-label">生活娱乐 · 浏览器扩展</div>
+      <h1 class="product-title">Muse</h1>
+      <p class="tagline">随手捕捉网页灵感，按氛围归类，把碎片化的触动整理成可回顾的创作土壤。</p>
+
+      <div class="ui-preview" aria-hidden="true">
+        <div class="ui-header">
+          <div class="ui-title"></div>
+          <div class="ui-filters">
+            <div class="ui-filter active">全部</div>
+            <div class="ui-filter">温暖</div>
+            <div class="ui-filter">清冷</div>
+          </div>
+        </div>
+        <div class="ui-grid">
+          <div class="ui-card">
+            <div class="ui-card-img"></div>
+            <div class="ui-line"></div>
+            <div class="ui-line short"></div>
+            <div class="ui-mood"><span class="ui-mood-pill">诗意</span><span class="ui-mood-pill">夜晚</span></div>
+          </div>
+          <div class="ui-card">
+            <div class="ui-card-img"></div>
+            <div class="ui-line"></div>
+            <div class="ui-line short"></div>
+            <div class="ui-mood"><span class="ui-mood-pill">建筑</span><span class="ui-mood-pill">几何</span></div>
+          </div>
+          <div class="ui-card">
+            <div class="ui-card-img"></div>
+            <div class="ui-line"></div>
+            <div class="ui-line short"></div>
+            <div class="ui-mood"><span class="ui-mood-pill">自然</span></div>
+          </div>
+          <div class="ui-card">
+            <div class="ui-card-img"></div>
+            <div class="ui-line"></div>
+            <div class="ui-line short"></div>
+            <div class="ui-mood"><span class="ui-mood-pill">怀旧</span><span class="ui-mood-pill">胶片</span></div>
+          </div>
+          <div class="ui-card">
+            <div class="ui-card-img"></div>
+            <div class="ui-line"></div>
+            <div class="ui-line short"></div>
+            <div class="ui-mood"><span class="ui-mood-pill">未来</span><span class="ui-mood-pill">科技</span></div>
+          </div>
+          <div class="ui-card">
+            <div class="ui-card-img"></div>
+            <div class="ui-line"></div>
+            <div class="ui-line short"></div>
+            <div class="ui-mood"><span class="ui-mood-pill">手写</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="features">
+      <div class="feature">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M12 2v10"/></svg>
+        </div>
+        <div class="feature-title">选中片段保存</div>
+        <div class="feature-desc">选中网页文字即可保存，保留原文与来源 URL。</div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <div class="feature-title">氛围而非文件夹</div>
+        <div class="feature-desc">用情绪标签组织灵感，更符合创作时的心理模型。</div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div class="feature-title">时间线日记</div>
+        <div class="feature-desc">按日期分组呈现，像一本私人的灵感日记。</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="footer-slogan">让信息在恰当的时机，出现在恰当的地方。</div>
+      <div>Vannevar · 上下文管理产品族</div>
+    </div>
+  </div>
+</body>
+</html>

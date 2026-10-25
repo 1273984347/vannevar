@@ -1,0 +1,56 @@
+# NOTICE
+
+Vannevar 以 MIT 协议发布（见 [LICENSE](LICENSE)）。除 MIT 覆盖的源代码外，仓库内还包含以下第三方组件与项目自有素材，它们的版权与许可声明各自独立。
+
+## 1. 第三方组件
+
+### SQLite WASM（sql.js 运行时）
+
+| 路径 | 说明 |
+|---|---|
+| `products/focus-mvp/lib/sql-wasm.js` | SQLite 的 WebAssembly 构建（JavaScript 胶水层） |
+| `products/focus-mvp/lib/sql-wasm.wasm` | SQLite 的 WebAssembly 二进制 |
+| `products/muse-mvp/lib/sql-wasm.js` | 同上 |
+| `products/muse-mvp/lib/sql-wasm.wasm` | 同上 |
+
+这些文件由 SQL.js（基于 Emscripten 编译的 SQLite）分发而来，**不属于 Vannevar Contributors 的原创代码**，本仓库仅原样引入以支持浏览器端本地数据库。
+
+- SQLite 本身处于**公共领域（public domain）**。
+- sql.js 发行版附带其自身的 MIT 许可与版权声明；使用或再分发这些文件时，请保留 `sql-wasm.js` 内附带的原始版权头与许可条款。
+- Vannevar 项目不对这些第三方文件的正确性、安全性或可用性作任何担保；若上游更新，请跟随上游替换并保留其声明。
+
+各产品目录下另有 `lib/sql-wrapper.js`，这是 Vannevar 自研的 sql.js 薄封装（初始化、持久化与表结构管理），属于 MIT 覆盖范围。
+
+### 其他第三方依赖
+
+- Bridge 的 Python 依赖（FastAPI、SQLAlchemy、Uvicorn、Jinja2 及其传递依赖等）不随本仓库分发，其版权归各自作者所有，许可证见各项目官方仓库；通过 `products/bridge-mvp/requirements.txt` 安装。
+- 浏览器扩展运行环境依赖 Chrome Extension Manifest V3 规范与 Chrome 平台能力，版权归 Google LLC 所有。
+
+## 2. 项目自有素材
+
+以下素材由本项目原创或由本项目自行生成，以 MIT 协议随仓库分发：
+
+| 路径 | 内容 |
+|---|---|
+| `shared/media/` | 品牌海报与产品海报（`vannevar-brand-poster.png`、`poster-focus.png`、`poster-muse.png`、`poster-bridge.png`） |
+| `shared/media/vannevar-brand-intro.mp4`、`vannevar-brand-intro-extended.mp4` | 演示视频 |
+| `shared/frames-extended/` | 由上述演示视频抽取的 250 张视频抽帧图片（`frame-0000.png` … `frame-0249.png`）。该目录体积较大，**已随过程资产迁往独立归档仓，不随主仓分发**；素材本身仍属项目自有，遵循 MIT 协议 |
+| `shared/brand-showcase.html`、`shared/brand-showcase-extended.html`、`shared/poster-*.html` | 品牌展示页源文件 |
+| `shared/privacy-policy.html` | 隐私政策页 |
+| `diagrams/` | 架构图源文件与导出图片 |
+| `screenshots/` | 产品界面截图 |
+| `shared/vannevar-brand.css` | 品牌设计令牌与共享样式 |
+
+视频抽帧图片由本项目使用 `scripts/capture_assets.py` 从自有演示视频生成，属于项目自有素材，不含第三方版权内容。
+
+## 3. 商标与名称
+
+"Vannevar"（范内瓦·布什同名）与本项目的产品名称、界面文案属于本项目标识。仓库同时致敬 Vannevar Bush 于 1945 年在《As We May Think》中提出的 Memex 概念——该历史概念本身属于公共知识，不受本仓库许可协议约束。
+
+## 4. 贡献者
+
+本项目由 Vannevar Contributors 共同维护。第三方贡献的代码在提交时即视为以 MIT 协议授权，并保留其原始版权归属。
+
+## 5. 疑问
+
+对本文件的归属声明有疑问，请通过 [SECURITY.md](SECURITY.md) 中列出的渠道联系维护者。

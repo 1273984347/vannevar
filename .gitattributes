@@ -1,0 +1,30 @@
+# Git 属性 —— 统一行尾处理、标记二进制资源、辅助 GitHub 语言统计。
+
+# 全仓文本文件统一以 LF 存储与检出，避免跨平台 CRLF/LF 噪声
+* text=auto eol=lf
+
+# 二进制资源：不做行尾转换，不参与文本差异
+*.(png|jpg|jpeg|gif|webp|mp4|wasm|ico) binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.mp4 binary
+*.wasm binary
+*.ico binary
+*.zip binary
+*.db binary
+*.bak binary
+
+# 文档类文件在 GitHub 语言统计中归入 Documentation
+*.md linguist-documentation=true
+
+# 各产品随包引入的第三方运行时（含 SQL.js WASM）视为 vendored 代码
+products/*/lib/* linguist-vendored=true
+
+# 差异展示策略
+*.py diff=python
+*.js diff=javascript
+*.mjs diff=javascript
+*.md diff=markdown

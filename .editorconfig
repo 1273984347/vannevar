@@ -1,0 +1,57 @@
+# EditorConfig —— https://editorconfig.org
+# 统一全仓编码、换行与缩进约定，降低跨平台 diff 噪声。
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.py]
+indent_style = space
+indent_size = 4
+
+[*.js]
+indent_style = space
+indent_size = 4
+
+[*.mjs]
+indent_style = space
+indent_size = 4
+
+[*.html]
+indent_style = space
+indent_size = 4
+
+[*.css]
+indent_style = space
+indent_size = 4
+
+[*.json]
+indent_style = space
+indent_size = 2
+
+[*.yml]
+indent_style = space
+indent_size = 2
+
+[*.yaml]
+indent_style = space
+indent_size = 2
+
+# Markdown 行尾双空格是合法的换行语法，不做裁剪
+[*.md]
+trim_trailing_whitespace = false
+
+[Makefile]
+indent_style = tab
+
+[*.bat]
+indent_style = tab
+
+[*.cmd]
+indent_style = tab

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vannevar · 品牌开场视频（10s 扩展版）</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --v-text: #1e293b;
+      --v-text-secondary: #64748b;
+      --v-text-muted: #94a3b8;
+      --v-surface: #ffffff;
+      --v-border: #e2e8f0;
+      --v-radius: 14px;
+      --v-radius-lg: 20px;
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f8fafc;
+      color: var(--v-text);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+    }
+
+    .bg-orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .bg-orb--1 { width: 420px; height: 420px; background: #3b82f6; top: -120px; left: -80px; }
+    .bg-orb--2 { width: 360px; height: 360px; background: #f97316; bottom: -80px; right: -60px; }
+    .bg-orb--3 { width: 300px; height: 300px; background: #10b981; top: 40%; left: 60%; }
+
+    .brand-header {
+      text-align: center;
+      margin-bottom: 56px;
+      opacity: 0;
+      will-change: opacity, transform;
+    }
+
+    .brand-logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 72px;
+      height: 72px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #1e293b, #3b82f6);
+      color: white;
+      margin-bottom: 24px;
+      box-shadow: 0 12px 32px -8px rgba(59, 130, 246, 0.35);
+    }
+    .brand-logo svg { width: 40px; height: 40px; }
+
+    .brand-title {
+      font-size: clamp(2.5rem, 6vw, 3.75rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #1e293b 0%, #3b82f6 50%, #0d9488 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .brand-subtitle {
+      font-size: 1.125rem;
+      color: var(--v-text-secondary);
+      max-width: 560px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 28px;
+      width: 100%;
+      max-width: 1080px;
+    }
+
+    .product-card {
+      position: relative;
+      background: var(--v-surface);
+      border: 1px solid var(--v-border);
+      border-radius: var(--v-radius);
+      padding: 32px;
+      overflow: hidden;
+      opacity: 0;
+      will-change: opacity, transform;
+      transition: transform 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out), filter 0.4s var(--ease-out);
+    }
+    .product-card::before {
+      content: '';
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 4px;
+      background: var(--card-accent);
+    }
+    .product-card.focus { --card-accent: linear-gradient(90deg, #1e293b, #3b82f6, #334155); --card-shadow: 0 16px 40px -8px rgba(59, 130, 246, 0.22); }
+    .product-card.muse { --card-accent: linear-gradient(90deg, #c2410c, #f59e0b, #b45309); --card-shadow: 0 16px 40px -8px rgba(249, 115, 22, 0.22); }
+    .product-card.bridge { --card-accent: linear-gradient(90deg, #047857, #0d9488, #10b981); --card-shadow: 0 16px 40px -8px rgba(16, 185, 129, 0.22); }
+
+    .product-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      color: white;
+      box-shadow: 0 8px 20px -4px rgba(0,0,0,0.18);
+    }
+    .product-card.focus .product-icon { background: linear-gradient(135deg, #1e293b, #334155); }
+    .product-card.muse .product-icon { background: linear-gradient(135deg, #c2410c, #b45309); }
+    .product-card.bridge .product-icon { background: linear-gradient(135deg, #047857, #0d9488); }
+    .product-icon svg { width: 28px; height: 28px; }
+
+    .product-name { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.02em; }
+    .product-tagline { font-size: 0.95rem; color: var(--v-text-secondary); line-height: 1.6; margin-bottom: 20px; }
+    .product-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+    .product-pill {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 99px;
+      background: var(--pill-bg);
+      color: var(--pill-fg);
+    }
+    .product-card.focus .product-pill { --pill-bg: #eff6ff; --pill-fg: #1d4ed8; }
+    .product-card.muse .product-pill { --pill-bg: #fff7ed; --pill-fg: #c2410c; }
+    .product-card.bridge .product-pill { --pill-bg: #ecfdf5; --pill-fg: #047857; }
+
+    .product-detail {
+      position: absolute;
+      inset: auto 0 0 0;
+      padding: 0 32px 32px;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.35s var(--ease-out), transform 0.35s var(--ease-out);
+      pointer-events: none;
+    }
+    .product-detail p {
+      font-size: 0.875rem;
+      color: var(--v-text-secondary);
+      line-height: 1.6;
+    }
+    .product-card.active .product-detail { opacity: 1; transform: translateY(0); }
+    .product-card.dim { filter: brightness(0.92) saturate(0.85); transform: scale(0.98); }
+
+    .footer-line {
+      margin-top: 56px;
+      font-size: 0.875rem;
+      color: var(--v-text-muted);
+      opacity: 0;
+      will-change: opacity;
+    }
+
+    /* 落版 slogan 遮罩 */
+    .slogan-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0);
+      opacity: 0;
+      pointer-events: none;
+      transition: background 0.6s var(--ease-out), opacity 0.5s var(--ease-out);
+    }
+    .slogan-overlay.visible {
+      opacity: 1;
+      background: rgba(15, 23, 42, 0.88);
+    }
+    .slogan-logo {
+      width: 80px;
+      height: 80px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #1e293b, #3b82f6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      margin-bottom: 28px;
+      box-shadow: 0 16px 48px -12px rgba(59, 130, 246, 0.4);
+      transform: scale(0.8);
+      opacity: 0;
+      transition: transform 0.6s var(--ease-out), opacity 0.5s var(--ease-out);
+    }
+    .slogan-overlay.visible .slogan-logo { transform: scale(1); opacity: 1; }
+    .slogan-logo svg { width: 44px; height: 44px; }
+    .slogan-title {
+      font-size: 3.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #f8fafc;
+      margin-bottom: 16px;
+      transform: translateY(20px);
+      opacity: 0;
+      transition: transform 0.6s 0.1s var(--ease-out), opacity 0.5s 0.1s var(--ease-out);
+    }
+    .slogan-overlay.visible .slogan-title { transform: translateY(0); opacity: 1; }
+    .slogan-text {
+      font-size: 1.5rem;
+      color: #94a3b8;
+      max-width: 560px;
+      text-align: center;
+      line-height: 1.6;
+      transform: translateY(20px);
+      opacity: 0;
+      transition: transform 0.6s 0.2s var(--ease-out), opacity 0.5s 0.2s var(--ease-out);
+    }
+    .slogan-overlay.visible .slogan-text { transform: translateY(0); opacity: 1; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-orb bg-orb--1"></div>
+  <div class="bg-orb bg-orb--2"></div>
+  <div class="bg-orb bg-orb--3"></div>
+
+  <header class="brand-header">
+    <div class="brand-logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6 L12 18 L20 6"/></svg>
+    </div>
+    <h1 class="brand-title">Vannevar</h1>
+    <p class="brand-subtitle">三个产品，一种思路：让信息在恰当的时机，出现在恰当的地方。</p>
+  </header>
+
+  <main class="products-grid">
+    <article class="product-card focus" id="card-focus">
+      <div class="product-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </div>
+      <h2 class="product-name">Focus</h2>
+      <p class="product-tagline">保存与恢复浏览器上下文，让工作流在切换中保持完整。</p>
+      <div class="product-meta">
+        <span class="product-pill">效率工具</span>
+        <span class="product-pill">浏览器扩展</span>
+      </div>
+      <div class="product-detail"><p>一键保存完整标签页上下文，本地优先、安全恢复。</p></div>
+    </article>
+
+    <article class="product-card muse" id="card-muse">
+      <div class="product-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M12 2v10"/></svg>
+      </div>
+      <h2 class="product-name">Muse</h2>
+      <p class="product-tagline">随手捕捉网页灵感，按氛围归类，构建个人灵感博物馆。</p>
+      <div class="product-meta">
+        <span class="product-pill">生活娱乐</span>
+        <span class="product-pill">浏览器扩展</span>
+      </div>
+      <div class="product-detail"><p>选中片段、氛围标签、时间线，让灵感成为创作土壤。</p></div>
+    </article>
+
+    <article class="product-card bridge" id="card-bridge">
+      <div class="product-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21h-10a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2z"/><line x1="12" y1="11" x2="12" y2="11.01"/><line x1="8" y1="11" x2="8" y2="11.01"/><line x1="16" y1="11" x2="16" y2="11.01"/></svg>
+      </div>
+      <h2 class="product-name">Bridge</h2>
+      <p class="product-tagline">公益项目交接平台，让志愿者与管理者之间的信息无缝传递。</p>
+      <div class="product-meta">
+        <span class="product-pill">社会服务</span>
+        <span class="product-pill">Web 应用</span>
+      </div>
+      <div class="product-detail"><p>二维码交接、任务看板、协作留言，让志愿接力不断档。</p></div>
+    </article>
+  </main>
+
+  <footer class="footer-line">Vannevar · 上下文管理产品族</footer>
+
+  <div class="slogan-overlay" id="sloganOverlay">
+    <div class="slogan-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6 L12 18 L20 6"/></svg>
+    </div>
+    <div class="slogan-title">Vannevar</div>
+    <div class="slogan-text">保存 · 恢复 · 连接上下文</div>
+  </div>
+
+  <script>
+    (function() {
+      const header = document.querySelector('.brand-header');
+      const cards = Array.from(document.querySelectorAll('.product-card'));
+      const footer = document.querySelector('.footer-line');
+      const slogan = document.getElementById('sloganOverlay');
+
+      function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+      function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+      function updateAt(seconds) {
+        const t = seconds;
+
+        // 0.0-0.2 隐藏，0.2-1.0 header 入场
+        const headerP = clamp((t - 0.2) / 0.8, 0, 1);
+        const headerE = easeOut(headerP);
+        header.style.opacity = headerE;
+        header.style.transform = `translateY(${24 * (1 - headerE)}px)`;
+
+        // 0.5-1.7 cards 入场
+        cards.forEach((card, i) => {
+          const start = 0.5 + i * 0.15;
+          const p = clamp((t - start) / 0.6, 0, 1);
+          const e = easeOut(p);
+          card.style.opacity = e;
+          card.style.transform = `translateY(${32 * (1 - e)}px)`;
+        });
+
+        // 1.2-1.6 footer 入场
+        const footerP = clamp((t - 1.2) / 0.4, 0, 1);
+        footer.style.opacity = easeOut(footerP);
+
+        // 2.0-6.5 产品高亮轮播
+        cards.forEach(card => card.classList.remove('active', 'dim'));
+        const cycleStart = 2.0;
+        const cycleDuration = 4.5;
+        const localT = clamp((t - cycleStart) / cycleDuration, 0, 1);
+        if (localT > 0 && localT < 1) {
+          const activeIndex = Math.min(Math.floor(localT * 3), 2);
+          cards.forEach((card, i) => {
+            if (i === activeIndex) card.classList.add('active');
+            else card.classList.add('dim');
+          });
+        }
+
+        // 7.0-8.0 退出高亮，恢复平静
+        if (t >= 7.0 && t < 8.0) {
+          cards.forEach(card => card.classList.remove('active', 'dim'));
+        }
+
+        // 8.0-10.0 slogan 落版
+        if (t >= 8.0) {
+          slogan.classList.add('visible');
+        } else {
+          slogan.classList.remove('visible');
+        }
+      }
+
+      window.__brandTime = 0;
+      window.__brandManual = false;
+      window.__updateBrandFrame = function() { updateAt(window.__brandTime); };
+
+      let startTime = null;
+      function loop(ts) {
+        if (!window.__brandManual) {
+          if (!startTime) startTime = ts;
+          const elapsed = (ts - startTime) / 1000;
+          window.__brandTime = elapsed;
+          updateAt(elapsed);
+        }
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>

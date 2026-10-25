@@ -1,0 +1,2994 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vannevar Focus · 浏览器上下文管理</title>
+<script>
+  // 同步主题检测：在首屏渲染前设置 data-theme，避免 FOUC（Flash of Unstyled Content）
+  (function () {
+    try {
+      var stored = localStorage.getItem('focus-theme-pref');
+      var dark = stored === 'dark' ? true
+        : stored === 'light' ? false
+        : window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    } catch (e) { /* localStorage 不可用时降级到默认亮色 */ }
+  })();
+</script>
+<!-- 引入 Inter + Noto Sans SC 字体（与架构图设计基准对齐） -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet"></noscript>
+<style>
+/* ============================================================
+   设计系统变量（浅色模式默认 + 深色模式覆盖）
+   ============================================================ */
+:root {
+  /* 品牌签名色：slate+blue 蓝灰色系（与架构图一致） */
+  --brand-gradient: linear-gradient(135deg, #1e293b, #334155);
+  --brand-primary: #3b82f6;
+  --brand-primary-hover: #2563eb;
+  --brand-secondary: #334155;
+
+  /* 浅色模式背景与卡片 */
+  --bg: #f8fafc;
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --card-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(59,130,246,0.12);
+  --card-shadow-hover: 0 2px 8px rgba(0,0,0,0.12), 0 8px 24px rgba(59,130,246,0.18);
+
+  /* 文字层级（与架构图 slate-800 / slate-500 对齐） */
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-muted: #64748b;
+  --hover-bg: #f1f5f9;
+  --divider: #e2e8f0;
+
+  /* 状态色 */
+  --danger: #ef4444;
+  --danger-bg: #fef2f2;
+  --success: #10b981;
+  --warning: #f59e0b;
+
+  /* 圆角规范（W066a：8/14/20 体系，更柔和） */
+  --radius-card: 20px;
+  --radius-button: 14px;
+
+  /* 字体栈：Inter 为主，Noto Sans SC 兜底中文 */
+  --font-stack: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'SF Mono', Monaco, Consolas, 'Courier New', monospace;
+
+  /* 专业级缓动曲线（用于关键交互） */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-circ: cubic-bezier(0.85, 0, 0.15, 1);
+
+  /* mock 网页专用色（深色模式由 [data-theme="dark"] 重定义） */
+  --mock-github-bg: #f6f8fa;
+  --mock-mdn-bg: #1d4ed8;
+  --mock-mdn-text: #ffffff;
+  --mock-so-bg: #f48024;
+  --mock-so-text: #ffffff;
+  /* mock 网页 badge/tag 装饰色（浅色） */
+  --mock-badge-build-bg: #fff3d6;
+  --mock-badge-build-text: #5b4400;
+  --mock-badge-cov-bg: #d4f4dd;
+  --mock-badge-cov-text: #15503b;
+  --mock-badge-npm-bg: #e0e7ff;
+  --mock-badge-npm-text: #3730a3;
+  --mock-badge-lic-bg: #fce7f3;
+  --mock-badge-lic-text: #831843;
+  --mock-tag-bg: #e1ecf4;
+  --mock-tag-text: #39739d;
+
+  /* mock 网页通用变量 */
+  --mock-bg: #ffffff;
+  --mock-card-bg: #ffffff;
+  --mock-text: #0f172a;
+  --mock-text-muted: #64748b;
+  --mock-radius: 12px;
+  --mock-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  --mock-border: #e2e8f0;
+  --mock-link: #3b82f6;
+  --mock-code-bg: #f1f5f9;
+  --mock-btn-bg: var(--card-bg);
+  --mock-btn-text: var(--text-primary);
+  --mock-btn-border: var(--card-border);
+  --mock-btn-secondary-text: var(--text-primary);
+  --mock-btn-secondary-border: #4a5568;
+  --mock-avatar-bg: #657786;
+
+  /* 阴影与圆角 token */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+}
+
+/* 深色模式覆盖：通过 [data-theme="dark"] 控制，支持手动切换（系统跟随在初始化时设置属性） */
+[data-theme="dark"] {
+  --bg: #0f172a;
+  --card-bg: #1e293b;
+  --card-border: #334155;
+  --card-shadow: 0 1px 3px rgba(0,0,0,0.4), 0 4px 12px rgba(59,130,246,0.18);
+  --brand-gradient: linear-gradient(135deg, #334155, #475569);
+  --brand-primary-hover: #60a5fa;
+  --card-shadow-hover: 0 2px 8px rgba(0,0,0,0.5), 0 8px 24px rgba(59,130,246,0.32);
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #a8b5c7;
+  --hover-bg: #334155;
+  --divider: #334155;
+  --danger-bg: rgba(239,68,68,0.15);
+  --warning: #f59e0b;
+
+  /* mock 网页深色适配 */
+  --mock-github-bg: #0d1117;
+  --mock-mdn-bg: #1a1a2e;
+  --mock-mdn-text: #c9d1d9;
+  --mock-so-bg: #161616;
+  --mock-so-text: #f48024;
+  /* mock 网页 badge/tag 深色配色（提亮保证对比度） */
+  --mock-badge-build-bg: #422006;
+  --mock-badge-build-text: #fbbf24;
+  --mock-badge-cov-bg: #052e1a;
+  --mock-badge-cov-text: #4ade80;
+  --mock-badge-npm-bg: #1e1b4b;
+  --mock-badge-npm-text: #a5b4fc;
+  --mock-badge-lic-bg: #500724;
+  --mock-badge-lic-text: #f9a8d4;
+  --mock-tag-bg: #0c1f2e;
+  --mock-tag-text: #5da9e9;
+
+  /* mock 网页通用变量（深色） */
+  --mock-bg: #0f172a;
+  --mock-card-bg: #1e293b;
+  --mock-text: #f1f5f9;
+  --mock-text-muted: #94a3b8;
+  --mock-radius: 12px;
+  --mock-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  --mock-border: #334155;
+  --mock-link: #60a5fa;
+  --mock-code-bg: #1e293b;
+  --mock-btn-bg: var(--card-bg);
+  --mock-btn-text: var(--text-primary);
+  --mock-btn-border: var(--card-border);
+  --mock-btn-secondary-text: var(--text-primary);
+  --mock-btn-secondary-border: #64748b;
+  --mock-avatar-bg: #64748b;
+
+  /* 阴影 token（深色） */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.5);
+
+  /* 深色模式下品牌主色使用更深的蓝，保证白字对比度达标 */
+  --brand-primary: #2563eb;
+}
+
+/* ============================================================
+   基础重置
+   ============================================================ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-stack);
+  background-color: var(--bg);
+  background-image: radial-gradient(circle at 50% 0%, rgba(59,130,246,0.08), transparent 60%);
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+}
+button:focus-visible, [tabindex]:focus-visible, [role="button"]:focus-visible, [role="tab"]:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   主布局：左侧浏览器 + 右侧 Focus Popup
+   ============================================================ */
+.app {
+  display: flex;
+  gap: 24px;
+  padding: 24px;
+  min-height: 100vh;
+  max-width: 1440px;
+  margin: 0 auto;
+  align-items: flex-start;
+  animation: fadeInUp 0.5s ease both;
+}
+
+/* 左侧：模拟浏览器窗口 */
+.browser-window {
+  flex: 1;
+  min-width: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 720px;
+}
+
+/* 右侧：Focus 扩展 popup */
+.focus-popup {
+  width: 360px;
+  flex-shrink: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 720px;
+  position: sticky;
+  top: 24px;
+}
+
+/* 响应式：小屏堆叠 */
+@media (max-width: 1024px) {
+  .app { flex-direction: column; padding: 16px; gap: 16px; }
+  .focus-popup { width: 100%; position: static; max-height: none; }
+  .browser-window { height: 560px; }
+}
+
+/* ============================================================
+   浏览器 Chrome（标签栏 + 地址栏）
+   ============================================================ */
+.browser-chrome {
+  background: var(--hover-bg);
+  border-bottom: 1px solid var(--card-border);
+  padding: 8px 12px 0;
+  flex-shrink: 0;
+}
+
+.tab-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-muted) transparent;
+}
+.tab-bar::-webkit-scrollbar { height: 4px; }
+.tab-bar::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 2px; }
+
+/* 单个标签页 */
+.tab-wrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+  max-width: 200px;
+  min-width: 130px;
+}
+.tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 32px 8px 12px;
+  background: transparent;
+  border-radius: 8px 8px 0 0;
+  min-width: 0;
+  position: relative;
+  transition: background 0.2s var(--ease-out-expo), border-color 0.2s var(--ease-out-expo), color 0.2s var(--ease-out-expo);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+button.tab {
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+.tab-wrapper:hover .tab { background: rgba(59,130,246,0.06); }
+.tab-wrapper.active .tab {
+  background: var(--card-bg);
+  color: var(--text-primary);
+}
+.tab-wrapper.active .tab::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 3px;
+  background: var(--brand-primary);
+  border-radius: 8px 8px 0 0;
+}
+.tab-favicon {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: white;
+  line-height: 1;
+}
+.tab-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+}
+.tab-close {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: all 0.18s var(--ease-out-expo);
+  flex-shrink: 0;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+}
+.tab-wrapper:hover .tab-close, .tab-wrapper.active .tab-close { opacity: 0.7; }
+.tab-close:hover { background: rgba(0,0,0,0.12); opacity: 1 !important; color: var(--text-primary); }
+
+/* 新建标签页按钮 */
+.tab.new-tab-btn {
+  padding: 8px 12px;
+  min-width: 36px;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--text-secondary);
+}
+.tab.new-tab-btn:hover { background: rgba(59,130,246,0.1); color: var(--brand-primary); }
+
+/* 标签页打开动画（恢复时使用） */
+@keyframes tabOpen {
+  from { opacity: 0; transform: translateY(-8px) scale(0.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.tab-wrapper.opening .tab { animation: tabOpen 0.3s ease both; }
+
+/* 地址栏 */
+.address-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 4px;
+}
+.nav-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1;
+}
+.nav-btn:hover { background: rgba(0,0,0,0.06); color: var(--text-primary); }
+[data-theme="dark"] .nav-btn:hover { background: rgba(255,255,255,0.08); }
+
+.url-display {
+  flex: 1;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.url-lock {
+  width: 10px; height: 10px;
+  border: 1.5px solid var(--success);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.url-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.extension-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--brand-gradient);
+  color: white;
+  font-weight: 800;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   网页内容区
+   ============================================================ */
+.web-content {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--mock-bg);
+  position: relative;
+}
+.web-content::-webkit-scrollbar { width: 10px; }
+.web-content::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 5px; }
+.web-content::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* 空标签页状态 */
+.page-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  gap: 12px;
+  padding: 40px;
+  text-align: center;
+}
+.page-empty svg { opacity: 0.35; }
+.page-empty .empty-title { font-size: 16px; font-weight: 600; color: var(--text-secondary); }
+.page-empty .empty-hint { font-size: 13px; max-width: 280px; line-height: 1.6; }
+
+/* ============================================================
+   Focus Popup 内部样式
+   ============================================================ */
+.popup-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--divider);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  flex-shrink: 0;
+}
+[data-theme="dark"] .popup-header {
+  background: rgba(30, 41, 59, 0.72);
+}
+.popup-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--brand-gradient);
+  color: white;
+  font-weight: 800;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+  flex-shrink: 0;
+  animation: logoGlow 3s ease-in-out infinite;
+}
+.popup-titles h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+.popup-titles p { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+
+.popup-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+.popup-body::-webkit-scrollbar { width: 6px; }
+.popup-body::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 3px; }
+
+/* 保存按钮 */
+.save-btn {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--brand-gradient);
+  color: white;
+  border-radius: var(--radius-button);
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.2s var(--ease-out-expo), box-shadow 0.2s var(--ease-out-expo), opacity 0.2s var(--ease-out-expo);
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+}
+.save-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.save-btn:active:not(:disabled) { transform: scale(0.98); }
+.save-btn:disabled {
+  opacity: 0.95;
+  cursor: not-allowed;
+  animation: savePulse 1.4s ease-in-out infinite;
+}
+
+/* Loading spinner */
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.35);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 区段标题（架构图同款分层小标签：slate-400 / 12px / 600 / uppercase） */
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+[data-theme="dark"] .section-label { color: var(--text-muted); }
+
+/* 快照列表 */
+.snapshot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 快照搜索框与导出按钮 */
+.section-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.section-label-row .section-label { margin-bottom: 0; }
+
+.snapshot-search { margin-bottom: 8px; }
+.search-input {
+  width: 100%; padding: 6px 10px;
+  border: 1px solid var(--card-border); border-radius: var(--radius-button);
+  background: var(--card-bg); color: var(--text-primary);
+  font-size: 12px; transition: border-color 0.2s var(--ease-out-expo);
+}
+.search-input:focus { outline: none; border-color: var(--brand-primary); box-shadow: 0 0 0 2px rgba(59,130,246,0.12); }
+.search-input::placeholder { color: var(--text-muted); }
+
+.export-btn {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 0.2s var(--ease-out-expo), color 0.2s var(--ease-out-expo);
+}
+.export-btn:hover {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+.snapshot-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-card);
+  padding: 16px;
+  transition: transform 0.3s var(--ease-out-expo), box-shadow 0.3s var(--ease-out-expo), border-color 0.3s var(--ease-out-expo);
+  animation: slideIn 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* stagger 入场动画：列表前 12 项 50ms 递增 */
+.snapshot-list .snapshot-card:nth-child(1) { animation-delay: 0ms; }
+.snapshot-list .snapshot-card:nth-child(2) { animation-delay: 50ms; }
+.snapshot-list .snapshot-card:nth-child(3) { animation-delay: 100ms; }
+.snapshot-list .snapshot-card:nth-child(4) { animation-delay: 150ms; }
+.snapshot-list .snapshot-card:nth-child(5) { animation-delay: 200ms; }
+.snapshot-list .snapshot-card:nth-child(6) { animation-delay: 250ms; }
+.snapshot-list .snapshot-card:nth-child(7) { animation-delay: 300ms; }
+.snapshot-list .snapshot-card:nth-child(8) { animation-delay: 350ms; }
+.snapshot-list .snapshot-card:nth-child(9) { animation-delay: 400ms; }
+.snapshot-list .snapshot-card:nth-child(10) { animation-delay: 450ms; }
+.snapshot-list .snapshot-card:nth-child(11) { animation-delay: 500ms; }
+.snapshot-list .snapshot-card:nth-child(12) { animation-delay: 550ms; }
+
+/* ============================================================
+   新增交互动画（DESIGN-focus.md 规范增强）
+   ============================================================ */
+/* 页面入场动画 */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* 保存按钮 loading 脉冲（蓝灰色系，区别于删除按钮的红色 pulse） */
+@keyframes savePulse {
+  0%, 100% { box-shadow: 0 4px 12px rgba(30,41,59,0.25), 0 0 0 0 rgba(59,130,246,0.45); }
+  50% { box-shadow: 0 4px 12px rgba(30,41,59,0.25), 0 0 0 8px rgba(59,130,246,0); }
+}
+/* Logo 微光晕呼吸 */
+@keyframes logoGlow {
+  0%, 100% { box-shadow: 0 4px 12px rgba(30,41,59,0.3), 0 0 12px rgba(59,130,246,0.25); }
+  50% { box-shadow: 0 4px 12px rgba(30,41,59,0.3), 0 0 20px rgba(59,130,246,0.5); }
+}
+/* 通用按钮按压效果 */
+button:active:not(:disabled) { transform: scale(0.98); }
+.snapshot-card:hover {
+  box-shadow: var(--card-shadow-hover);
+  transform: translateY(-2px);
+  border-color: var(--brand-primary);
+}
+
+.snapshot-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.snapshot-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.snapshot-meta .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+
+.snapshot-actions {
+  display: flex;
+  gap: 8px;
+}
+.snap-btn {
+  flex: 1;
+  padding: 7px 10px;
+  border-radius: var(--radius-button);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--text-primary);
+  transition: background 0.2s var(--ease-out-expo), border-color 0.2s var(--ease-out-expo), color 0.2s var(--ease-out-expo), transform 0.15s var(--ease-out-expo);
+}
+.snap-btn:hover { background: var(--hover-bg); }
+.snap-btn.restore:hover {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  background: rgba(59,130,246,0.06);
+}
+.snap-btn.delete:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+.snap-btn.confirm-delete {
+  background: var(--danger);
+  color: white;
+  border-color: var(--danger);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(239,68,68,0); }
+}
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 40px 16px;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: fadeInUp 0.4s ease both;
+}
+.empty-icon {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: rgba(59,130,246,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--brand-primary);
+  border: 1px dashed rgba(59,130,246,0.35);
+  animation: logoGlow 3s ease-in-out infinite;
+}
+.empty-state h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.empty-state p { font-size: 12px; line-height: 1.6; max-width: 240px; }
+
+/* ============================================================
+   涟漪效果（按钮点击反馈）
+   ============================================================ */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.4);
+  transform: scale(0);
+  animation: ripple 0.6s var(--ease-out-expo);
+  pointer-events: none;
+}
+@keyframes ripple {
+  to { transform: scale(4); opacity: 0; }
+}
+
+/* 空状态插画：打开的文件夹 */
+.empty-illustration {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+.empty-illustration .folder-lid {
+  transform-origin: 50% 100%;
+  animation: folderLid 2.6s var(--ease-in-out-circ) infinite;
+}
+@keyframes folderLid {
+  0%, 100% { transform: rotate(0deg); }
+  40% { transform: rotate(-12deg); }
+  60% { transform: rotate(-12deg); }
+}
+
+/* ============================================================
+   注意力轨迹时间轴
+   ============================================================ */
+.timeline-wrap {
+  position: relative;
+  margin-top: 8px;
+  background: var(--hover-bg);
+  border-radius: var(--radius-button);
+  padding: 12px;
+  animation: fadeInUp 0.5s ease both;
+}
+.timeline-wrap svg { display: block; }
+.timeline-empty {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 10px 0;
+}
+.timeline-dot {
+  cursor: pointer;
+  transition: r 0.2s var(--ease-out-expo), opacity 0.2s var(--ease-out-expo);
+}
+.timeline-dot:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+.timeline-dot:hover {
+  fill: var(--brand-primary);
+  opacity: 1;
+}
+.timeline-tooltip {
+  position: absolute;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+  border-radius: var(--radius-button);
+  padding: 6px 10px;
+  font-size: 11px;
+  z-index: 100;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+/* ============================================================
+   Mock 网页通用工具类
+   ============================================================ */
+.mock-btn {
+  background: var(--mock-btn-bg);
+  color: var(--mock-btn-text);
+  border: 1px solid var(--mock-btn-border);
+  padding: 10px 22px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 14px;
+}
+.mock-btn-secondary {
+  background: transparent;
+  color: var(--mock-btn-secondary-text);
+  border-color: var(--mock-btn-secondary-border);
+}
+.mock-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+}
+.mock-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--mock-avatar-bg);
+  flex-shrink: 0;
+}
+.mock-favicon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.mock-badge,
+.mock-tag {
+  padding: 3px 10px;
+  border-radius: var(--mock-radius);
+  font-size: 12px;
+}
+.mock-title { color: var(--mock-text); }
+.mock-text { color: var(--text-secondary); }
+.mock-muted { color: var(--text-muted); }
+.timeline-tooltip .tt-title { font-weight: 600; }
+.timeline-tooltip .tt-meta { color: var(--text-muted); margin-top: 2px; }
+.attention-focus {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.attention-focus-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-right: 2px;
+}
+.focus-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  gap: 4px;
+  background: rgba(59,130,246,0.1);
+  color: var(--brand-primary-hover);
+  font-weight: 500;
+}
+
+/* ============================================================
+   Toast 通知
+   ============================================================ */
+.toast-container {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-left: 4px solid var(--success);
+  border-radius: var(--radius-button);
+  padding: 12px 16px;
+  box-shadow: var(--shadow-lg);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 220px;
+  max-width: 320px;
+  animation: toastIn 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  pointer-events: auto;
+}
+.toast.error { border-left-color: var(--danger); }
+.toast.info { border-left-color: var(--brand-primary); }
+.toast.info .toast-icon { background: var(--brand-primary); }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.toast.out { animation: toastOut 0.25s ease forwards; }
+@keyframes toastOut {
+  to { opacity: 0; transform: translateX(110%); }
+}
+.toast-icon {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.toast.success .toast-icon { background: var(--success); }
+.toast.error .toast-icon { background: var(--danger); }
+
+/* 可撤销 toast：黄色警告色边框 + 倒计时进度条 */
+.toast.undo {
+  border-left-color: var(--warning);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 280px;
+  position: relative;
+  overflow: hidden;
+}
+.toast-undo-btn {
+  padding: 4px 12px;
+  border-radius: var(--radius-button);
+  background: var(--card-bg);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--card-border);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.toast-undo-btn:hover {
+  background: var(--warning);
+  color: white;
+  border-color: var(--warning);
+}
+.toast-undo-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: var(--warning);
+  animation: undoCountdown 5s linear forwards;
+}
+@keyframes undoCountdown {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+/* ============================================================
+   模拟网页内容通用样式
+   ============================================================ */
+.mock-page {
+  padding: 36px 48px;
+  max-width: 920px;
+  margin: 0 auto;
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.mock-page h1, .mock-page h2, .mock-page h3 { line-height: 1.3; }
+
+.mock-code {
+  background: #0d1117;
+  color: #e6edf3;
+  padding: 16px 20px;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 12px 0;
+}
+.mock-code .kw { color: #ff7b72; }
+.mock-code .fn { color: #d2a8ff; }
+.mock-code .str { color: #a5d6ff; }
+.mock-code .prop { color: #79c0ff; }
+.mock-code .com { color: #8b949e; }
+
+@media (max-width: 600px) {
+  .mock-page { padding: 24px 20px; }
+}
+
+/* ============================================================
+   AI 主题聚类
+   ============================================================ */
+.cluster-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: var(--radius-button);
+  background: var(--hover-bg);
+  border: 1px dashed var(--card-border);
+  color: var(--text-primary);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  transition: all 0.2s var(--ease-out-expo);
+  position: relative;
+  overflow: hidden;
+}
+.cluster-btn:hover:not(:disabled) {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  border-style: solid;
+}
+.cluster-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.cluster-btn.loading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+.cluster-btn .spinner {
+  border: 2px solid rgba(59,130,246,0.25);
+  border-top-color: var(--brand-primary);
+}
+.cluster-result {
+  margin-top: 12px;
+  animation: fadeInUp 0.4s ease both;
+}
+.cluster-stats {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  background: var(--hover-bg);
+  border-radius: var(--radius-button);
+}
+.cluster-group {
+  margin-bottom: 10px;
+  padding: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-left: 3px solid var(--topic-color);
+  border-radius: var(--radius-button);
+}
+.cluster-group:last-child { margin-bottom: 0; }
+.cluster-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+}
+.cluster-group-count {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.cluster-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--topic-color);
+  flex-shrink: 0;
+}
+.cluster-tab-item {
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding: 3px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cluster-more {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  cursor: pointer;
+  padding: 3px 0;
+  display: inline-block;
+}
+.cluster-more:hover {
+  color: var(--brand-primary);
+}
+
+/* ============================================================
+   Onboarding Tour（首次使用引导）
+   ============================================================ */
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: auto;
+  background: transparent;
+}
+.onboarding-highlight {
+  position: fixed;
+  border-radius: 10px;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.55), 0 0 0 3px var(--brand-primary);
+  transition: left 0.35s var(--ease-out-expo), top 0.35s var(--ease-out-expo), width 0.35s var(--ease-out-expo), height 0.35s var(--ease-out-expo);
+  z-index: 9999;
+  pointer-events: none;
+}
+.onboarding-highlight.no-transition { transition: none; }
+.onboarding-tooltip {
+  position: fixed;
+  z-index: 10000;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  width: 320px;
+  box-shadow: var(--shadow-lg);
+  animation: tooltipIn 0.32s var(--ease-out-expo);
+  transition: left 0.35s var(--ease-out-expo), top 0.35s var(--ease-out-expo);
+}
+.onboarding-tooltip.no-transition { transition: none; }
+@keyframes tooltipIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.onboarding-step {
+  font-size: 11px; font-weight: 700; color: var(--brand-primary);
+  text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;
+}
+.onboarding-title {
+  font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;
+}
+.onboarding-desc {
+  font-size: 13px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 16px;
+}
+.onboarding-actions {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.onboarding-progress { font-size: 12px; color: var(--text-muted); }
+.onboarding-btns { display: flex; gap: 8px; }
+.onboarding-btn-skip {
+  padding: 7px 14px; border-radius: var(--radius-md); font-size: 13px;
+  color: var(--text-secondary); border: 1px solid var(--card-border);
+  background: transparent; transition: all 0.18s var(--ease-out-expo);
+}
+.onboarding-btn-skip:hover { color: var(--text-primary); background: var(--hover-bg); }
+.onboarding-btn-next {
+  padding: 7px 16px; border-radius: var(--radius-md); font-size: 13px; font-weight: 600;
+  color: #fff; background: var(--brand-primary); border: none;
+  transition: all 0.18s var(--ease-out-expo);
+}
+.onboarding-btn-next:hover { background: var(--brand-primary-hover); transform: translateY(-2px); }
+/* 深色模式下 --brand-primary 已调整为更深的蓝，保证白字对比度达标 */
+[data-theme="dark"] .onboarding-btn-next:hover { background: var(--brand-primary); }
+.theme-btn {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; line-height: 1; color: var(--text-muted);
+  border: 1px solid var(--card-border); background: transparent;
+  transition: all 0.18s var(--ease-out-expo);
+  margin-left: auto; flex-shrink: 0;
+}
+.theme-btn:hover { color: var(--brand-primary); border-color: var(--brand-primary); }
+.help-btn {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: var(--text-muted);
+  border: 1px solid var(--card-border); background: transparent;
+  transition: all 0.18s var(--ease-out-expo);
+  flex-shrink: 0;
+}
+.help-btn:hover { color: var(--brand-primary); border-color: var(--brand-primary); }
+
+/* 屏幕阅读器专用：视觉上隐藏但可被辅助技术朗读 */
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+/* ===== prefers-reduced-motion 降级（保留功能性动画） ===== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .toast-undo-progress { animation-duration: 5s !important; }
+  .spinner { animation-duration: 0.7s !important; animation-iteration-count: infinite !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ============================================================
+       左侧：模拟浏览器窗口
+       ============================================================ -->
+  <main class="browser-window">
+    <div class="browser-chrome">
+      <div class="tab-bar" id="tabBar"><!-- 标签页由 JS 渲染 --></div>
+      <div class="address-bar">
+        <button class="nav-btn" title="后退" aria-label="后退" type="button">‹</button>
+        <button class="nav-btn" title="前进" aria-label="前进" type="button">›</button>
+        <button class="nav-btn" title="刷新" aria-label="刷新" type="button">↻</button>
+        <div class="url-display" id="urlDisplay">
+          <span class="url-lock"></span>
+          <span class="url-text"></span>
+        </div>
+        <div class="extension-icon" title="Vannevar Focus">V</div>
+      </div>
+    </div>
+    <div class="web-content" id="webContent" role="region" aria-label="模拟网页内容"><!-- 网页内容由 JS 渲染 --></div>
+  </main>
+
+  <!-- ============================================================
+       右侧：Focus 扩展 Popup
+       ============================================================ -->
+  <aside class="focus-popup">
+    <div class="popup-header">
+      <div class="popup-logo" aria-hidden="true">V</div>
+      <div class="popup-titles">
+        <h1>Focus</h1>
+        <p>保存 · 恢复 · 聚类你的标签页</p>
+      </div>
+      <button class="theme-btn" id="theme-btn" title="切换深色/浅色主题" aria-label="切换深色/浅色主题" aria-pressed="false" type="button"><span class="theme-icon" aria-hidden="true">🌙</span></button>
+      <button class="help-btn" id="help-btn" title="查看使用引导" aria-label="查看使用引导" type="button">?</button>
+    </div>
+    <div class="popup-body">
+      <div>
+        <div class="section-label">当前上下文</div>
+        <button class="save-btn" id="saveBtn" type="button">
+          <span id="saveBtnContent">保存当前上下文</span>
+        </button>
+      </div>
+      <div>
+        <div class="section-label">AI 主题聚类</div>
+        <button class="cluster-btn" id="clusterBtn" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M7 7l3 3M17 7l-3 3M7 17l3-3M17 17l-3-3"/></svg>
+          <span>智能分组当前标签页</span>
+        </button>
+        <div class="cluster-result" id="clusterResult" hidden>
+          <!-- 聚类结果由 JS 渲染 -->
+        </div>
+      </div>
+      <div>
+        <div class="section-label-row">
+          <div class="section-label">已保存的上下文</div>
+          <button class="export-btn" id="exportBtn" title="导出全部快照为 JSON" type="button">⬇ 导出</button>
+        </div>
+        <div class="snapshot-search">
+          <label for="snapshotSearch" class="visually-hidden">搜索快照</label>
+          <input type="text" class="search-input" id="snapshotSearch" placeholder="搜索快照..." aria-label="搜索快照">
+        </div>
+        <div class="snapshot-list" id="snapshotList"><!-- 快照列表由 JS 渲染 --></div>
+      </div>
+      <div>
+        <div class="section-label">注意力轨迹</div>
+        <div class="timeline-wrap" id="timelineWrap">
+          <!-- SVG 时间轴由 JS 渲染 -->
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- Toast 容器 -->
+<div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="false"></div>
+
+<script>
+/* ============================================================
+   模拟数据
+   ============================================================ */
+
+// 初始 6 个多元化标签页（开发/学习/社交/新闻/娱乐，用于演示 AI 主题聚类）
+const initialTabs = [
+  // 开发类
+  { id: 't1', title: 'React 官方文档',          url: 'react.dev',                              favicon: '#61dafb', faviconText: 'R', type: 'react-docs' },
+  { id: 't2', title: 'GitHub - facebook/react', url: 'github.com/facebook/react',              favicon: '#24292e', faviconText: 'G', type: 'github' },
+  // 学习类
+  { id: 't3', title: 'Wikipedia - 计算机科学',   url: 'wikipedia.org/wiki/Computer_science',    favicon: '#636666', faviconText: 'W', type: 'wikipedia' },
+  // 社交类
+  { id: 't4', title: 'Twitter - Home',          url: 'twitter.com/home',                       favicon: '#1da1f2', faviconText: 'X', type: 'twitter' },
+  // 新闻类
+  { id: 't5', title: 'BBC News - World',        url: 'bbc.com/news/world',                     favicon: '#bb1919', faviconText: 'B', type: 'bbc' },
+  // 娱乐类
+  { id: 't6', title: 'YouTube - 首页',          url: 'youtube.com',                            favicon: '#ff0000', faviconText: 'Y', type: 'youtube' }
+];
+
+// 预设快照：「前端面试准备」8 个标签页
+const presetSnapshotTabs = [
+  { id: 'p1', title: 'React 官方文档',     url: 'react.dev',                          favicon: '#61dafb', faviconText: 'R', type: 'react-docs' },
+  { id: 'p2', title: 'MDN Web Docs',       url: 'developer.mozilla.org/JavaScript',   favicon: '#42b883', faviconText: 'V', type: 'mdn' },
+  { id: 'p3', title: 'Stack Overflow',     url: 'stackoverflow.com/questions/tagged/react', favicon: '#f7df1e', faviconText: 'J', type: 'stackoverflow' },
+  { id: 'p4', title: 'GitHub - vuejs/core', url: 'github.com/vuejs/core',             favicon: '#ff7a59', faviconText: 'C', type: 'github' },
+  { id: 'p5', title: '阮一峰的网络日志',    url: 'ruanyifeng.com/blog',                favicon: '#ffa116', faviconText: 'L', type: 'blog' },
+  { id: 'p6', title: 'LeetCode',           url: 'leetcode.com',                       favicon: '#1e80ff', faviconText: '掘', type: 'generic' },
+  { id: 'p7', title: 'MDN - CSS Flexbox',  url: 'developer.mozilla.org/CSS/flexbox',  favicon: '#3b82f6', faviconText: '阮', type: 'mdn' },
+  { id: 'p8', title: 'GitHub - microsoft/TypeScript', url: 'github.com/microsoft/TypeScript', favicon: '#3178c6', faviconText: 'T', type: 'github' }
+];
+
+/* ============================================================
+   应用状态
+   ============================================================ */
+const state = {
+  tabs: initialTabs.map(t => ({ ...t })),   // 当前打开的标签页
+  activeTabId: 't1',                          // 当前激活的标签页 id
+  snapshots: [                                // 已保存的快照列表（顶部为最新）
+    {
+      id: 'preset-1',
+      title: '前端面试准备',
+      tabCount: 8,
+      savedAt: '昨天',
+      hour: 14,
+      tabsData: presetSnapshotTabs.map(t => ({ ...t }))
+    }
+  ],
+  isSaving: false,                            // 是否正在保存
+  isRestoring: false,                         // 是否正在恢复快照（防重入 + 动画中断）
+  pendingDeleteId: null,                      // 处于"待确认删除"状态的快照 id
+  deleteTimer: null,                          // 删除确认倒计时
+  snapshotFilter: '',                         // 快照搜索过滤关键词
+  restoreTimers: []                           // restoreSnapshot 的 setTimeout id 列表（用于撤销/引导时清理）
+};
+
+/* ============================================================
+   DOM 引用
+   ============================================================ */
+const tabBar = document.getElementById('tabBar');
+const urlText = document.querySelector('.url-text');
+const webContent = document.getElementById('webContent');
+const saveBtn = document.getElementById('saveBtn');
+const saveBtnContent = document.getElementById('saveBtnContent');
+const snapshotList = document.getElementById('snapshotList');
+const snapshotSearch = document.getElementById('snapshotSearch');
+const exportBtn = document.getElementById('exportBtn');
+const timelineWrap = document.getElementById('timelineWrap');
+const toastContainer = document.getElementById('toastContainer');
+const clusterBtn = document.getElementById('clusterBtn');
+const clusterResult = document.getElementById('clusterResult');
+
+/* ============================================================
+   渲染：标签页栏
+   ============================================================ */
+function renderTabs(openingIds = []) {
+  tabBar.innerHTML = '';
+
+  state.tabs.forEach((tab, i) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tab-wrapper' + (tab.id === state.activeTabId ? ' active' : '');
+    if (openingIds.includes(tab.id)) wrapper.classList.add('opening');
+
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'tab';
+    el.dataset.id = tab.id;
+    el.setAttribute('aria-label', '浏览器标签页 ' + (i + 1));
+
+    el.innerHTML = `
+      <div class="tab-favicon" style="background:${escapeHtml(tab.favicon)}">${escapeHtml(tab.faviconText)}</div>
+      <div class="tab-title">${escapeHtml(tab.title)}</div>
+    `;
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'tab-close';
+    closeBtn.setAttribute('aria-label', '关闭标签页 ' + escapeHtml(tab.title));
+    closeBtn.innerHTML = '<span aria-hidden="true">×</span>';
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeTab(tab.id);
+    });
+
+    // 点击切换标签页
+    el.addEventListener('click', () => {
+      setActiveTab(tab.id);
+    });
+
+    wrapper.appendChild(el);
+    wrapper.appendChild(closeBtn);
+    tabBar.appendChild(wrapper);
+  });
+
+  // 新建标签页按钮（+）
+  const newBtn = document.createElement('button');
+  newBtn.type = 'button';
+  newBtn.className = 'tab new-tab-btn';
+  newBtn.innerHTML = '+';
+  newBtn.title = '新建标签页';
+  newBtn.setAttribute('aria-label', '新建标签页');
+  newBtn.addEventListener('click', createNewTab);
+  tabBar.appendChild(newBtn);
+
+  // 同步聚类按钮的禁用状态（无标签页时禁用并提示）
+  updateClusterBtnState();
+}
+
+/* 设置当前激活的标签页 */
+function setActiveTab(id) {
+  if (state.isRestoring) return;
+  state.activeTabId = id;
+  renderTabs();
+  renderContent();
+}
+
+/* 关闭标签页 */
+function closeTab(id) {
+  if (state.isRestoring) return;
+  const idx = state.tabs.findIndex(t => t.id === id);
+  if (idx === -1) return;
+  state.tabs.splice(idx, 1);
+
+  // 若关闭的是当前激活标签页，则切换到相邻标签页
+  if (state.activeTabId === id) {
+    if (state.tabs.length === 0) {
+      state.activeTabId = null;
+    } else {
+      const newIdx = Math.min(idx, state.tabs.length - 1);
+      state.activeTabId = state.tabs[newIdx].id;
+    }
+  }
+  renderTabs();
+  renderContent();
+}
+
+/* 新建标签页 */
+function createNewTab() {
+  if (state.isRestoring) return;
+  const newId = 'new-' + Date.now();
+  const newTab = {
+    id: newId,
+    title: '新标签页',
+    url: 'about:newtab',
+    favicon: '#3b82f6',
+    faviconText: '+',
+    type: 'newtab'
+  };
+  state.tabs.push(newTab);
+  state.activeTabId = newId;
+  renderTabs([newId]);
+  renderContent();
+}
+
+/* ============================================================
+   渲染：地址栏 + 网页内容
+   ============================================================ */
+function renderContent() {
+  const tab = state.tabs.find(t => t.id === state.activeTabId);
+
+  // 地址栏
+  if (!tab) {
+    urlText.textContent = '';
+  } else {
+    urlText.textContent = tab.url;
+  }
+
+  // 网页内容
+  if (!tab) {
+    webContent.innerHTML = `
+      <div class="page-empty">
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="16" rx="2"/>
+          <path d="M3 9h18"/>
+          <circle cx="6" cy="6.5" r="0.5" fill="currentColor"/>
+          <circle cx="8.5" cy="6.5" r="0.5" fill="currentColor"/>
+        </svg>
+        <div class="empty-title">此窗口已没有标签页</div>
+        <div class="empty-hint">Focus 恢复上下文，或点击 + 新建标签页</div>
+      </div>
+    `;
+    return;
+  }
+
+  webContent.innerHTML = renderPageByType(tab);
+  webContent.scrollTop = 0;
+}
+
+/* 根据标签页类型返回对应的模拟网页 HTML */
+function renderPageByType(tab) {
+  switch (tab.type) {
+    case 'react-docs':     return reactDocsHtml();
+    case 'mdn':            return mdnHtml();
+    case 'github':         return githubHtml();
+    case 'stackoverflow':  return stackoverflowHtml();
+    case 'blog':           return blogHtml();
+    case 'newtab':         return newtabHtml();
+    case 'wikipedia':      return wikipediaHtml();
+    case 'twitter':        return twitterHtml();
+    case 'bbc':            return bbcHtml();
+    case 'youtube':        return youtubeHtml();
+    default:               return genericHtml(tab);
+  }
+}
+
+/* ============================================================
+   各网站模拟内容
+   ============================================================ */
+
+// react.dev
+function reactDocsHtml() {
+  return `
+    <div class="mock-page">
+      <div style="background: linear-gradient(to right, #23272f, #16181d); color: #fff; padding: 48px 40px; border-radius: 14px; margin-bottom: 28px;">
+        <div style="display:flex; align-items:center; gap:14px; margin-bottom:18px;">
+          <svg width="48" height="48" viewBox="0 0 100 100" fill="none">
+            <circle cx="50" cy="50" r="9" fill="#61dafb"/>
+            <ellipse cx="50" cy="50" rx="44" ry="16" stroke="#61dafb" stroke-width="3.5" fill="none"/>
+            <ellipse cx="50" cy="50" rx="44" ry="16" stroke="#61dafb" stroke-width="3.5" fill="none" transform="rotate(60 50 50)"/>
+            <ellipse cx="50" cy="50" rx="44" ry="16" stroke="#61dafb" stroke-width="3.5" fill="none" transform="rotate(120 50 50)"/>
+          </svg>
+          <h1 style="font-size:42px; font-weight:800; letter-spacing:-0.02em;">React</h1>
+        </div>
+        <p style="font-size:18px; color:#a8b3cf; max-width:580px; line-height:1.6;">用于构建用户界面的 JavaScript 库。组件化、声明式，一次学习，随处编写。</p>
+        <div style="display:flex; gap:12px; margin-top:22px;">
+          <button style="background:#61dafb; color:#1a1d23; padding:10px 22px; border-radius:var(--radius-md); font-weight:700; border:none; cursor:pointer; font-size:14px;" type="button">开始学习</button>
+          <button class="mock-btn-secondary" style="color:#fff; border-color:#4a5568; padding:10px 22px;" type="button">API 参考</button>
+        </div>
+      </div>
+
+      <h2 style="font-size:26px; margin-bottom:14px;">快速开始</h2>
+      <p class="mock-text" style="margin-bottom:8px;">React 让你通过组件来组合用户界面。下面是一个最简单的组件示例：</p>
+      <pre class="mock-code"><code><span class="kw">function</span> <span class="fn">Button</span>() {
+  <span class="kw">return</span> (
+    <span class="str">&lt;button onClick={() =&gt; alert('点击!')}&gt;</span>
+      点我
+    <span class="str">&lt;/button&gt;</span>
+  );
+}</code></pre>
+
+      <h3 style="font-size:18px; margin:28px 0 10px;">核心概念</h3>
+      <ul class="mock-text" style="padding-left:22px; line-height:2;">
+        <li>使用组件组合 UI</li>
+        <li>使用 state 管理数据</li>
+        <li>使用 effect 同步外部系统</li>
+        <li>使用 props 在组件间传递数据</li>
+      </ul>
+    </div>
+  `;
+}
+
+// MDN Web Docs
+function mdnHtml() {
+  return `
+    <div class="mock-page">
+      <div style="background:var(--mock-mdn-bg); color:var(--mock-mdn-text); padding:18px 24px; margin:-36px -48px 28px; border-radius:0; display:flex; align-items:center; gap:12px;">
+        <div class="mock-badge" style="background:var(--card-bg); color:var(--brand-primary); font-weight:800; padding:4px 10px; border-radius:var(--radius-sm); font-size:14px;">MDN</div>
+        <span style="font-size:14px;">Web 技术文档 · 开发者参考</span>
+      </div>
+
+      <div class="mock-muted" style="font-size:12px; margin-bottom:8px;">Web 技术 » JavaScript » 标准内置对象 » Array</div>
+
+      <h1 style="font-size:30px; margin-bottom:8px;">Array.prototype.map()</h1>
+      <p class="mock-text" style="margin-bottom:20px;">
+        <code style="background:var(--hover-bg); padding:2px 6px; border-radius:3px; font-family:var(--font-mono); font-size:13px;">map()</code>
+        方法创建一个新数组，其结果是该数组中的每个元素都调用一个提供的函数后返回的结果。
+      </p>
+
+      <h2 style="font-size:20px; margin:20px 0 10px;">语法</h2>
+      <pre class="mock-code"><code><span class="kw">const</span> newArray = arr.<span class="fn">map</span>(callback(currentValue[, index[, array]]) {
+  <span class="com">// 返回新数组的元素</span>
+}[, thisArg])</code></pre>
+
+      <h2 style="font-size:20px; margin:24px 0 10px;">示例</h2>
+      <pre class="mock-code"><code><span class="kw">const</span> numbers = [<span class="str">1</span>, <span class="str">2</span>, <span class="str">3</span>, <span class="str">4</span>];
+<span class="kw">const</span> doubled = numbers.<span class="fn">map</span>(n =&gt; n * <span class="str">2</span>);
+console.<span class="fn">log</span>(doubled); <span class="com">// [2, 4, 6, 8]</span></code></pre>
+
+      <h2 style="font-size:20px; margin:24px 0 10px;">浏览器兼容性</h2>
+      <table style="width:100%; border-collapse:collapse; font-size:13px; margin-top:8px;">
+        <thead>
+          <tr style="background:var(--hover-bg);">
+            <th class="mock-text" style="padding:10px 12px; text-align:left; border:1px solid var(--card-border);">Chrome</th>
+            <th class="mock-text" style="padding:10px 12px; text-align:left; border:1px solid var(--card-border);">Firefox</th>
+            <th class="mock-text" style="padding:10px 12px; text-align:left; border:1px solid var(--card-border);">Safari</th>
+            <th class="mock-text" style="padding:10px 12px; text-align:left; border:1px solid var(--card-border);">Edge</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mock-text" style="padding:10px 12px; border:1px solid var(--card-border);">✓ 1.0</td>
+            <td class="mock-text" style="padding:10px 12px; border:1px solid var(--card-border);">✓ 1.5</td>
+            <td class="mock-text" style="padding:10px 12px; border:1px solid var(--card-border);">✓ 3.0</td>
+            <td class="mock-text" style="padding:10px 12px; border:1px solid var(--card-border);">✓ 12</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// GitHub repo page
+function githubHtml() {
+  return `
+    <div class="mock-page">
+      <div style="background:var(--mock-github-bg); padding:18px 24px; margin:-36px -48px 24px; border-bottom:1px solid var(--card-border);">
+        <div style="font-size:20px;">
+          <span class="mock-text">facebook /</span>
+          <span style="font-weight:700;">react</span>
+        </div>
+        <p class="mock-text" style="font-size:13px; margin-top:6px;">The library for web and native user interfaces.</p>
+        <div style="display:flex; gap:10px; margin-top:14px;">
+          <button class="mock-btn" style="padding:5px 12px; font-size:13px;" type="button">⭐ Star <strong style="margin-left:8px;">228k</strong></button>
+          <button class="mock-btn" style="padding:5px 12px; font-size:13px;" type="button">⑂ Fork <strong style="margin-left:8px;">46.5k</strong></button>
+          <button class="mock-btn" style="padding:5px 12px; font-size:13px;" type="button">👁 Watch <strong style="margin-left:8px;">6.6k</strong></button>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:20px;">
+        <div style="flex:1; min-width:0;">
+          <h3 class="mock-text" style="font-size:14px; margin-bottom:10px;">README.md</h3>
+          <div class="mock-card">
+            <h1 style="font-size:28px; margin-bottom:12px;">React</h1>
+            <p class="mock-text" style="margin-bottom:14px;">React 是一个用于构建用户界面的声明式、高效且灵活的 JavaScript 库。</p>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
+              <span class="mock-badge" style="background:var(--mock-badge-build-bg); color:var(--mock-badge-build-text);">build: passing</span>
+              <span class="mock-badge" style="background:var(--mock-badge-cov-bg); color:var(--mock-badge-cov-text);">coverage: 92%</span>
+              <span class="mock-badge" style="background:var(--mock-badge-npm-bg); color:var(--mock-badge-npm-text);">npm: v18.3.1</span>
+              <span class="mock-badge" style="background:var(--mock-badge-lic-bg); color:var(--mock-badge-lic-text);">license: MIT</span>
+            </div>
+            <h3 style="font-size:16px; margin:18px 0 8px;">安装</h3>
+            <pre class="mock-code" style="margin:6px 0;"><code>npm install react react-dom</code></pre>
+            <h3 style="font-size:16px; margin:18px 0 8px;">使用</h3>
+            <pre class="mock-code" style="margin:6px 0;"><code><span class="kw">import</span> { createRoot } <span class="kw">from</span> <span class="str">'react-dom/client'</span>;
+
+<span class="kw">function</span> <span class="fn">App</span>() {
+  <span class="kw">return</span> <span class="str">&lt;h1&gt;Hello React!&lt;/h1&gt;</span>;
+}
+
+<span class="fn">createRoot</span>(document.<span class="fn">getElementById</span>(<span class="str">'root'</span>)).<span class="fn">render</span>(<span class="str">&lt;App /&gt;</span>);</code></pre>
+          </div>
+        </div>
+
+        <div style="width:240px; flex-shrink:0;">
+          <div class="mock-card" style="padding:14px;">
+            <div class="mock-text" style="font-size:12px; font-weight:700; margin-bottom:10px;">About</div>
+            <p style="font-size:13px; margin-bottom:14px;">The library for web and native user interfaces.</p>
+            <div class="mock-muted" style="font-size:12px; line-height:1.9;">
+              <div>🔗 react.dev</div>
+              <div>★ 228k stars</div>
+              <div>⑂ 46.5k forks</div>
+              <div>📄 MIT License</div>
+              <div>📊 19 issues</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Stack Overflow Q&A
+function stackoverflowHtml() {
+  return `
+    <div class="mock-page">
+      <div style="background:var(--mock-so-bg); padding:6px 24px; margin:-36px -48px 20px; color:var(--mock-so-text); font-weight:700; font-size:13px;">
+        Stack Overflow
+      </div>
+
+      <h1 style="font-size:22px; margin-bottom:14px; line-height:1.4;">How to use React Hooks properly with useEffect for data fetching?</h1>
+
+      <div style="display:flex; gap:20px; margin-bottom:24px;">
+        <div style="display:flex; flex-direction:column; align-items:center; gap:6px; color:var(--text-muted); font-size:13px; min-width:40px;">
+          <button class="mock-btn-secondary" style="padding:0; border:none; font-size:20px;" type="button">▲</button>
+          <span style="font-weight:700; color:var(--text-primary); font-size:16px;">142</span>
+          <button class="mock-btn-secondary" style="padding:0; border:none; font-size:20px;" type="button">▼</button>
+        </div>
+        <div style="flex:1;">
+          <p style="margin-bottom:12px;">I'm trying to fetch data from an API when my component mounts, but I keep getting an infinite loop. Here's my code:</p>
+          <pre class="mock-code"><code><span class="kw">function</span> <span class="fn">MyComponent</span>() {
+  <span class="kw">const</span> [data, setData] = <span class="fn">useState</span>(null);
+
+  <span class="fn">useEffect</span>(() =&gt; {
+    <span class="fn">fetch</span>(<span class="str">'/api/data'</span>).<span class="fn">then</span>(res =&gt; res.<span class="fn">json</span>()).<span class="fn">then</span>(setData);
+  }); <span class="com">// &lt;-- 缺少依赖数组</span>
+
+  <span class="kw">return</span> <span class="str">&lt;div&gt;{JSON.stringify(data)}&lt;/div&gt;</span>;
+}</code></pre>
+          <div style="display:flex; gap:6px; margin-top:12px;">
+            <span class="mock-tag" style="background:var(--mock-tag-bg); color:var(--mock-tag-text);">react</span>
+            <span class="mock-tag" style="background:var(--mock-tag-bg); color:var(--mock-tag-text);">react-hooks</span>
+            <span class="mock-tag" style="background:var(--mock-tag-bg); color:var(--mock-tag-text);">use-effect</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--card-border); padding-top:20px;">
+        <h3 style="font-size:16px; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+          <span style="color:var(--success);">✓</span> 采纳的答案
+        </h3>
+        <div style="display:flex; gap:20px;">
+          <div style="display:flex; flex-direction:column; align-items:center; gap:6px; color:var(--text-muted); font-size:13px; min-width:40px;">
+            <button class="mock-btn-secondary" style="padding:0; border:none; font-size:20px;" type="button">▲</button>
+            <span style="font-weight:700; color:var(--success); font-size:16px;">218</span>
+            <button class="mock-btn-secondary" style="padding:0; border:none; font-size:20px;" type="button">▼</button>
+          </div>
+          <div style="flex:1;">
+            <p style="margin-bottom:12px;">你的 <code style="background:var(--hover-bg); padding:2px 6px; border-radius:3px; font-family:var(--font-mono); font-size:13px;">useEffect</code> 没有传依赖数组，所以每次渲染都会重新触发，导致无限循环。加上空数组作为第二参数即可：</p>
+            <pre class="mock-code"><code><span class="fn">useEffect</span>(() =&gt; {
+  <span class="fn">fetch</span>(<span class="str">'/api/data'</span>).<span class="fn">then</span>(res =&gt; res.<span class="fn">json</span>()).<span class="fn">then</span>(setData);
+}, <span class="prop">[]</span>); <span class="com">// 只在 mount 时执行一次</span></code></pre>
+            <p class="mock-muted" style="font-size:12px; margin-top:14px;">回答于 2 分钟前 · 由 reactmaster</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// 博客文章
+function blogHtml() {
+  return `
+    <div class="mock-page" style="max-width:720px;">
+      <div style="text-align:center; margin-bottom:24px;">
+        <div style="color:var(--brand-primary); font-size:12px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:12px;">React 性能优化</div>
+        <h1 style="font-size:34px; line-height:1.25; margin-bottom:14px; letter-spacing:-0.01em;">React 性能优化的 7 个实践，让你的应用快 3 倍</h1>
+        <p class="mock-muted" style="font-size:13px;">由 overreacted · 发表于 2026 年 6 月 12 日 · 阅读时长 8 分钟</p>
+      </div>
+
+      <div style="height:240px; background:linear-gradient(to right, var(--mock-text), var(--mock-text-muted) 50%, var(--mock-link)); border-radius:var(--mock-radius); margin-bottom:28px; display:flex; align-items:center; justify-content:center; color:var(--mock-bg); font-size:60px; font-weight:800; letter-spacing:0.05em;">
+        ⚡
+      </div>
+
+      <p class="mock-text" style="font-size:16px; margin-bottom:18px;">
+        在大型 React 应用中，性能问题往往不是单一原因造成的，而是由多个小问题累积而成。本文总结了我在多个生产项目中验证过的 7 个优化实践。
+      </p>
+
+      <h2 style="font-size:22px; margin:28px 0 12px;">1. 使用 React.memo 避免不必要的重渲染</h2>
+      <p style="margin-bottom:12px;">当一个组件的 props 没有变化时，使用 <code style="background:var(--hover-bg); padding:2px 6px; border-radius:3px; font-family:var(--font-mono); font-size:13px;">React.memo</code> 可以跳过这次渲染：</p>
+      <pre class="mock-code"><code><span class="kw">const</span> ExpensiveItem = React.<span class="fn">memo</span>(<span class="kw">function</span> <span class="fn">Item</span>({ name }) {
+  <span class="kw">return</span> <span class="str">&lt;li&gt;{name}&lt;/li&gt;</span>;
+});</code></pre>
+
+      <h2 style="font-size:22px; margin:28px 0 12px;">2. 使用 useMemo 缓存计算结果</h2>
+      <p style="margin-bottom:12px;">对于昂贵的计算，用 <code style="background:var(--hover-bg); padding:2px 6px; border-radius:3px; font-family:var(--font-mono); font-size:13px;">useMemo</code> 在依赖未变时复用上次结果：</p>
+      <pre class="mock-code"><code><span class="kw">const</span> sorted = <span class="fn">useMemo</span>(() =&gt; {
+  <span class="kw">return</span> [...items].<span class="fn">sort</span>(compareFn);
+}, [items]);</code></pre>
+
+      <h2 style="font-size:22px; margin:28px 0 12px;">3. 列表使用稳定的 key</h2>
+      <p>给列表项一个稳定且唯一的 key（不要用数组 index），可以让 React 精准地识别哪些项发生了变化，避免整列重建。</p>
+
+      <blockquote style="border-left:4px solid var(--brand-primary); background:var(--hover-bg); padding:14px 20px; margin:24px 0; border-radius:0 var(--radius-md) var(--radius-md) 0; font-style:italic; color:var(--text-secondary);">
+        性能优化的第一原则是：先测量，再优化。不要凭直觉，用 React DevTools Profiler 找到真正的瓶颈。
+      </blockquote>
+
+      <h2 style="font-size:22px; margin:28px 0 12px;">4. 拆分组件，缩小重渲染范围</h2>
+      <p>把一个大型组件拆成多个小组件，每个组件的 state 越少，触发重渲染的概率越低。</p>
+
+      <p class="mock-muted" style="margin-top:32px; font-size:13px;">—— 未完待续，下篇会讲虚拟列表、Suspense 和并发渲染。</p>
+    </div>
+  `;
+}
+
+// Chrome 新标签页
+function newtabHtml() {
+  return `
+    <div class="mock-page" style="max-width:600px; min-height:480px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+      <div style="font-size:64px; font-weight:300; letter-spacing:-0.04em; margin-bottom:32px; color:var(--text-secondary);">
+        <span style="color:#4285f4;">G</span><span style="color:#ea4335;">o</span><span style="color:#fbbc05;">o</span><span style="color:#4285f4;">g</span><span style="color:#34a853;">l</span><span style="color:#ea4335;">e</span>
+      </div>
+      <div class="mock-card" style="width:100%; max-width:480px; padding:12px 20px; border-radius:24px; display:flex; align-items:center; gap:12px; box-shadow:var(--mock-shadow);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <span class="mock-muted" style="font-size:14px;">在 Google 中搜索，或输入网址</span>
+      </div>
+      <div style="display:flex; gap:14px; margin-top:28px;">
+        <button class="mock-btn" style="background:var(--hover-bg); border-color:transparent; padding:9px 18px; font-size:13px; color:var(--text-secondary);" type="button">Google 搜索</button>
+        <button class="mock-btn" style="background:var(--hover-bg); border-color:transparent; padding:9px 18px; font-size:13px; color:var(--text-secondary);" type="button">手气不错</button>
+      </div>
+    </div>
+  `;
+}
+
+// Wikipedia 词条
+function wikipediaHtml() {
+  return `
+    <div class="mock-page" style="max-width:760px; font-family: Georgia, 'Times New Roman', serif;">
+      <div class="mock-muted" style="border-bottom:1px solid var(--card-border); padding-bottom:6px; margin-bottom:14px; font-size:12px; font-family: var(--font-stack);">
+        Wikipedia <span class="mock-text">» 计算机科学</span>
+      </div>
+      <h1 style="font-size:32px; margin-bottom:4px;">计算机科学</h1>
+      <p class="mock-muted" style="font-size:13px; margin-bottom:18px; font-family: var(--font-stack);">来自维基百科，自由的百科全书</p>
+      <p class="mock-text" style="margin-bottom:14px; font-family: var(--font-stack);">
+        计算机科学是研究计算机及其周围各种现象与规律的科学，亦即研究计算机系统结构、程序系统、人工智能以及计算本身的性质和问题的学科。
+      </p>
+      <p class="mock-text" style="margin-bottom:14px; font-family: var(--font-stack);">
+        计算机科学包含了理论计算机科学与应用计算机科学两大分支。前者探讨计算的本质与边界，后者关注计算技术在现实问题中的应用。
+      </p>
+      <h2 style="font-size:22px; margin:22px 0 10px; border-bottom:1px solid var(--card-border); padding-bottom:4px;">主要分支</h2>
+      <ul class="mock-text" style="padding-left:22px; line-height:2; font-family: var(--font-stack);">
+        <li>理论计算机科学（算法、计算复杂性）</li>
+        <li>计算机系统（体系结构、操作系统）</li>
+        <li>人工智能与机器学习</li>
+        <li>软件工程与程序设计语言</li>
+      </ul>
+    </div>
+  `;
+}
+
+// Twitter / X 时间线
+function twitterHtml() {
+  const tweets = [
+    ['Jane Doe', '@janedoe', '2h', '刚学完 React 18 的并发渲染，Suspense 真的改变了写组件的方式 🚀', '12', '8', '42'],
+    ['Tech News', '@technews', '4h', '2026 年开发者就业报告：前端需求持续增长，全栈占比过半。', '34', '56', '128'],
+    ['Dev Tips', '@devtips', '6h', '用 useEffect 清理订阅的 3 种模式，避免内存泄漏。', '8', '21', '67']
+  ];
+  return `
+    <div class="mock-page" style="max-width:600px;">
+      <div style="display:flex; align-items:center; gap:10px; padding:4px 0 16px; border-bottom:1px solid var(--card-border); margin-bottom:16px;">
+        <div class="mock-favicon" style="background:#1da1f2; color:#fff;" aria-hidden="true">X</div>
+        <h1 style="font-size:20px; font-weight:700;">Home</h1>
+      </div>
+      ${tweets.map(([name, handle, time, text, replies, rts, likes]) => `
+        <div style="border-bottom:1px solid var(--card-border); padding:14px 0;">
+          <div style="display:flex; gap:10px;">
+            <div class="mock-avatar" aria-hidden="true"></div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:13px; margin-bottom:6px;">
+                <strong>${escapeHtml(name)}</strong> <span class="mock-muted">${escapeHtml(handle)} · ${escapeHtml(time)}</span>
+              </div>
+              <p style="font-size:14px; margin-bottom:10px;">${escapeHtml(text)}</p>
+              <div class="mock-muted" style="display:flex; gap:32px; font-size:12px;">
+                <span><span aria-hidden="true">💬</span> ${escapeHtml(replies)}</span>
+                <span><span aria-hidden="true">🔁</span> ${escapeHtml(rts)}</span>
+                <span><span aria-hidden="true">❤️</span> ${escapeHtml(likes)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// BBC News 新闻页
+function bbcHtml() {
+  return `
+    <div class="mock-page" style="max-width:760px;">
+      <div style="background:#bb1919; color:#fff; padding:10px 16px; margin:-36px -48px 20px; font-weight:800; font-size:16px; display:flex; align-items:center; gap:10px;">
+        <span style="background:var(--card-bg); color:#bb1919; padding:2px 8px; font-size:12px;">BBC NEWS</span>
+        <span>World</span>
+      </div>
+      <h1 style="font-size:28px; margin-bottom:10px; line-height:1.3;">全球科技产业峰会聚焦人工智能与可持续发展</h1>
+      <p class="mock-muted" style="font-size:13px; margin-bottom:18px;">2 小时前 · 科技记者报道</p>
+      <p class="mock-text" style="margin-bottom:14px;">
+        来自 60 多个国家的科技领袖本周齐聚峰会，讨论人工智能在应对气候变化、医疗健康与教育公平中的应用前景。
+      </p>
+      <p class="mock-text" style="margin-bottom:14px;">
+        多位发言者强调，技术进步必须与伦理治理同步推进，避免 AI 加剧数字鸿沟。
+      </p>
+      <h2 style="font-size:20px; margin:22px 0 10px;">关键议题</h2>
+      <ul class="mock-text" style="padding-left:22px; line-height:2;">
+        <li>AI 在气候建模中的角色</li>
+        <li>开源大模型与主权 AI</li>
+        <li>绿色数据中心的能源转型</li>
+      </ul>
+    </div>
+  `;
+}
+
+// YouTube 首页
+function youtubeHtml() {
+  const videos = [
+    ['React 18 并发渲染完全指南', 'TechWithTim', '128万'],
+    ['10 个让你效率翻倍的 VSCode 插件', 'CodingDaily', '56万'],
+    ['Lo-fi 音乐陪你写代码 1 小时', 'ChillBeats', '320万'],
+    ['2026 前端框架横评', 'FrontendMasters', '89万']
+  ];
+  return `
+    <div class="mock-page" style="max-width:900px;">
+      <div style="display:flex; align-items:center; gap:10px; padding:4px 0 18px; border-bottom:1px solid var(--card-border); margin-bottom:20px;">
+        <div style="width:36px; height:36px; border-radius:var(--radius-md); background:#ff0000; color:#fff; display:flex; align-items:center; justify-content:center;" aria-hidden="true">
+          <svg width="20" height="14" viewBox="0 0 20 14" fill="currentColor" aria-hidden="true"><path d="M19.6 2.2c-.2-.9-.9-1.6-1.8-1.8C16.2 0 10 0 10 0S3.8 0 2.2.4C1.3.6.6 1.3.4 2.2 0 3.8 0 7 0 7s0 3.2.4 4.8c.2.9.9 1.6 1.8 1.8C3.8 14 10 14 10 14s6.2 0 7.8-.4c.9-.2 1.6-.9 1.8-1.8.4-1.6.4-4.8.4-4.8s0-3.2-.4-4.8z"/><path d="M8 10V4l5.2 3L8 10z" fill="#fff"/></svg>
+        </div>
+        <h1 style="font-size:20px; font-weight:700;">YouTube</h1>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:18px;">
+        ${videos.map(([title, channel, views]) => `
+          <div>
+            <div style="height:120px; background:linear-gradient(to right, var(--mock-text), var(--mock-link)); border-radius:var(--mock-radius); margin-bottom:8px; display:flex; align-items:center; justify-content:center; color:var(--mock-bg); font-size:32px;" aria-hidden="true">▶</div>
+            <div style="display:flex; gap:8px;">
+              <div class="mock-avatar" style="width:28px; height:28px;" aria-hidden="true"></div>
+              <div style="flex:1; min-width:0;">
+                <div style="font-size:13px; font-weight:600; margin-bottom:3px; line-height:1.4; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${escapeHtml(title)}</div>
+                <div class="mock-muted" style="font-size:11px;">${escapeHtml(channel)} · ${escapeHtml(views)} 次观看</div>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// 通用页面（恢复时的非研究类标签）
+function genericHtml(tab) {
+  return `
+    <div class="mock-page">
+      <h1 style="font-size:28px; margin-bottom:14px;">${escapeHtml(tab.title)}</h1>
+      <p class="mock-muted" style="font-size:13px; margin-bottom:24px;">${escapeHtml(tab.url)}</p>
+      <div style="border:1px dashed var(--card-border); border-radius:var(--radius-md); padding:40px; text-align:center; background:var(--hover-bg);">
+        <div class="mock-text" style="font-size:14px; font-weight:600; margin-bottom:6px;">已恢复的标签页</div>
+        <div class="mock-muted" style="font-size:12px;">这是从 Focus 快照恢复的上下文，仅保留标题与地址用于演示。</div>
+      </div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   Focus Popup：保存上下文
+   ============================================================ */
+saveBtn.addEventListener('click', () => {
+  if (state.isSaving) return;
+  if (state.isRestoring) return;
+
+  if (state.tabs.length === 0) {
+    showToast('error', '当前没有打开的标签页');
+    return;
+  }
+
+  // 进入保存中状态
+  state.isSaving = true;
+  saveBtn.disabled = true;
+  saveBtnContent.innerHTML = '<span class="spinner"></span> 保存中…';
+
+  // 模拟 1 秒保存过程
+  setTimeout(() => {
+    // 生成快照标题：N 个标签页 · HH:MM
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const snapshot = {
+      id: 'snap-' + Date.now(),
+      title: `${state.tabs.length} 个标签页 · ${hh}:${mm}`,
+      tabCount: state.tabs.length,
+      savedAt: `${hh}:${mm}`,
+      hour: now.getHours(),
+      tabsData: state.tabs.map(t => ({ ...t }))
+    };
+    state.snapshots.unshift(snapshot);
+
+    // 恢复按钮状态
+    state.isSaving = false;
+    saveBtn.disabled = false;
+    saveBtnContent.textContent = '保存当前上下文';
+
+    renderSnapshots();
+    renderTimeline();
+    showToast('success', '上下文已保存');
+  }, 1000);
+});
+
+/* ============================================================
+   Focus Popup：渲染快照列表
+   ============================================================ */
+function renderSnapshots() {
+  // 空状态
+  if (state.snapshots.length === 0) {
+    snapshotList.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-illustration" aria-hidden="true">
+          <svg width="80" height="80" viewBox="0 0 80 80" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path class="folder-lid" d="M14 24 L14 16 L32 16 L36 22 L66 22 L66 28" stroke="currentColor" fill="none"/>
+            <path d="M14 28 L66 28 L62 60 L18 60 Z" fill="currentColor" fill-opacity="0.08"/>
+            <path d="M14 28 L66 28 L62 60 L18 60 Z" fill="none" stroke="currentColor"/>
+            <line x1="28" y1="40" x2="52" y2="40" stroke-dasharray="3 3" opacity="0.5"/>
+          </svg>
+        </div>
+        <h3>还没有保存的上下文</h3>
+        <p>点击上方按钮保存第一个快照</p>
+      </div>
+    `;
+    return;
+  }
+
+  // 按关键词过滤（大小写不敏感，匹配 title）
+  const filter = state.snapshotFilter.trim().toLowerCase();
+  const filteredSnapshots = filter
+    ? state.snapshots.filter(s => (s.title || '').toLowerCase().includes(filter))
+    : state.snapshots;
+
+  // 搜索结果为空
+  if (filteredSnapshots.length === 0) {
+    snapshotList.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </div>
+        <h3>没有匹配的快照</h3>
+        <p>尝试其他关键词</p>
+      </div>
+    `;
+    return;
+  }
+
+  snapshotList.innerHTML = '';
+  filteredSnapshots.forEach(snap => {
+    const isPendingDelete = state.pendingDeleteId === snap.id;
+    const card = document.createElement('div');
+    card.className = 'snapshot-card';
+    card.innerHTML = `
+      <div class="snapshot-title">${escapeHtml(snap.title)}</div>
+      <div class="snapshot-meta">
+        <span>${snap.tabCount} 个标签页</span>
+        <span class="dot"></span>
+        <span>${escapeHtml(snap.savedAt)}</span>
+      </div>
+      <div class="snapshot-actions">
+        <button class="snap-btn restore" data-action="restore" data-id="${escapeHtml(snap.id)}" type="button">恢复</button>
+        <button class="snap-btn delete ${isPendingDelete ? 'confirm-delete' : ''}" data-action="delete" data-id="${escapeHtml(snap.id)}" type="button">
+          ${isPendingDelete ? '确认删除？' : '删除'}
+        </button>
+      </div>
+    `;
+    snapshotList.appendChild(card);
+  });
+}
+
+/* 快照操作：事件委托 */
+snapshotList.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-action]');
+  if (!btn) return;
+  const action = btn.dataset.action;
+  const id = btn.dataset.id;
+  if (action === 'restore') restoreSnapshot(id);
+  else if (action === 'delete') handleDelete(id);
+});
+
+/* 快照搜索：实时过滤 */
+snapshotSearch.addEventListener('input', (e) => {
+  state.snapshotFilter = e.target.value;
+  renderSnapshots();
+});
+
+/* 导出全部快照为 JSON */
+exportBtn.addEventListener('click', () => {
+  if (state.snapshots.length === 0) {
+    showToast('error', '暂无可导出的快照');
+    return;
+  }
+  const data = JSON.stringify(state.snapshots.map(s => ({
+    title: s.title, tabCount: s.tabCount, savedAt: s.savedAt,
+    tabs: s.tabsData.map(t => ({ title: t.title, url: t.url }))
+  })), null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `focus-snapshots-${Date.now()}.json`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  showToast('success', `已导出 ${state.snapshots.length} 个快照`);
+});
+
+/* ============================================================
+   恢复快照：清空当前标签页，依次动画打开快照中的标签页
+   ============================================================ */
+function restoreSnapshot(id) {
+  // 防重入：保存中或恢复中时禁止再次触发
+  if (state.isSaving || state.isRestoring) return;
+
+  // 清除上一轮可能残留的 undoToast，避免撤销按钮在新恢复期间仍可点击
+  if (undoToastTimer) { clearTimeout(undoToastTimer); undoToastTimer = null; }
+  if (undoToastEl && undoToastEl.parentNode) { undoToastEl.remove(); undoToastEl = null; }
+  pendingUndoCallback = null;
+
+  const snap = state.snapshots.find(s => s.id === id);
+  if (!snap) return;
+
+  if (!snap.tabsData || snap.tabsData.length === 0) {
+    showToast('error', '没有标签页可恢复');
+    return;
+  }
+
+  // 保存当前标签页为临时 backup（用于撤销恢复）
+  const backup = state.tabs.slice();
+  const backupActiveId = state.activeTabId;
+  state.isRestoring = true;
+  // 重置 timer id 列表，便于撤销/引导时统一清理
+  state.restoreTimers = [];
+
+  // 清空当前标签页
+  state.tabs = [];
+  state.activeTabId = null;
+  renderTabs();
+  renderContent();
+
+  // 依次打开快照中的标签页
+  snap.tabsData.forEach((tabData, i) => {
+    const t1 = setTimeout(() => {
+      // 中断检查：若恢复已被撤销则停止后续动画
+      if (!state.isRestoring) return;
+
+      // 给每个标签页分配新的 id，避免与历史 id 冲突
+      const newTab = { ...tabData, id: 'restored-' + Date.now() + '-' + i };
+      state.tabs.push(newTab);
+      if (i === 0) state.activeTabId = newTab.id;
+      renderTabs([newTab.id]);
+      if (i === 0) renderContent();
+
+      // 全部打开完成后显示 undoToast（可撤销恢复）
+      if (i === snap.tabsData.length - 1) {
+        const t2 = setTimeout(() => {
+          renderContent();
+          state.isRestoring = false;
+          // 恢复完成后清除上一轮的聚类结果，避免与新恢复的标签页不一致
+          clusterResult.hidden = true;
+          clusterResult.innerHTML = '';
+          undoToast('已恢复，原标签页已暂存', () => {
+            // 撤销恢复：清理可能残留的 timer，还原 backup
+            state.restoreTimers.forEach(clearTimeout);
+            state.restoreTimers = [];
+            state.tabs = backup;
+            state.activeTabId = backupActiveId;
+            renderTabs();
+            renderContent();
+            state.isRestoring = false;
+          }, '已撤销恢复', false);
+        }, 80);
+        state.restoreTimers.push(t2);
+      }
+    }, i * 120);
+    state.restoreTimers.push(t1);
+  });
+}
+
+/* ============================================================
+   删除快照：两步确认
+   ============================================================ */
+function handleDelete(id) {
+  // 第二次点击：确认删除 → 立即删除 + 弹出可撤销 toast
+  if (state.pendingDeleteId === id) {
+    clearTimeout(state.deleteTimer);
+    state.pendingDeleteId = null;
+
+    const idx = state.snapshots.findIndex(s => s.id === id);
+    if (idx === -1) return;
+    const snapshot = state.snapshots[idx];
+    state.snapshots.splice(idx, 1);
+    renderSnapshots();
+    renderTimeline();
+    // undoToast 内部已对 message 调用 escapeHtml，这里传原始 title 即可
+    undoToast(`已删除「${snapshot.title}」`, () => {
+      // 撤销：恢复到原位置
+      state.snapshots.splice(idx, 0, snapshot);
+      renderSnapshots();
+      renderTimeline();
+    });
+    return;
+  }
+
+  // 第一次点击：进入待确认状态，3 秒后自动恢复
+  if (state.deleteTimer) clearTimeout(state.deleteTimer);
+  state.pendingDeleteId = id;
+  renderSnapshots();
+  state.deleteTimer = setTimeout(() => {
+    state.pendingDeleteId = null;
+    renderSnapshots();
+  }, 3000);
+}
+
+/* ============================================================
+   Toast 通知组件
+   ============================================================ */
+function showToast(type, message) {
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+  const iconChar = type === 'success' ? '✓' : '!';
+  toast.innerHTML = `
+    <div class="toast-icon">${iconChar}</div>
+    <span>${escapeHtml(message)}</span>
+  `;
+  toastContainer.appendChild(toast);
+
+  // 2.5 秒后淡出移除
+  setTimeout(() => {
+    toast.classList.add('out');
+    setTimeout(() => toast.remove(), 250);
+  }, 2500);
+}
+
+/* ============================================================
+   可撤销 Toast：带"撤销"按钮 + 5 秒倒计时进度条
+   ============================================================ */
+let undoToastTimer = null;
+let undoToastEl = null;
+let pendingUndoCallback = null; // 当前 toast 挂载的撤销回调（被新 toast 覆盖时自动触发，避免 backup 永久丢失）
+function undoToast(message, undoCallback, undoSuccessMessage = '已撤销删除', autoConfirm = true) {
+  // 同一时刻只允许一个 undo toast：新的 undo 操作会取消旧的（旧操作视为确认）
+  if (undoToastTimer) {
+    clearTimeout(undoToastTimer);
+    undoToastTimer = null;
+  }
+  // 若旧 toast 的撤销回调尚未执行，则视为"确认操作"——丢弃旧 callback 不执行。
+  // 注意：删除场景的 undoCallback 是"恢复快照"，若在连续删除第二个快照时仍执行它，
+  // 会把第一个被删的快照自动恢复回来，与"视为确认"语义矛盾，因此必须丢弃而非调用。
+  // restore 场景传 autoConfirm=false：旧 backup 语义上已被用户接受，同样直接丢弃。
+  if (pendingUndoCallback && autoConfirm !== false) {
+    /* 旧操作视为确认，丢弃 callback 不执行 */
+    pendingUndoCallback = null;
+  } else {
+    pendingUndoCallback = null;
+  }
+  if (undoToastEl && undoToastEl.parentNode) {
+    undoToastEl.remove();
+    undoToastEl = null;
+  }
+
+  const toast = document.createElement('div');
+  toast.className = 'toast undo';
+  toast.setAttribute('role', 'status');
+  toast.innerHTML = `
+    <span>${escapeHtml(message)}</span>
+    <button class="toast-undo-btn" type="button">撤销</button>
+    <div class="toast-undo-progress"></div>
+  `;
+  toastContainer.appendChild(toast);
+  undoToastEl = toast;
+  pendingUndoCallback = undoCallback;
+
+  const undoBtn = toast.querySelector('.toast-undo-btn');
+  undoBtn.addEventListener('click', () => {
+    clearTimeout(undoToastTimer);
+    undoToastTimer = null;
+    toast.classList.add('out');
+    setTimeout(() => toast.remove(), 250);
+    undoToastEl = null;
+    pendingUndoCallback = null;
+    if (typeof undoCallback === 'function') undoCallback();
+    showToast('success', undoSuccessMessage);
+  });
+
+  // 5 秒后自动消失（确认删除，不执行 undoCallback）
+  undoToastTimer = setTimeout(() => {
+    toast.classList.add('out');
+    setTimeout(() => {
+      toast.remove();
+      if (undoToastEl === toast) undoToastEl = null;
+    }, 250);
+    undoToastTimer = null;
+    pendingUndoCallback = null;
+  }, 5000);
+}
+
+/* ============================================================
+   工具函数
+   ============================================================ */
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[c]);
+}
+
+/* ============================================================
+   注意力轨迹：时间轴可视化（Memex 理念）
+   ============================================================ */
+// 时间轴范围：9:00 → 21:00（一天的学习时间）
+const TIMELINE_HOUR_MIN = 9;
+const TIMELINE_HOUR_MAX = 21;
+const TIMELINE_X_MIN = 20;
+const TIMELINE_X_MAX = 280;
+const TIMELINE_Y_LINE = 40;
+
+function hourToX(h) {
+  const clamped = Math.max(TIMELINE_HOUR_MIN, Math.min(TIMELINE_HOUR_MAX, h));
+  return TIMELINE_X_MIN + (clamped - TIMELINE_HOUR_MIN) /
+    (TIMELINE_HOUR_MAX - TIMELINE_HOUR_MIN) * (TIMELINE_X_MAX - TIMELINE_X_MIN);
+}
+
+function renderTimeline() {
+  if (!timelineWrap) return;
+  // 清空（保留 tooltip 由独立函数管理）
+  timelineWrap.innerHTML = '';
+
+  // 空状态
+  if (state.snapshots.length === 0) {
+    timelineWrap.innerHTML = '<div class="timeline-empty">保存快照后将显示注意力轨迹</div>';
+    return;
+  }
+
+  // 计算 tabCount → 半径映射（min r=4, max r=10）
+  const counts = state.snapshots.map(s => s.tabCount || 1);
+  const maxTabs = Math.max(...counts);
+  const minTabs = Math.min(...counts);
+  const radiusFor = cnt => {
+    const c = cnt || 1;
+    if (maxTabs === minTabs) return 6;
+    return 4 + (c - minTabs) / (maxTabs - minTabs) * 6;
+  };
+
+  // 按时间排序（旧的在左，新的在右），同小时按数组顺序保留
+  // 注意：hour=0 是合法值（午夜），不能用 || 12 短路
+  const hourOf = snap => snap.hour != null ? snap.hour : 12;
+  const sorted = [...state.snapshots].sort((a, b) => hourOf(a) - hourOf(b));
+
+  // 预计算每个快照的 x 坐标，同小时的快照水平偏移避免重叠
+  let prevHour = -1;
+  let sameHourIdx = 0;
+  const dotPositions = sorted.map(snap => {
+    const h = hourOf(snap);
+    if (h === prevHour) {
+      sameHourIdx++;
+    } else {
+      sameHourIdx = 0;
+      prevHour = h;
+    }
+    return { snap, x: hourToX(h) + sameHourIdx * 6, r: radiusFor(snap.tabCount) };
+  });
+
+  // 构建 SVG 字符串
+  let svg = '<svg viewBox="0 0 300 80" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="注意力轨迹时间轴">';
+
+  // 水平时间线
+  svg += `<line x1="${TIMELINE_X_MIN}" y1="${TIMELINE_Y_LINE}" x2="${TIMELINE_X_MAX}" y2="${TIMELINE_Y_LINE}" stroke="var(--text-muted)" stroke-width="1" opacity="0.4"/>`;
+
+  // 时间刻度（9:00, 12:00, 15:00, 18:00, 21:00）
+  [9, 12, 15, 18, 21].forEach(h => {
+    const x = hourToX(h);
+    svg += `<line x1="${x}" y1="${TIMELINE_Y_LINE - 3}" x2="${x}" y2="${TIMELINE_Y_LINE + 3}" stroke="var(--text-muted)" stroke-width="1" opacity="0.4"/>`;
+    svg += `<text x="${x}" y="${TIMELINE_Y_LINE + 16}" text-anchor="middle" fill="var(--text-muted)" font-size="9" font-family="inherit">${h}:00</text>`;
+  });
+
+  // 相邻圆点之间的虚线（代表注意力切换）
+  for (let i = 0; i < dotPositions.length - 1; i++) {
+    const xa = dotPositions[i].x;
+    const xb = dotPositions[i + 1].x;
+    if (xb - xa > 1) {
+      svg += `<line x1="${xa}" y1="${TIMELINE_Y_LINE}" x2="${xb}" y2="${TIMELINE_Y_LINE}" stroke="var(--text-muted)" stroke-dasharray="3,3" opacity="0.5"/>`;
+    }
+  }
+
+  // 圆点（每个快照一个，按 hour 定位，半径按 tabCount）
+  dotPositions.forEach(({ snap, x, r }) => {
+    const hourLabel = (snap.hour != null) ? `${snap.hour}:00` : '';
+    const ariaLabel = `快照：${snap.title}，${snap.tabCount} 个标签页，${snap.savedAt}${hourLabel ? ' · ' + hourLabel : ''}`;
+    svg += `<circle class="timeline-dot" data-id="${escapeHtml(snap.id)}" cx="${x}" cy="${TIMELINE_Y_LINE}" r="${r}" fill="var(--brand-primary)" opacity="0.85" tabindex="0" role="button" aria-label="${escapeHtml(ariaLabel)}"></circle>`;
+  });
+
+  svg += '</svg>';
+
+  timelineWrap.innerHTML = svg;
+
+  // 绑定圆点 hover：放大 1.5x + 显示 tooltip；click/Enter/Space 恢复快照
+  timelineWrap.querySelectorAll('.timeline-dot').forEach(dot => {
+    const baseR = parseFloat(dot.getAttribute('r'));
+    const activateDot = () => {
+      const snap = state.snapshots.find(s => s.id === dot.dataset.id);
+      if (snap) {
+        showTimelineTooltip(dot, snap);
+        restoreSnapshot(snap.id);
+      }
+    };
+    dot.addEventListener('mouseenter', () => {
+      dot.setAttribute('r', (baseR * 1.5).toFixed(2));
+      const snap = state.snapshots.find(s => s.id === dot.dataset.id);
+      if (snap) showTimelineTooltip(dot, snap);
+    });
+    dot.addEventListener('mouseleave', () => {
+      dot.setAttribute('r', baseR);
+      hideTimelineTooltip();
+    });
+    dot.addEventListener('click', activateDot);
+    // 键盘交互：Enter/Space 触发恢复；blur 时复位
+    dot.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        dot.setAttribute('r', (baseR * 1.5).toFixed(2));
+        activateDot();
+      }
+    });
+    dot.addEventListener('blur', () => {
+      dot.setAttribute('r', baseR);
+      hideTimelineTooltip();
+    });
+  });
+
+  // 注意力焦点分析
+  renderAttentionFocus();
+}
+
+/* 注意力焦点：从所有快照 tabsData 提取标签页 title，按关键词分组统计 top 3 */
+function renderAttentionFocus() {
+  const groups = { '前端开发': 0, '代码托管': 0, '社区/问答': 0, '文档/教程': 0, '其他': 0 };
+  state.snapshots.forEach(snap => {
+    (snap.tabsData || []).forEach(t => {
+      const title = (t.title || '').toLowerCase();
+      if (/github|gitlab|gitee/.test(title)) groups['代码托管']++;
+      else if (/stack|overflow|掘金|juejin|社区/.test(title)) groups['社区/问答']++;
+      else if (/react|vue|前端|javascript|typescript|\bjs\b|css|es6/.test(title)) groups['前端开发']++;
+      else if (/文档|docs|tutorial|教程|guide|mdn/.test(title)) groups['文档/教程']++;
+      else groups['其他']++;
+    });
+  });
+
+  const top = Object.entries(groups)
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+
+  if (top.length === 0) return;
+
+  const focusDiv = document.createElement('div');
+  focusDiv.className = 'attention-focus';
+  const label = document.createElement('div');
+  label.className = 'attention-focus-label';
+  label.textContent = '注意力焦点';
+  focusDiv.appendChild(label);
+  top.forEach(([name, count]) => {
+    const pill = document.createElement('span');
+    pill.className = 'focus-pill';
+    pill.textContent = `${name} ${count}次`;
+    focusDiv.appendChild(pill);
+  });
+  timelineWrap.appendChild(focusDiv);
+}
+
+/* 时间轴圆点 tooltip：绝对定位，hover 显示，带边界裁剪避免超出 popup */
+function showTimelineTooltip(dot, snap) {
+  hideTimelineTooltip();
+  const tooltip = document.createElement('div');
+  tooltip.className = 'timeline-tooltip';
+  tooltip.id = 'timelineTooltip';
+  tooltip.setAttribute('role', 'tooltip');
+  const hourLabel = (snap.hour != null) ? ` · ${snap.hour}:00` : '';
+  tooltip.innerHTML =
+    `<div class="tt-title">${escapeHtml(snap.title)}</div>` +
+    `<div class="tt-meta">${snap.tabCount} 个标签页 · ${escapeHtml(snap.savedAt)}${hourLabel}</div>`;
+  // 先 append 以便测量宽度
+  timelineWrap.appendChild(tooltip);
+
+  const wrapRect = timelineWrap.getBoundingClientRect();
+  const dotRect = dot.getBoundingClientRect();
+  let left = dotRect.left - wrapRect.left + dotRect.width / 2;
+  const tooltipWidth = tooltip.offsetWidth;
+  // 水平裁剪，保证 tooltip 不超出 timeline-wrap 边界
+  const minLeft = tooltipWidth / 2 + 4;
+  const maxLeft = wrapRect.width - tooltipWidth / 2 - 4;
+  left = Math.max(minLeft, Math.min(maxLeft, left));
+  tooltip.style.left = left + 'px';
+  // 显示在圆点上方，留 8px 间距
+  tooltip.style.top = (dotRect.top - wrapRect.top - 8) + 'px';
+}
+
+function hideTimelineTooltip() {
+  const t = document.getElementById('timelineTooltip');
+  if (t) t.remove();
+}
+
+/* ============================================================
+   AI 主题聚类：本地模拟智能分组（杀手锏功能）
+   ============================================================ */
+const TOPIC_KEYWORDS = {
+  '开发': ['github', 'stackoverflow', 'mdn', '文档', 'api', 'react', 'vue', 'python', 'java', 'javascript', 'css', 'html', '前端', '后端', '代码', '编程', 'debug', '错误', 'bug', '框架', '库', 'npm', 'yarn', 'docker', 'kubernetes', 'linux', '终端', 'ide', 'vscode'],
+  '学习': ['课程', '教程', '学习', 'mooc', 'coursera', 'udemy', '论文', '研究', '学术', 'wikipedia', '知乎', 'csdn', '博客', '笔记', '复习', '考试', '单词', '语言', 'english', 'book'],
+  '社交': ['微信', 'qq', '微博', 'twitter', 'facebook', 'instagram', 'linkedin', 'discord', 'telegram', 'slack', '邮件', 'gmail', 'outlook', '聊天', '消息', '社群', '论坛'],
+  '娱乐': ['youtube', 'bilibili', 'b站', '抖音', 'tiktok', 'netflix', 'spotify', '音乐', '视频', '电影', '电视剧', '综艺', '游戏', 'steam', '直播', '动漫', '小说'],
+  '新闻': ['新闻', 'news', 'bbc', 'cnn', '澎湃', '网易', '新浪', '腾讯', '36kr', '虎嗅', '科技', '财经', '股票', 'crypto', '比特币', '时事', '头条'],
+  '其他': []  // 兜底
+};
+
+const TOPIC_COLORS = {
+  '开发': '#3b82f6',
+  '学习': '#10b981',
+  '社交': '#f59e0b',
+  '娱乐': '#ec4899',
+  '新闻': '#ef4444',
+  '其他': '#64748b'
+};
+
+/* 聚类算法：基于关键词命中数将每个标签页归类到主题 */
+function clusterTabs(tabs) {
+  const clusters = {};
+  tabs.forEach(tab => {
+    const title = (tab.title || '').toLowerCase();
+    const hits = {};
+    let maxHit = 0;
+    Object.keys(TOPIC_KEYWORDS).forEach(topic => {
+      let count = 0;
+      TOPIC_KEYWORDS[topic].forEach(kw => {
+        if (title.includes(kw.toLowerCase())) count++;
+      });
+      hits[topic] = count;
+      if (count > maxHit) maxHit = count;
+    });
+    // 全部为 0 归入"其他"；否则在命中数最多的主题中按字典序取第一个
+    let assignedTopic = '其他';
+    if (maxHit > 0) {
+      assignedTopic = Object.keys(hits)
+        .filter(t => hits[t] === maxHit)
+        .sort()[0];
+    }
+    if (!clusters[assignedTopic]) clusters[assignedTopic] = [];
+    clusters[assignedTopic].push(tab);
+  });
+  return clusters;
+}
+
+/* 渲染聚类结果：统计条 + 各主题分组卡片（支持展开/收起） */
+function renderClusterResult(clusters) {
+  const topics = Object.keys(clusters);
+  const totalTabs = topics.reduce((sum, t) => sum + clusters[t].length, 0);
+  const expandedSet = new Set();
+
+  const stats = document.createElement('div');
+  stats.className = 'cluster-stats';
+  stats.textContent = `共 ${totalTabs} 个标签页，识别为 ${topics.length} 个主题`;
+
+  const container = document.createElement('div');
+  topics.forEach(topic => {
+    const tabs = clusters[topic];
+    const color = TOPIC_COLORS[topic] || '#64748b';
+    const group = document.createElement('div');
+    group.className = 'cluster-group';
+    group.style.setProperty('--topic-color', color);
+
+    const header = document.createElement('div');
+    header.className = 'cluster-group-header';
+    header.innerHTML = `
+      <span class="cluster-dot"></span>
+      <span>${escapeHtml(topic)}</span>
+      <span class="cluster-group-count">${tabs.length} 个</span>
+    `;
+    group.appendChild(header);
+
+    const listDiv = document.createElement('div');
+    listDiv.className = 'cluster-tab-list';
+    const renderItems = (all) => {
+      listDiv.innerHTML = '';
+      const items = all ? tabs : tabs.slice(0, 3);
+      items.forEach(tab => {
+        const item = document.createElement('div');
+        item.className = 'cluster-tab-item';
+        item.textContent = tab.title || '';
+        item.title = tab.title || '';
+        listDiv.appendChild(item);
+      });
+      if (!all && tabs.length > 3) {
+        const more = document.createElement('button');
+        more.type = 'button';
+        more.className = 'cluster-more';
+        more.setAttribute('aria-expanded', 'false');
+        more.setAttribute('aria-label', `展开 ${tabs.length - 3} 个标签`);
+        more.textContent = `+${tabs.length - 3} more`;
+        more.addEventListener('click', () => {
+          more.setAttribute('aria-expanded', 'true');
+          expandedSet.add(topic);
+          renderItems(true);
+        });
+        listDiv.appendChild(more);
+      } else if (all && tabs.length > 3) {
+        const collapse = document.createElement('button');
+        collapse.type = 'button';
+        collapse.className = 'cluster-more';
+        collapse.setAttribute('aria-expanded', 'true');
+        collapse.setAttribute('aria-label', '收起');
+        collapse.textContent = '收起';
+        collapse.addEventListener('click', () => {
+          collapse.setAttribute('aria-expanded', 'false');
+          expandedSet.delete(topic);
+          renderItems(false);
+        });
+        listDiv.appendChild(collapse);
+      }
+    };
+    renderItems(expandedSet.has(topic));
+    group.appendChild(listDiv);
+
+    container.appendChild(group);
+  });
+
+  clusterResult.innerHTML = '';
+  clusterResult.appendChild(stats);
+  clusterResult.appendChild(container);
+  clusterResult.hidden = false;
+}
+
+/* 同步聚类按钮状态：无标签页时禁用并显示提示文案 */
+function updateClusterBtnState() {
+  if (!clusterBtn) return;
+  if (clusterBtn.classList.contains('loading')) return;
+  const span = clusterBtn.querySelector('span:last-child');
+  if (state.tabs.length === 0) {
+    clusterBtn.disabled = true;
+    if (span) span.textContent = '没有标签页可分析';
+  } else {
+    clusterBtn.disabled = false;
+    if (span) span.textContent = '智能分组当前标签页';
+  }
+}
+
+/* 智能分组按钮交互：模拟 AI 思考 800ms 后展示聚类结果 */
+clusterBtn.addEventListener('click', () => {
+  if (clusterBtn.disabled) return;
+  if (clusterBtn.classList.contains('loading')) return;
+  if (state.isRestoring) return;
+
+  const originalHTML = clusterBtn.innerHTML;
+  clusterBtn.classList.add('loading');
+  clusterBtn.innerHTML = '<span class="spinner"></span><span>AI 分析中...</span>';
+
+  setTimeout(() => {
+    clusterBtn.classList.remove('loading');
+    clusterBtn.innerHTML = originalHTML;
+    updateClusterBtnState();
+    if (state.isRestoring) return;  // restore 期间跳过渲染，避免竞态覆盖清空结果
+
+    if (state.tabs.length === 0) {
+      clusterResult.hidden = true;
+      showToast('error', '没有标签页可分析');
+      return;
+    }
+
+    const clusters = clusterTabs(state.tabs);
+    renderClusterResult(clusters);
+    showToast('info', `已识别为 ${Object.keys(clusters).length} 个主题`);
+  }, 800);
+});
+
+/* ============================================================
+   涟漪效果：为主要按钮添加点击反馈
+   ============================================================ */
+function attachRipple(btn) {
+  if (!btn) return;
+  btn.addEventListener('click', function (e) {
+    const rect = btn.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    const x = (e.clientX || rect.left + rect.width / 2) - rect.left - size / 2;
+    const y = (e.clientY || rect.top + rect.height / 2) - rect.top - size / 2;
+    const ripple = document.createElement('span');
+    ripple.className = 'ripple';
+    ripple.style.width = ripple.style.height = size + 'px';
+    ripple.style.left = x + 'px';
+    ripple.style.top = y + 'px';
+    btn.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 600);
+  });
+}
+attachRipple(saveBtn);
+attachRipple(clusterBtn);
+
+/* 绑定浏览器导航按钮（后退/前进/刷新）的点击反馈 */
+document.querySelectorAll('.nav-btn[aria-label]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const label = btn.getAttribute('aria-label');
+    if (label === '后退') showToast('info', '已后退（模拟）');
+    else if (label === '前进') showToast('info', '已前进（模拟）');
+    else if (label === '刷新') showToast('info', '已刷新（模拟）');
+  });
+});
+
+/* ============================================================
+   深色模式：手动切换 + 系统跟随
+   ============================================================ */
+const THEME_KEY = 'focus-theme-pref';
+let themeBtnEl = null;
+let themeIconEl = null;
+
+function setTheme(dark, persist) {
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  if (themeIconEl) themeIconEl.textContent = dark ? '☀️' : '🌙';
+  if (themeBtnEl) {
+    themeBtnEl.setAttribute('aria-pressed', dark ? 'true' : 'false');
+    themeBtnEl.title = dark ? '切换到浅色主题' : '切换到深色主题';
+    themeBtnEl.setAttribute('aria-label', dark ? '切换到浅色主题' : '切换到深色主题');
+  }
+  if (persist) {
+    localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light');
+  }
+}
+
+function initTheme() {
+  themeBtnEl = document.getElementById('theme-btn');
+  themeIconEl = themeBtnEl ? themeBtnEl.querySelector('.theme-icon') : null;
+
+  let dark = false;
+  try {
+    const stored = localStorage.getItem(THEME_KEY);
+    if (stored === 'dark') dark = true;
+    else if (stored === 'light') dark = false;
+    else dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  } catch (e) {
+    // localStorage 不可用（隐私模式/file://）或 matchMedia 不支持，降级到默认亮色
+    dark = false;
+  }
+  setTheme(dark, false);
+
+  // 系统主题变化监听（仅当无 localStorage 偏好时跟随系统）
+  try {
+    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mql.addEventListener) {
+      mql.addEventListener('change', (e) => {
+        try {
+          if (!localStorage.getItem(THEME_KEY)) setTheme(e.matches, false);
+        } catch (err) { /* 忽略 */ }
+      });
+    } else if (mql.addListener) {
+      mql.addListener((e) => {
+        try {
+          if (!localStorage.getItem(THEME_KEY)) setTheme(e.matches, false);
+        } catch (err) { /* 忽略 */ }
+      });
+    }
+  } catch (e) { /* matchMedia 不支持 */ }
+
+  if (themeBtnEl) {
+    themeBtnEl.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme') === 'dark';
+      setTheme(!current, true);
+    });
+  }
+}
+
+/* ============================================================
+   初始化渲染
+   ============================================================ */
+initTheme();
+renderTabs();
+renderContent();
+renderSnapshots();
+renderTimeline();
+
+/* ============================================================
+   Onboarding Tour（首次使用引导）
+   ============================================================ */
+const ONBOARDING_KEY = 'onboarding-completed-focus';
+const onboardingSteps = [
+  {
+    selector: '#tabBar',
+    title: '标签页栏',
+    desc: '这里是你的浏览器标签页，Focus 会展示所有打开的标签页上下文。'
+  },
+  {
+    selector: '#saveBtn',
+    title: '保存当前上下文',
+    desc: '一键保存此刻所有标签页的上下文，让混乱的浏览状态瞬间归档。'
+  },
+  {
+    selector: '#clusterBtn',
+    title: 'AI 主题聚类',
+    desc: 'AI 会自动按主题分组你的标签页，让你看清自己究竟在做什么。'
+  },
+  {
+    selector: '#snapshotList',
+    title: '快照列表',
+    desc: '已保存的上下文快照在这里，可搜索、恢复、导出。开始你的 Focus 之旅吧。'
+  }
+];
+let onboardingIndex = 0;
+let onboardingActive = false;
+let onboardingTriggerEl = null;
+
+function buildOnboardingDom() {
+  if (document.querySelector('.onboarding-overlay')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'onboarding-overlay';
+  document.body.appendChild(overlay);
+  const highlight = document.createElement('div');
+  highlight.className = 'onboarding-highlight';
+  document.body.appendChild(highlight);
+  const tooltip = document.createElement('div');
+  tooltip.className = 'onboarding-tooltip';
+  tooltip.setAttribute('role', 'dialog');
+  tooltip.setAttribute('aria-modal', 'true');
+  tooltip.setAttribute('aria-labelledby', 'onboarding-title');
+  tooltip.setAttribute('aria-live', 'polite');
+  tooltip.style.visibility = 'hidden';
+  document.body.appendChild(tooltip);
+}
+
+function onboardingKeydown(e) {
+  if (!onboardingActive) return;
+  if (e.key === 'Escape') { skipOnboarding(); return; }
+  // Tab/Shift+Tab 焦点陷阱：限制焦点在 tooltip 内部循环
+  if (e.key === 'Tab') {
+    const tooltip = document.querySelector('.onboarding-tooltip');
+    if (!tooltip) return;
+    const focusables = tooltip.querySelectorAll('button, [href], input, [tabindex]:not([tabindex="-1"])');
+    if (focusables.length === 0) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first || !tooltip.contains(document.activeElement)) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (document.activeElement === last || !tooltip.contains(document.activeElement)) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  }
+}
+
+function startOnboarding() {
+  if (onboardingActive) return;
+  onboardingActive = true;
+  onboardingIndex = 0;
+  // 保存触发元素，引导结束后返回焦点
+  onboardingTriggerEl = document.activeElement;
+  buildOnboardingDom();
+  showStep();
+  window.addEventListener('resize', onboardingReposition);
+  window.addEventListener('scroll', onboardingReposition, true);
+  document.addEventListener('keydown', onboardingKeydown);
+}
+
+let onboardingRafId = null;
+
+function positionOnboarding(isScrollReposition) {
+  if (onboardingRafId) { cancelAnimationFrame(onboardingRafId); onboardingRafId = null; }
+  const step = onboardingSteps[onboardingIndex];
+  if (!step) return;
+  const target = document.querySelector(step.selector);
+  const highlight = document.querySelector('.onboarding-highlight');
+  const tooltip = document.querySelector('.onboarding-tooltip');
+  if (!target || !highlight || !tooltip) return;
+  // 滚动/resize 重定位时禁用过渡，避免高亮框与 tooltip 滞后于目标造成视觉偏移
+  if (isScrollReposition) {
+    highlight.classList.add('no-transition');
+    tooltip.classList.add('no-transition');
+  } else {
+    highlight.classList.remove('no-transition');
+    tooltip.classList.remove('no-transition');
+  }
+  const rect = target.getBoundingClientRect();
+  const pad = 6;
+  highlight.style.left = (rect.left - pad) + 'px';
+  highlight.style.top = (rect.top - pad) + 'px';
+  highlight.style.width = (rect.width + pad * 2) + 'px';
+  highlight.style.height = (rect.height + pad * 2) + 'px';
+  const tipH = tooltip.offsetHeight || 180;
+  const tipW = 320;
+  const placeBelow = (rect.bottom + tipH + 24 <= window.innerHeight);
+  const top = placeBelow ? rect.bottom + 16 : rect.top - tipH - 16;
+  let left = rect.left + (rect.width / 2) - (tipW / 2);
+  if (left < 12) left = 12;
+  if (left + tipW > window.innerWidth - 12) left = window.innerWidth - tipW - 12;
+  tooltip.style.left = left + 'px';
+  tooltip.style.top = Math.max(12, top) + 'px';
+  tooltip.style.visibility = 'visible';
+}
+
+function onboardingReposition() {
+  if (!onboardingActive) return;
+  if (onboardingRafId) cancelAnimationFrame(onboardingRafId);
+  onboardingRafId = requestAnimationFrame(function() { positionOnboarding(true); });
+}
+
+function showStep() {
+  const step = onboardingSteps[onboardingIndex];
+  if (!step) return completeOnboarding();
+  const target = document.querySelector(step.selector);
+  const highlight = document.querySelector('.onboarding-highlight');
+  const tooltip = document.querySelector('.onboarding-tooltip');
+  if (!target || !highlight || !tooltip) {
+    onboardingIndex++;
+    return showStep();
+  }
+
+  const isLast = onboardingIndex === onboardingSteps.length - 1;
+  tooltip.innerHTML =
+    '<div class="onboarding-step">第 ' + (onboardingIndex + 1) + ' / ' + onboardingSteps.length + ' 步</div>' +
+    '<div class="onboarding-title" id="onboarding-title">' + step.title + '</div>' +
+    '<div class="onboarding-desc">' + step.desc + '</div>' +
+    '<div class="onboarding-actions">' +
+      '<span class="onboarding-progress">' + (onboardingIndex + 1) + ' / ' + onboardingSteps.length + '</span>' +
+      '<div class="onboarding-btns">' +
+        (!isLast ? '<button class="onboarding-btn-skip" id="onboarding-skip" type="button">跳过</button>' : '') +
+        '<button class="onboarding-btn-next" id="onboarding-next" type="button">' + (isLast ? '开始体验' : '下一步') + '</button>' +
+      '</div>' +
+    '</div>';
+
+  // 高亮 + tooltip 定位（抽成独立函数，scroll 时复用，避免重建 innerHTML）
+  // 目标不可见时先滚动到可视区，等滚动稳定后再定位，避免高亮框漂移
+  const targetRect = target.getBoundingClientRect();
+  if (targetRect.bottom < 0 || targetRect.top > window.innerHeight) {
+    target.scrollIntoView({ block: 'center' });
+    setTimeout(positionOnboarding, 100);
+  } else {
+    positionOnboarding();
+  }
+
+  const nextBtn = document.getElementById('onboarding-next');
+  if (nextBtn) nextBtn.onclick = nextStep;
+  const skipBtn = document.getElementById('onboarding-skip');
+  if (skipBtn) skipBtn.onclick = skipOnboarding;
+  if (nextBtn) nextBtn.focus();
+}
+
+let onboardingTransitioning = false;
+function nextStep() {
+  if (onboardingTransitioning) return;
+  onboardingTransitioning = true;
+  setTimeout(function () { onboardingTransitioning = false; }, 350);
+  onboardingIndex++;
+  if (onboardingIndex >= onboardingSteps.length) {
+    completeOnboarding();
+  } else {
+    showStep();
+  }
+}
+
+function skipOnboarding() {
+  completeOnboarding();
+}
+
+function completeOnboarding() {
+  onboardingActive = false;
+  if (onboardingRafId) cancelAnimationFrame(onboardingRafId);
+  try { localStorage.setItem(ONBOARDING_KEY, '1'); } catch (e) { /* localStorage 不可用时静默降级 */ }
+  window.removeEventListener('resize', onboardingReposition);
+  window.removeEventListener('scroll', onboardingReposition, true);
+  document.removeEventListener('keydown', onboardingKeydown);
+  // 若引导期间存在未消费的 restore timer，清理避免遗留动画
+  if (state.restoreTimers && state.restoreTimers.length) {
+    state.restoreTimers.forEach(clearTimeout);
+    state.restoreTimers = [];
+    state.isRestoring = false;  // 同步重置，避免引导打断恢复后永久死锁
+  }
+  ['onboarding-overlay', 'onboarding-highlight', 'onboarding-tooltip'].forEach(cls => {
+    const el = document.querySelector('.' + cls);
+    if (el) el.remove();
+  });
+  // 焦点返回触发元素
+  if (onboardingTriggerEl && typeof onboardingTriggerEl.focus === 'function') {
+    onboardingTriggerEl.focus();
+    onboardingTriggerEl = null;
+  }
+}
+
+function initOnboarding() {
+  const btn = document.getElementById('help-btn');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      try { localStorage.removeItem(ONBOARDING_KEY); } catch (e) { /* localStorage 不可用时静默降级 */ }
+      startOnboarding();
+    });
+  }
+  let completed = false;
+  try { completed = !!localStorage.getItem(ONBOARDING_KEY); } catch (e) { /* localStorage 不可用时视为未完成 */ }
+  if (!completed) {
+    setTimeout(startOnboarding, 600);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initOnboarding);
+} else {
+  initOnboarding();
+}
+</script>
+</body>
+</html>

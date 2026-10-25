@@ -1,0 +1,100 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+eggs/
+.eggs/
+sdist/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ---- 测试与覆盖率 ----
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.verify_tmp/
+
+# ---- 虚拟环境 ----
+.venv/
+venv/
+env/
+ENV/
+
+# ---- Node ----
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---- 数据库（Bridge 本地运行时数据） ----
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite
+*.sqlite3
+*.corrupt_*.db
+*.v0.bak
+*.v8.bak
+*.bak
+backups/
+
+# ---- 环境变量与密钥 ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+
+# ---- 打包产物 ----
+dist/
+*.zip
+*.zip.manifest.json
+*.tar.gz
+
+# ---- QA / 评审运行时产物（体积大且可重新生成） ----
+dogfood-output/
+dogfood_shots/
+products/*/dogfood_shots/
+products/*/lighthouse-reports/*.report.html
+products/*/lighthouse-reports/*.report.json
+products/*/lighthouse-reports/perf-metrics.json
+screenshots/generated/
+
+# ---- Agent / 工具状态目录 ----
+.superpowers/
+*.log
+
+# ---- 编辑器 ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ---- 操作系统 ----
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ---- 大体积媒体（品牌视频抽帧等，见 NOTICE） ----
+shared/frames-extended/

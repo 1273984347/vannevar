@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vannevar · Bridge 技术架构</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', 'Noto Sans SC', sans-serif; }
+    .arrow { position: relative; }
+    .arrow::after {
+      content: '';
+      position: absolute;
+      bottom: -16px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-top: 12px solid #86efac;
+    }
+  </style>
+</head>
+<body class="bg-emerald-50 p-8">
+  <div class="max-w-4xl mx-auto">
+    <div class="text-center mb-8">
+      <h1 class="text-2xl font-bold text-emerald-900">Vannevar · Bridge 技术架构</h1>
+      <p class="text-emerald-600 mt-2">社会服务 · 公益团队任务上下文交接</p>
+    </div>
+
+    <!-- 用户交互层 -->
+    <div class="bg-white rounded-xl shadow-sm border border-emerald-100 p-6 mb-6">
+      <div class="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-4">用户交互层</div>
+      <div class="grid grid-cols-3 gap-4">
+        <div class="bg-emerald-50 border border-emerald-100 rounded-lg p-4 text-center">
+          <div class="text-2xl mb-2">📱</div>
+          <div class="font-semibold text-emerald-800">志愿者 H5</div>
+          <div class="text-xs text-emerald-600 mt-1">移动端任务视图</div>
+        </div>
+        <div class="bg-emerald-50 border border-emerald-100 rounded-lg p-4 text-center">
+          <div class="text-2xl mb-2">🖥️</div>
+          <div class="font-semibold text-emerald-800">组织管理后台</div>
+          <div class="text-xs text-emerald-600 mt-1">Web 端项目管控</div>
+        </div>
+        <div class="bg-emerald-50 border border-emerald-100 rounded-lg p-4 text-center">
+          <div class="text-2xl mb-2">🔗</div>
+          <div class="font-semibold text-emerald-800">二维码入口</div>
+          <div class="text-xs text-emerald-600 mt-1">扫码即看上下文</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow h-6 mb-6"></div>
+
+    <!-- 核心引擎层 -->
+    <div class="bg-gradient-to-r from-emerald-700 to-teal-600 rounded-xl shadow-md p-6 mb-6">
+      <div class="text-xs font-semibold text-emerald-100 uppercase tracking-wider mb-4">Bridge Engine 协作内核</div>
+      <div class="grid grid-cols-3 gap-4">
+        <div class="bg-white/10 backdrop-blur rounded-lg p-4 text-center">
+          <div class="text-2xl mb-2">📋</div>
+          <div class="font-semibold text-white">Project Archive</div>
+          <div class="text-xs text-emerald-100 mt-1">项目档案</div>
+        </div>
+        <div class="bg-white/10 backdrop-blur rounded-lg p-4 text-center">
+          <div class="text-2xl mb-2">🤝</div>
+          <div class="font-semibold text-white">Handoff</div>
+          <div class="text-xs text-emerald-100 mt-1">接力交接清单</div>
+        </div>
+        <div class="bg-white/10 backdrop-blur rounded-lg p-4 text-center">
+          <div class="text-2xl mb-2">💬</div>
+          <div class="font-semibold text-white">Collaboration</div>
+          <div class="text-xs text-emerald-100 mt-1">上下文内留言</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow h-6 mb-6"></div>
+
+    <!-- 数据存储层 -->
+    <div class="bg-white rounded-xl shadow-sm border border-emerald-100 p-6">
+      <div class="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-4">数据存储层 · 云端协同</div>
+      <div class="grid grid-cols-3 gap-4">
+        <div class="bg-emerald-50/50 border border-emerald-100 rounded-lg p-4 text-center">
+          <div class="text-2xl mb-2">🗄️</div>
+          <div class="font-semibold text-emerald-800">PostgreSQL</div>
+          <div class="text-xs text-emerald-600 mt-1">项目数据库</div>
+        </div>
+        <div class="bg-emerald-50/50 border border-emerald-100 rounded-lg p-4 text-center">
+          <div class="text-2xl mb-2">📜</div>
+          <div class="font-semibold text-emerald-800">交接记录</div>
+          <div class="text-xs text-emerald-600 mt-1">人员流动轨迹</div>
+        </div>
+        <div class="bg-emerald-50/50 border border-emerald-100 rounded-lg p-4 text-center">
+          <div class="text-2xl mb-2">🔐</div>
+          <div class="font-semibold text-emerald-800">用户权限</div>
+          <div class="text-xs text-emerald-600 mt-1">组织角色管理</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

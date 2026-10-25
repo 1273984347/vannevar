@@ -1,0 +1,3960 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vannevar Bridge · 公益项目交接平台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet"></noscript>
+<style>
+/* ========== 全局变量（亮色） ========== */
+:root {
+  /* 品牌色：emerald+teal 翠绿渐变（135° 对角，立体感更强 — W066a） */
+  --brand-from: #047857;
+  --brand-to: #0d9488;
+  --brand-gradient: linear-gradient(135deg, #047857, #0d9488);
+
+  /* 头像配色盘 token */
+  --avatar-1: #047857;
+  --avatar-2: #0d9488;
+  --avatar-3: #ec4899;
+  --avatar-4: #f59e0b;
+  --avatar-5: #10b981;
+  --avatar-6: #06b6d4;
+  --avatar-7: #3b82f6;
+  --avatar-8: #ef4444;
+
+  /* 影响力/状态语义色 token */
+  --status-completed: #047857;
+  --status-active: #0d9488;
+  --status-pending: #b45309;
+
+  /* 背景与表面 — 新增径向渐变光斑（W066a） */
+  --bg: #ecfdf5;
+  --bg-radial: radial-gradient(circle at 50% 0%, rgba(4,120,87,0.08), transparent 60%);
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --surface-hover: #f1f5f9;
+  /* 玻璃态令牌（topbar 半透明背景） */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+
+  /* 边框（翠绿色系） */
+  --border: #d1fae5;
+  --border-strong: #a7f3d0;
+
+  /* 文字（翠绿色系） */
+  --text: #064e3b;
+  --text-muted: #047857;
+  --text-subtle: #065f46;
+
+  /* 状态色 */
+  --status-todo: #475569;
+  --status-todo-bg: #f1f5f9;
+  --status-progress: #b45309;
+  --status-progress-bg: #fef3c7;
+  --status-done: #047857;
+  --status-done-bg: #d1fae5;
+
+  /* 高风险色（用于 risk-high 边框与高风险标签） */
+  --danger: #dc2626;
+  --danger-soft-bg: rgba(220,38,38,0.12);
+  --danger-border: #ef4444;
+
+  /* 危险按钮色 */
+  --danger-bg: #ef4444;
+  --danger-text: #fff;
+  --danger-hover: #dc2626;
+
+  /* 阴影 */
+  --shadow-sm: 0 1px 2px rgba(15,23,42,.05);
+  --shadow: 0 1px 3px rgba(15,23,42,.1), 0 1px 2px rgba(15,23,42,.06);
+  --shadow-md: 0 4px 6px -1px rgba(15,23,42,.1), 0 2px 4px -2px rgba(15,23,42,.1);
+  --shadow-lg: 0 10px 15px -3px rgba(15,23,42,.1), 0 4px 6px -4px rgba(15,23,42,.1);
+
+  /* 品牌/主按钮阴影 — 多层柔和 + 翠绿色调（W066a） */
+  --shadow-brand: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(4,120,87,0.12);
+  --shadow-brand-hover: 0 2px 8px rgba(0,0,0,0.12), 0 8px 24px rgba(4,120,87,0.18);
+  --shadow-primary: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(4,120,87,0.12);
+  --shadow-primary-hover: 0 2px 8px rgba(0,0,0,0.12), 0 8px 24px rgba(4,120,87,0.18);
+  --shadow-focus: 0 0 0 3px rgba(13,148,136,.15);
+  --shadow-filter-active: 0 2px 6px rgba(4,120,87,.2);
+
+  /* 圆角体系（W066a：8/14/20 三级，旧令牌名映射到新体系） */
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --radius-card: 14px;
+  --radius-inner: 8px;
+  --radius-btn: 8px;
+  --radius-sm: 8px;
+
+  /* 字体栈：Inter + Noto Sans SC */
+  --font: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  /* 专业级缓动曲线（用于关键交互） */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-circ: cubic-bezier(0.85, 0, 0.15, 1);
+}
+
+/* ========== 深色模式（系统偏好） ========== */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    /* 深色模式下品牌色提亮，保证对比度（--brand-to 用 emerald-400，对比度约 5.8:1） */
+    --brand-from: #10b981;
+    --brand-to: #34d399;
+    --brand-gradient: linear-gradient(135deg, #10b981, #34d399);
+
+    /* 头像配色盘 token（深色提亮） */
+    --avatar-1: #10b981;
+    --avatar-2: #14b8a6;
+    --avatar-3: #f472b6;
+    --avatar-4: #fbbf24;
+    --avatar-5: #34d399;
+    --avatar-6: #22d3ee;
+    --avatar-7: #60a5fa;
+    --avatar-8: #f87171;
+
+    /* 影响力/状态语义色 token（深色） */
+    --status-completed: #10b981;
+    --status-active: #14b8a6;
+    --status-pending: #fbbf24;
+
+    --bg: #022c22;
+    --bg-radial: radial-gradient(circle at 50% 0%, rgba(16,185,129,0.10), transparent 60%);
+    --glass-bg: rgba(6, 78, 59, 0.72);
+    --shadow-brand-hover: 0 2px 8px rgba(0,0,0,0.4), 0 8px 24px rgba(16,185,129,0.22);
+    --surface: #064e3b;
+    --surface-2: #052e2b;
+    --surface-hover: #065f46;
+    --border: #065f46;
+    --border-strong: #065f46;
+    --text: #f1f5f9;
+    --text-muted: #cbd5e1;
+    --text-subtle: #6ee7b7;
+    --status-todo: #cbd5e1;
+    --status-todo-bg: #052e2b;
+    --status-progress: #fbbf24;
+    --status-progress-bg: #422006;
+    --status-done: #34d399;
+    --status-done-bg: #052e1a;
+    --danger: #fca5a5;
+    --danger-soft-bg: rgba(248,113,113,.18);
+    --danger-border: #f87171;
+    --danger-bg: #f87171;
+    --danger-text: #fff;
+    --danger-hover: #ef4444;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.3);
+    --shadow: 0 1px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.3);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,.4), 0 2px 4px -2px rgba(0,0,0,.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.5), 0 4px 6px -4px rgba(0,0,0,.4);
+    --shadow-brand: 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(16,185,129,0.18);
+    --shadow-primary: 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(16,185,129,0.15);
+    --shadow-primary-hover: 0 2px 8px rgba(0,0,0,0.4), 0 8px 24px rgba(16,185,129,0.22);
+    --shadow-focus: 0 0 0 3px rgba(45,212,191,.2);
+    --shadow-filter-active: 0 2px 6px rgba(16,185,129,.25);
+  }
+}
+
+/* ========== 深色模式（手动切换） ========== */
+[data-theme="dark"] {
+  /* 深色模式下品牌色提亮，保证对比度（--brand-to 用 emerald-400，对比度约 5.8:1） */
+  --brand-from: #10b981;
+  --brand-to: #34d399;
+  --brand-gradient: linear-gradient(135deg, #10b981, #34d399);
+
+  /* 头像配色盘 token（深色提亮） */
+  --avatar-1: #10b981;
+  --avatar-2: #14b8a6;
+  --avatar-3: #f472b6;
+  --avatar-4: #fbbf24;
+  --avatar-5: #34d399;
+  --avatar-6: #22d3ee;
+  --avatar-7: #60a5fa;
+  --avatar-8: #f87171;
+
+  /* 影响力/状态语义色 token（深色） */
+  --status-completed: #10b981;
+  --status-active: #14b8a6;
+  --status-pending: #fbbf24;
+
+  --bg: #022c22;
+  --bg-radial: radial-gradient(circle at 50% 0%, rgba(16,185,129,0.10), transparent 60%);
+  --glass-bg: rgba(6, 78, 59, 0.72);
+  --shadow-brand-hover: 0 2px 8px rgba(0,0,0,0.4), 0 8px 24px rgba(16,185,129,0.22);
+  --surface: #064e3b;
+  --surface-2: #052e2b;
+  --surface-hover: #065f46;
+  --border: #065f46;
+  --border-strong: #065f46;
+  --text: #f1f5f9;
+  --text-muted: #cbd5e1;
+  --text-subtle: #6ee7b7;
+  --status-todo: #cbd5e1;
+  --status-todo-bg: #052e2b;
+  --status-progress: #fbbf24;
+  --status-progress-bg: #422006;
+  --status-done: #34d399;
+  --status-done-bg: #052e1a;
+  --danger: #fca5a5;
+  --danger-soft-bg: rgba(248,113,113,.18);
+  --danger-border: #f87171;
+  --danger-bg: #f87171;
+  --danger-text: #fff;
+  --danger-hover: #ef4444;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.3);
+  --shadow: 0 1px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.3);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,.4), 0 2px 4px -2px rgba(0,0,0,.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.5), 0 4px 6px -4px rgba(0,0,0,.4);
+  --shadow-brand: 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(16,185,129,0.18);
+  --shadow-primary: 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(16,185,129,0.15);
+  --shadow-primary-hover: 0 2px 8px rgba(0,0,0,0.4), 0 8px 24px rgba(16,185,129,0.22);
+  --shadow-focus: 0 0 0 3px rgba(45,212,191,.2);
+  --shadow-filter-active: 0 2px 6px rgba(16,185,129,.25);
+}
+
+/* ========== 重置 ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  background-image: var(--bg-radial);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color .2s ease, color .2s ease;
+}
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; transition: transform .1s ease; }
+/* 按钮按压效果 */
+button:active { transform: scale(0.98); }
+input, textarea, select { font-family: inherit; font-size: inherit; color: inherit; }
+a { color: inherit; text-decoration: none; }
+svg { display: block; }
+
+/* focus-visible 可访问性 */
+:focus-visible {
+  outline: 2px solid var(--brand-to);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* ========== 顶部导航栏 ========== */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.topbar-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--brand-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 20px;
+  box-shadow: var(--shadow-brand);
+}
+.brand-text { display: flex; flex-direction: column; line-height: 1.2; }
+.brand-name { font-weight: 700; font-size: 16px; }
+.brand-sub { font-size: 12px; color: var(--text-muted); }
+
+.topbar-actions-wrapper { display: flex; align-items: center; gap: 6px; }
+.topbar-actions { display: flex; align-items: center; gap: 6px; }
+.tab-btn {
+  padding: 8px 14px;
+  border-radius: var(--radius-btn);
+  font-size: 14px;
+  color: var(--text-muted);
+  transition: all .2s var(--ease-out-expo);
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+.tab-btn:hover { color: var(--text); background: var(--surface-hover); }
+.tab-btn.active {
+  color: var(--brand-to);
+  border-bottom-color: var(--brand-to);
+  font-weight: 600;
+}
+.theme-toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-btn);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: var(--text-muted);
+  transition: all .2s var(--ease-out-expo);
+}
+.theme-toggle:hover { color: var(--text); background: var(--surface-hover); }
+
+/* ========== 主内容区 ========== */
+.main { max-width: 1400px; margin: 0 auto; padding: 24px; animation: fadeInUp .5s ease; }
+.view { display: none; }
+.view.active { display: block; animation: viewFade .3s ease; }
+/* Onboarding 激活期间禁用视图入场动画，从根源消除 viewFade 污染 getBoundingClientRect() */
+.onboarding-active .view.active { animation: none; }
+@keyframes viewFade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* 页面入场动画：opacity 0→1, translateY 12px→0, 0.5s ease */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ========== 通用按钮 ========== */
+.btn-primary {
+  padding: 10px 18px;
+  border-radius: var(--radius-btn);
+  background: var(--brand-gradient);
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  transition: transform .2s var(--ease-out-expo), box-shadow .2s var(--ease-out-expo);
+  box-shadow: var(--shadow-primary);
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: var(--shadow-primary-hover); }
+.btn-primary:active { transform: scale(0.98); }
+.btn-ghost {
+  padding: 8px 14px;
+  border-radius: var(--radius-btn);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  transition: all .2s var(--ease-out-expo);
+}
+.btn-ghost:hover { border-color: var(--border-strong); background: var(--surface-hover); }
+.btn-danger {
+  padding: 8px 14px;
+  border-radius: var(--radius-btn);
+  border: 1px solid var(--danger-bg);
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  font-size: 14px;
+  transition: all .2s var(--ease-out-expo);
+}
+.btn-danger:hover { background: var(--danger-hover); }
+
+/* ========== 视图1：项目列表 ========== */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.page-title { font-size: 24px; font-weight: 700; }
+.search-box {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+  min-width: 200px;
+}
+.search-box input {
+  width: 100%;
+  padding: 10px 14px 10px 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  background: var(--surface);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.search-box input:focus {
+  outline: none;
+  border-color: var(--brand-from);
+  box-shadow: var(--shadow-focus);
+}
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: var(--text-subtle);
+  pointer-events: none;
+}
+.sort-select {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color .15s ease;
+}
+.sort-select:focus {
+  outline: none;
+  border-color: var(--brand-from);
+  box-shadow: var(--shadow-focus);
+}
+
+/* 任务筛选栏 */
+.task-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: var(--surface-2);
+  border-radius: var(--radius-inner);
+}
+.filter-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.filter-chip {
+  padding: 4px 12px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.filter-chip:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.filter-chip.active {
+  background: var(--brand-gradient);
+  color: white;
+  border-color: transparent;
+  box-shadow: var(--shadow-filter-active);
+}
+
+/* 项目卡片网格 */
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+.project-card {
+  position: relative;
+  width: 100%;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 24px;
+  cursor: pointer;
+  transition: transform .3s var(--ease-out-expo), box-shadow .3s var(--ease-out-expo), border-color .3s var(--ease-out-expo);
+  box-shadow: var(--shadow-sm);
+  animation: fadeInUp .5s ease both;
+}
+/* 项目卡片依次入场：8 级 50ms 步进（W066a） */
+.project-card:nth-child(1) { animation-delay: 0s; }
+.project-card:nth-child(2) { animation-delay: .05s; }
+.project-card:nth-child(3) { animation-delay: .1s; }
+.project-card:nth-child(4) { animation-delay: .15s; }
+.project-card:nth-child(5) { animation-delay: .2s; }
+.project-card:nth-child(6) { animation-delay: .25s; }
+.project-card:nth-child(7) { animation-delay: .3s; }
+.project-card:nth-child(n+8) { animation-delay: .35s; }
+.project-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: var(--shadow-brand-hover);
+  border-color: var(--brand-to);
+}
+/* 高风险项目标记：红色边框 */
+.project-card.risk-high {
+  border-color: var(--danger-border);
+}
+/* 右侧箭头指示器：hover 时滑入 */
+.project-card::after {
+  content: "→";
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%) translateX(8px);
+  opacity: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--brand-to);
+  transition: opacity .2s ease, transform .2s ease;
+  pointer-events: none;
+}
+.project-card:hover::after {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+.project-card-name { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+.project-card-desc {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 16px;
+  min-height: 42px;
+}
+.project-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.task-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.task-badge {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+.task-badge.todo { background: var(--status-todo-bg); color: var(--status-todo); }
+.task-badge.progress { background: var(--status-progress-bg); color: var(--status-progress); }
+.task-badge.done { background: var(--status-done-bg); color: var(--status-done); }
+.project-card-time { font-size: 12px; color: var(--text-subtle); }
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--text-muted);
+}
+.empty-state-icon { font-size: 48px; margin-bottom: 12px; opacity: .5; }
+.empty-state-text { font-size: 15px; }
+
+/* 空状态插画：桥梁（波浪桥面） */
+.empty-illustration {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+.empty-illustration .bridge-deck {
+  animation: bridgeWave 2.4s var(--ease-in-out-circ) infinite;
+  transform-origin: center;
+}
+@keyframes bridgeWave {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+/* 骨架屏（项目列表首屏） */
+.skel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+.skel-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.skel-bar {
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--border) 0%, var(--surface) 50%, var(--border) 100%);
+  background-size: 200% 100%;
+  animation: skelShimmer 1.5s infinite;
+}
+.skel-bar.title { width: 50%; height: 16px; }
+.skel-bar.desc { width: 90%; height: 12px; }
+.skel-bar.desc.short { width: 70%; }
+.skel-bar.badge { width: 25%; height: 14px; margin-top: auto; }
+@keyframes skelShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* 涟漪效果（按钮点击反馈） */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.4);
+  transform: scale(0);
+  animation: ripple 0.6s var(--ease-out-expo);
+  pointer-events: none;
+}
+@keyframes ripple {
+  to { transform: scale(4); opacity: 0; }
+}
+
+/* ========== 视图2：项目详情 ========== */
+.detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.detail-title-block { flex: 1; min-width: 200px; }
+.detail-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  padding: 4px 8px;
+  border-radius: var(--radius-btn);
+  transition: all .15s ease;
+}
+.detail-back:hover { color: var(--text); background: var(--surface-hover); }
+.detail-title { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+.detail-desc { color: var(--text-muted); font-size: 14px; max-width: 600px; }
+.detail-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* 任务看板 */
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.kanban-column {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-inner);
+  padding: 16px;
+  min-height: 200px;
+}
+.kanban-column-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--border);
+}
+.kanban-column-header.todo { border-bottom-color: var(--status-todo); }
+.kanban-column-header.progress { border-bottom-color: var(--status-progress); }
+.kanban-column-header.done { border-bottom-color: var(--status-done); }
+.column-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.column-dot.todo { background: var(--status-todo); }
+.column-dot.progress {
+  background: var(--status-progress);
+  animation: columnPulse 1.6s ease-in-out infinite;
+}
+.column-dot.done { background: var(--status-done); }
+/* 进行中状态圆点脉冲，强化"进行中"感知 */
+@keyframes columnPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,.45); }
+  50% { box-shadow: 0 0 0 5px rgba(245,158,11,0); }
+}
+.column-title { font-weight: 600; font-size: 14px; }
+.column-count {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  min-width: 26px;
+  text-align: center;
+}
+/* 数量徽标按状态色着色 */
+.kanban-column-header.todo .column-count { background: var(--status-todo-bg); color: var(--status-todo); border-color: var(--status-todo); }
+.kanban-column-header.progress .column-count { background: var(--status-progress-bg); color: var(--status-progress); border-color: var(--status-progress); }
+.kanban-column-header.done .column-count { background: var(--status-done-bg); color: var(--status-done); border-color: var(--status-done); }
+
+/* 任务卡片 */
+.task-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-inner);
+  padding: 14px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow-sm);
+  transition: transform .3s var(--ease-out-expo), box-shadow .3s var(--ease-out-expo), border-color .3s var(--ease-out-expo);
+  overflow: hidden;
+}
+.task-card:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: var(--shadow-md);
+  border-color: var(--brand-to);
+}
+/* 左侧彩色边框：hover 时从中心展开 */
+.task-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--brand-gradient);
+  transform: scaleY(0);
+  transform-origin: center;
+  transition: transform .2s ease;
+}
+.task-card:hover::before { transform: scaleY(1); }
+.task-card.just-moved { animation: cardEnter .35s ease-out; }
+@keyframes cardEnter {
+  from { opacity: 0; transform: translateY(10px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.task-card-title { font-weight: 600; font-size: 14px; margin-bottom: 8px; }
+.task-card-owner {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.task-card-status {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+  display: inline-block;
+  margin-bottom: 10px;
+}
+.task-card-status.todo { background: var(--status-todo-bg); color: var(--status-todo); }
+.task-card-status.progress { background: var(--status-progress-bg); color: var(--status-progress); }
+.task-card-status.done { background: var(--status-done-bg); color: var(--status-done); }
+.task-status-select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.task-status-select:focus { outline: none; border-color: var(--brand-from); }
+
+/* 看板列空状态占位 */
+.kanban-empty {
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius-inner);
+  padding: 24px 12px;
+  text-align: center;
+  color: var(--text-subtle);
+  font-size: 13px;
+  margin-bottom: 10px;
+  background: transparent;
+}
+.kanban-empty-icon { font-size: 22px; margin-bottom: 6px; opacity: .55; }
+
+/* 添加任务 */
+.add-task-btn {
+  width: 100%;
+  padding: 8px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-btn);
+  color: var(--text-muted);
+  font-size: 13px;
+  transition: all .15s ease;
+  background: transparent;
+}
+.add-task-btn:hover { border-color: var(--brand-from); color: var(--brand-from); background: var(--surface); }
+.add-task-form {
+  background: var(--surface);
+  border: 1px solid var(--brand-from);
+  border-radius: var(--radius-inner);
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.add-task-form input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  margin-bottom: 8px;
+}
+.add-task-form input:focus { outline: none; border-color: var(--brand-from); }
+.add-task-form-actions { display: flex; gap: 8px; }
+.add-task-form-actions button { flex: 1; padding: 6px; font-size: 13px; border-radius: var(--radius-sm); }
+
+/* 交接记录时间线 */
+/* 分层小标签（与架构图同款 eyebrow） */
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-subtle); /* 跟随主题，保证对比度 */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+.section-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+.section-block { margin-bottom: 32px; }
+.timeline { position: relative; padding-left: 24px; }
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: var(--border);
+}
+.timeline-item { position: relative; margin-bottom: 16px; }
+.timeline-item::before {
+  content: "";
+  position: absolute;
+  left: -21px;
+  top: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--brand-gradient);
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 0 2px var(--border);
+}
+.timeline-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-inner);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+}
+.timeline-from { font-size: 13px; font-weight: 600; color: var(--brand-from); margin-bottom: 4px; }
+.timeline-content { font-size: 14px; color: var(--text); margin-bottom: 6px; }
+.timeline-time { font-size: 12px; color: var(--text-subtle); }
+
+/* 协作留言 */
+.chat-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+.chat-bubble { display: flex; gap: 10px; align-items: flex-start; }
+.chat-bubble.me { flex-direction: row-reverse; }
+.chat-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.chat-content { max-width: 70%; }
+.chat-bubble.me .chat-content { text-align: right; }
+.chat-author { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+.chat-text {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px 12px 12px 2px;
+  padding: 10px 14px;
+  font-size: 14px;
+  display: inline-block;
+}
+.chat-bubble.me .chat-text {
+  background: var(--brand-gradient);
+  color: white;
+  border: none;
+  border-radius: 12px 12px 2px 12px;
+}
+.chat-time { font-size: 11px; color: var(--text-subtle); margin-top: 4px; }
+.chat-input { display: flex; gap: 8px; align-items: center; }
+.chat-input input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+}
+.chat-input input:focus { outline: none; border-color: var(--brand-from); }
+.chat-input button {
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: var(--brand-gradient);
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* ========== 视图3：志愿者H5 ========== */
+.mobile-stage { display: flex; justify-content: center; padding: 24px 0; }
+.phone-frame {
+  position: relative;
+  width: 375px;
+  max-width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 40px;
+  padding: 14px;
+  box-shadow:
+    0 0 0 2px rgba(15,23,42,.08),
+    0 24px 60px -12px rgba(15,23,42,.28),
+    0 8px 24px -6px rgba(15,23,42,.18),
+    inset 0 0 0 1px rgba(255,255,255,.06);
+}
+/* 顶部听筒条，模拟真实手机细节 */
+.phone-frame::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 64px;
+  height: 5px;
+  background: rgba(15,23,42,.35);
+  border-radius: 999px;
+  z-index: 5;
+  pointer-events: none;
+}
+/* 底部 Home 指示条 */
+.phone-frame::after {
+  content: "";
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 110px;
+  height: 4px;
+  background: rgba(15,23,42,.25);
+  border-radius: 999px;
+  z-index: 5;
+  pointer-events: none;
+}
+.phone-screen {
+  background: var(--bg);
+  border-radius: 26px;
+  overflow: hidden;
+  min-height: 700px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+.phone-header {
+  padding: 14px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.phone-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.phone-project-name { font-size: 17px; font-weight: 700; }
+.phone-project-selector {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  background: var(--surface);
+  cursor: pointer;
+}
+.phone-status-badge {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 500;
+  display: inline-block;
+}
+.phone-status-badge.todo { background: var(--status-todo-bg); color: var(--status-todo); }
+.phone-status-badge.progress { background: var(--status-progress-bg); color: var(--status-progress); }
+.phone-body { padding: 16px; overflow-y: auto; flex: 1; }
+.phone-section { margin-bottom: 24px; }
+.phone-section-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+.phone-desc-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-inner);
+  padding: 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* 移动端任务卡片 */
+.mobile-task {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-inner);
+  padding: 14px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow-sm);
+}
+.mobile-task-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.mobile-task-owner { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+.status-btn-group {
+  display: flex;
+  gap: 4px;
+  background: var(--surface-2);
+  padding: 3px;
+  border-radius: var(--radius-btn);
+  border: 1px solid var(--border);
+}
+.status-btn {
+  flex: 1;
+  padding: 6px 4px;
+  font-size: 12px;
+  border-radius: 4px;
+  color: var(--text-muted);
+  transition: all .15s ease;
+}
+button.status-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+.status-btn.active.todo { background: var(--status-todo); color: white; }
+.status-btn.active.progress { background: var(--status-progress); color: white; }
+.status-btn.active.done { background: var(--status-done); color: white; }
+
+/* 移动端时间线（简化） */
+.mobile-timeline { padding-left: 16px; position: relative; }
+.mobile-timeline::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: var(--border);
+}
+.mobile-timeline-item { position: relative; margin-bottom: 10px; }
+.mobile-timeline-item::before {
+  content: "";
+  position: absolute;
+  left: -13px;
+  top: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand-from);
+}
+.mobile-timeline-from { font-weight: 600; color: var(--brand-from); font-size: 12px; }
+.mobile-timeline-content { color: var(--text); font-size: 13px; }
+.mobile-timeline-time { color: var(--text-subtle); font-size: 11px; }
+
+/* 移动端留言 */
+.mobile-chat-bubble {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  align-items: flex-start;
+}
+.mobile-chat-bubble.me { flex-direction: row-reverse; }
+.mobile-chat-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.mobile-chat-content { max-width: 75%; }
+.mobile-chat-text {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px 10px 10px 2px;
+  padding: 8px 12px;
+  font-size: 13px;
+  display: inline-block;
+}
+.mobile-chat-bubble.me .mobile-chat-text {
+  background: var(--brand-gradient);
+  color: white;
+  border: none;
+  border-radius: 10px 10px 2px 10px;
+}
+.mobile-chat-input {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.mobile-chat-input input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  font-size: 13px;
+}
+.mobile-chat-input input:focus { outline: none; border-color: var(--brand-from); }
+.mobile-chat-input button {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--brand-gradient);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ========== 模态框 ========== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
+  animation: overlayIn .2s ease;
+}
+@keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+.modal-card {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  padding: 24px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: var(--shadow-lg);
+  animation: modalIn .3s var(--ease-out-expo);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+/* 模态框关闭动画：scale 1→0.9 + opacity 1→0（与入场反向） */
+@keyframes modalOut {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.9); }
+}
+.modal-card.closing { animation: modalOut .2s ease forwards; }
+.modal-overlay.closing { animation: overlayOut .2s ease forwards; }
+@keyframes overlayOut { from { opacity: 1; } to { opacity: 0; } }
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.modal-title { font-size: 18px; font-weight: 700; }
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-btn);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: var(--text-muted);
+  line-height: 1;
+  transition: all .15s ease;
+}
+.modal-close:hover { background: var(--surface-hover); color: var(--text); }
+.modal-body { margin-bottom: 24px; }
+.modal-footer { display: flex; gap: 10px; justify-content: flex-end; }
+
+.form-group { margin-bottom: 14px; }
+.form-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.form-input, .form-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  background: var(--surface);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.form-input:focus, .form-textarea:focus {
+  outline: none;
+  border-color: var(--brand-from);
+  box-shadow: var(--shadow-focus);
+}
+.form-textarea { resize: vertical; min-height: 80px; }
+
+/* 二维码模态框 */
+.qr-modal { text-align: center; }
+.qr-image {
+  display: inline-block;
+  padding: 16px;
+  background: white;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border);
+  margin: 8px 0 16px;
+}
+.qr-link-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  padding: 8px 12px;
+  margin-bottom: 16px;
+}
+.qr-link-text {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.qr-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 12px;
+  padding: 10px;
+  background: var(--surface-2);
+  border-radius: var(--radius-btn);
+  line-height: 1.5;
+}
+
+/* ========== Toast ========== */
+.toast-container {
+  position: fixed;
+  top: 80px;
+  right: 24px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  padding: 10px 16px;
+  box-shadow: var(--shadow-lg);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: toastIn .25s ease;
+  max-width: 320px;
+}
+.toast.success { border-left: 3px solid var(--status-done); }
+.toast.info { border-left: 3px solid var(--brand-from); }
+.toast.removing { animation: toastOut .2s ease forwards; }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes toastOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-20px); }
+}
+
+/* ========== 撤销 Toast（操作可撤销） ========== */
+.toast.undo {
+  border-left: 3px solid #f59e0b;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 280px;
+  position: relative;
+  overflow: hidden;
+}
+.toast-undo-btn {
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.toast-undo-btn:hover {
+  background: #f59e0b;
+  color: white;
+  border-color: #f59e0b;
+}
+.toast-undo-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: #f59e0b;
+  animation: undoCountdown 5s linear forwards;
+}
+@keyframes undoCountdown {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+/* ========== 影响力仪表盘 ========== */
+.impact-page { animation: fadeInUp .5s ease; }
+.impact-header { margin-bottom: 20px; }
+.impact-title {
+  font-size: 24px; font-weight: 700; color: var(--text); margin: 0 0 4px;
+}
+.impact-subtitle { font-size: 14px; color: var(--text-muted); }
+
+/* KPI 卡片网格 */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.kpi-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 24px;
+  transition: transform .3s var(--ease-out-expo), box-shadow .3s var(--ease-out-expo), border-color .3s var(--ease-out-expo);
+  opacity: 0;
+  animation: impactCardIn .5s ease forwards;
+}
+.kpi-card:nth-child(1) { animation-delay: 0s; }
+.kpi-card:nth-child(2) { animation-delay: .05s; }
+.kpi-card:nth-child(3) { animation-delay: .1s; }
+.kpi-card:nth-child(4) { animation-delay: .15s; }
+.kpi-card:nth-child(5) { animation-delay: .2s; }
+.kpi-card:nth-child(6) { animation-delay: .25s; }
+.kpi-card:nth-child(7) { animation-delay: .3s; }
+.kpi-card:nth-child(n+8) { animation-delay: .35s; }
+.kpi-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: var(--shadow-brand-hover);
+  border-color: var(--brand-to);
+}
+@keyframes impactCardIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.kpi-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.kpi-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--surface-2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  border: 1px solid var(--border);
+}
+.kpi-trend {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 600; color: var(--status-done);
+  background: rgba(16,185,129,.12);
+  padding: 3px 8px; border-radius: 999px;
+}
+.kpi-value {
+  font-size: 32px; font-weight: 800; line-height: 1.1;
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.kpi-label { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+/* 中部布局：环形图 + 说明 */
+.impact-mid {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) 1fr;
+  gap: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 28px;
+  margin-bottom: 28px;
+  align-items: center;
+}
+.ring-wrap {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 8px;
+}
+.ring-figure { position: relative; width: 240px; height: 240px; }
+.ring-svg { width: 240px; height: 240px; display: block; }
+.ring-center {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center; pointer-events: none;
+}
+.ring-center-value {
+  font-size: 28px; font-weight: 800; color: var(--text);
+  background: var(--brand-gradient);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.ring-center-label { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.ring-track { fill: none; stroke: var(--surface-2); stroke-width: 10; }
+.ring-bar { fill: none; stroke-width: 10; stroke-linecap: round; }
+.ring-bar-anim { animation: ringDraw 1.2s ease-out both; }
+@keyframes ringDraw {
+  from { stroke-dashoffset: var(--ring-circumference); }
+  to { stroke-dashoffset: var(--ring-offset); }
+}
+.ring-legend { display: flex; flex-direction: column; gap: 14px; }
+.ring-legend-item { display: flex; align-items: center; gap: 10px; }
+.ring-legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+.ring-legend-text { font-size: 14px; color: var(--text); }
+.ring-legend-value { font-size: 14px; font-weight: 700; color: var(--text); margin-left: auto; }
+
+/* 排行榜 */
+.impact-rank {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 24px;
+}
+.impact-rank-title { font-size: 16px; font-weight: 700; color: var(--text); margin: 0 0 16px; }
+.rank-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--border);
+}
+.rank-row:last-child { border-bottom: none; }
+.rank-index {
+  width: 24px; height: 24px; border-radius: 6px;
+  background: var(--surface-2); color: var(--text-muted);
+  font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.rank-row:nth-child(1) .rank-index { background: var(--brand-gradient); color: white; }
+.rank-name { font-size: 14px; color: var(--text); min-width: 120px; flex-shrink: 0; }
+.rank-bar {
+  flex: 1; height: 8px; border-radius: 4px;
+  background: var(--surface-2); overflow: hidden;
+}
+.rank-bar-fill {
+  height: 100%; border-radius: 4px;
+  background: var(--brand-gradient);
+  animation: rankFill 1s ease-out forwards;
+}
+@keyframes rankFill { from { width: 0; } }
+.rank-score { font-size: 14px; font-weight: 700; color: var(--text); min-width: 56px; text-align: right; }
+
+@media (max-width: 768px) {
+  .impact-mid { grid-template-columns: 1fr; }
+  .ring-figure, .ring-svg { width: 200px; height: 200px; }
+}
+
+/* ========== AI 影响力预测 ========== */
+.impact-prediction {
+  margin-top: 32px;
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+.prediction-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.prediction-header svg { flex-shrink: 0; color: var(--brand-from); }
+.prediction-header h3 {
+  flex: 1;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+.prediction-confidence {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: var(--status-done-bg);
+  color: var(--status-done);
+  white-space: nowrap;
+}
+.prediction-confidence.medium {
+  background: var(--status-progress-bg);
+  color: var(--status-progress);
+}
+.prediction-confidence.low {
+  background: var(--danger-soft-bg);
+  color: var(--danger);
+}
+.prediction-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 16px;
+}
+.prediction-card {
+  padding: 16px;
+  background: var(--surface-2);
+  border-radius: var(--radius-inner);
+  border: 1px solid var(--border);
+  animation: fadeInUp 0.5s ease both;
+  transition: transform .3s var(--ease-out-expo), box-shadow .3s var(--ease-out-expo), border-color .3s var(--ease-out-expo);
+}
+.prediction-card:nth-child(1) { animation-delay: 0s; }
+.prediction-card:nth-child(2) { animation-delay: .05s; }
+.prediction-card:nth-child(3) { animation-delay: .1s; }
+.prediction-card:nth-child(4) { animation-delay: .15s; }
+.prediction-card:nth-child(5) { animation-delay: .2s; }
+.prediction-card:nth-child(6) { animation-delay: .25s; }
+.prediction-card:nth-child(7) { animation-delay: .3s; }
+.prediction-card:nth-child(n+8) { animation-delay: .35s; }
+.prediction-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-brand-hover);
+  border-color: var(--border-strong);
+}
+.prediction-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.prediction-card-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.prediction-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.prediction-metric {
+  padding: 8px;
+  background: var(--surface);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+.prediction-metric-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.prediction-metric-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.prediction-metric-sub {
+  font-size: 10px;
+  color: var(--text-subtle);
+  margin-top: 2px;
+}
+.prediction-metric-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-2);
+  overflow: hidden;
+  margin-top: 6px;
+}
+.prediction-metric-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--brand-gradient);
+}
+.prediction-mini-ring { width: 18px; height: 18px; flex-shrink: 0; }
+.prediction-mini-ring-track { fill: none; stroke: var(--surface-2); stroke-width: 2.5; }
+.prediction-mini-ring-bar { fill: none; stroke: var(--brand-from); stroke-width: 2.5; stroke-linecap: round; }
+.prediction-factors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+.prediction-factor {
+  font-size: 10px;
+  padding: 2px 6px;
+  background: var(--surface);
+  border-radius: 4px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+.prediction-recommendation {
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  line-height: 1.4;
+  transition: filter .15s ease;
+}
+button.prediction-recommendation {
+  text-align: left;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  width: 100%;
+}
+button.prediction-recommendation:disabled {
+  opacity: .55;
+  cursor: default;
+}
+button.prediction-recommendation:disabled:hover { filter: none; }
+.prediction-recommendation:hover { filter: brightness(0.97); }
+.prediction-recommendation.adopted { opacity: .55; cursor: default; }
+.prediction-recommendation.adopted:hover { filter: none; }
+.prediction-recommendation .adopt-mark { display: none; }
+.prediction-recommendation.adopted .adopt-mark { display: inline; color: var(--status-done); font-weight: 700; }
+.prediction-recommendation.healthy {
+  background: var(--status-done-bg);
+  color: var(--status-done);
+}
+.prediction-recommendation.warning {
+  background: var(--status-progress-bg);
+  color: var(--status-progress);
+}
+.prediction-recommendation.danger {
+  background: var(--danger-soft-bg);
+  color: var(--danger);
+}
+.prediction-recommendation-icon { flex-shrink: 0; font-weight: 700; }
+.prediction-recommendation-text { flex: 1; }
+.prediction-recommendation-adopt {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(255,255,255,.55);
+}
+.prediction-empty {
+  padding: 18px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  background: var(--surface);
+  border-radius: 6px;
+  border: 1px dashed var(--border);
+}
+.prediction-skeleton {
+  height: 200px;
+  border-radius: var(--radius-inner);
+  background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-hover) 50%, var(--surface-2) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@media (max-width: 768px) {
+  .prediction-grid { grid-template-columns: 1fr; }
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 768px) {
+  .kanban { grid-template-columns: 1fr; }
+  .topbar-inner { padding: 0 16px; height: auto; flex-wrap: wrap; padding-top: 10px; padding-bottom: 10px; }
+  .main { padding: 16px; }
+  .brand-sub { display: none; }
+  .tab-btn { padding: 6px 10px; font-size: 13px; }
+  .detail-title { font-size: 20px; }
+  .phone-frame { width: 100%; border-radius: 20px; padding: 8px; }
+  .toast-container { right: 16px; left: 16px; top: 70px; }
+  .toast { max-width: none; }
+}
+
+/* ========== Onboarding Tour（首次使用引导） ========== */
+.onboarding-overlay {
+  position: fixed; inset: 0; z-index: 9998; pointer-events: auto; background: transparent;
+}
+.onboarding-highlight {
+  position: fixed; border-radius: 10px;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.55), 0 0 0 3px var(--brand-to);
+  transition: left 0.35s var(--ease-out-expo), top 0.35s var(--ease-out-expo), width 0.35s var(--ease-out-expo), height 0.35s var(--ease-out-expo);
+  z-index: 9999; pointer-events: none;
+}
+.onboarding-highlight.no-transition { transition: none; }
+.onboarding-tooltip {
+  position: fixed; z-index: 10000;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 18px 20px; width: 320px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.28);
+  animation: tooltipIn 0.32s var(--ease-out-expo);
+  transition: left 0.35s var(--ease-out-expo), top 0.35s var(--ease-out-expo);
+}
+.onboarding-tooltip.no-transition { transition: none; }
+@keyframes tooltipIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.onboarding-step {
+  font-size: 11px; font-weight: 700; color: var(--brand-to);
+  text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;
+}
+.onboarding-title {
+  font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px;
+}
+.onboarding-desc {
+  font-size: 13px; color: var(--text-muted); line-height: 1.55; margin-bottom: 16px;
+}
+.onboarding-actions {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.onboarding-progress { font-size: 12px; color: var(--text-subtle); }
+.onboarding-btns { display: flex; gap: 8px; }
+.onboarding-btn-skip {
+  padding: 7px 14px; border-radius: var(--radius-btn); font-size: 13px;
+  color: var(--text-muted); border: 1px solid var(--border);
+  background: transparent; transition: all 0.18s var(--ease-out-expo);
+}
+.onboarding-btn-skip:hover { color: var(--text); background: var(--surface-hover); }
+.onboarding-btn-next {
+  padding: 7px 16px; border-radius: var(--radius-btn); font-size: 13px; font-weight: 600;
+  color: #fff; background: var(--brand-gradient); border: none;
+  transition: all 0.18s var(--ease-out-expo);
+}
+.onboarding-btn-next:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(13,148,136,0.35); }
+.help-btn {
+  width: 36px; height: 36px; border-radius: var(--radius-btn);
+  display: grid; place-items: center;
+  font-size: 15px; font-weight: 700; color: var(--text-muted);
+  border: 1px solid var(--border); background: var(--surface);
+  transition: all 0.18s var(--ease-out-expo);
+}
+.help-btn:hover { color: var(--brand-to); border-color: var(--brand-to); }
+
+/* 屏幕阅读器专用：视觉上隐藏但可被辅助技术朗读 */
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .toast-undo-progress { animation-duration: 5s !important; }
+  .prediction-skeleton { animation-duration: 1.5s !important; animation-iteration-count: infinite !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== 顶部导航栏 ========== -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-logo">V</div>
+      <div class="brand-text">
+        <span class="brand-name">Bridge</span>
+        <span class="brand-sub">公益项目交接平台</span>
+      </div>
+    </div>
+    <div class="topbar-actions-wrapper">
+      <div class="topbar-actions" role="tablist" aria-label="主导航">
+        <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="view-projects" data-tab="admin" id="tab-admin" type="button">📋 管理后台</button>
+        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="view-impact" data-tab="impact" id="tab-impact" type="button">📊 影响力</button>
+        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="view-mobile" data-tab="mobile" id="tab-mobile" type="button">📱 志愿者视角</button>
+      </div>
+      <button class="help-btn" id="help-btn" title="查看使用引导" aria-label="查看使用引导" type="button">?</button>
+      <button class="theme-toggle" id="theme-toggle" title="切换主题" aria-label="切换深浅色主题" aria-pressed="false" type="button"><span aria-hidden="true">🌙</span></button>
+    </div>
+  </div>
+</header>
+
+<!-- ========== 主内容区 ========== -->
+<main class="main">
+  <!-- 视图1：项目列表 -->
+  <section id="view-projects" class="view active" role="tabpanel" aria-labelledby="tab-admin" aria-label="项目列表"></section>
+  <!-- 视图2：项目详情 -->
+  <section id="view-detail" class="view" role="tabpanel" aria-labelledby="tab-admin" aria-label="项目详情" hidden></section>
+  <!-- 视图3：志愿者H5 -->
+  <section id="view-mobile" class="view" role="tabpanel" aria-labelledby="tab-mobile" aria-label="志愿者移动端" hidden></section>
+  <!-- 视图4：影响力仪表盘 -->
+  <section id="view-impact" class="view" role="tabpanel" aria-labelledby="tab-impact" aria-label="影响力仪表盘" hidden></section>
+</main>
+
+<!-- 模态框容器 -->
+<div id="modal-root"></div>
+<!-- Toast 容器 -->
+<div id="toast-root" class="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+<script>
+/* ============================================================
+ * Vannevar Bridge · 公益项目交接平台 · 交互逻辑
+ * 单文件实现，所有视图与状态由 JS 驱动
+ * ============================================================ */
+
+/* ========== 模拟数据 ========== */
+const PROJECTS = [
+  {
+    id: 'p1',
+    name: '社区花园改造计划',
+    description: '将社区闲置空地改造成共享花园，由志愿者共同维护，为居民提供亲近自然的公共空间。',
+    updatedAt: '2小时前',
+    tasks: [
+      { id: 't1', title: '清理场地垃圾与杂草', owner: '小李', status: 'done' },
+      { id: 't2', title: '绘制花园改造草图', owner: '小王', status: 'done' },
+      { id: 't3', title: '采购土壤和种子', owner: '小李', status: 'in_progress' },
+      { id: 't4', title: '搭建花坛框架', owner: '小张', status: 'todo' },
+      { id: 't5', title: '种植花卉和蔬菜', owner: '小陈', status: 'todo' }
+    ],
+    handovers: [
+      { id: 'h1', from: '小李', to: '小张', content: '第一批土壤和种子已到位，注意周二浇水。', time: '2天前' },
+      { id: 'h2', from: '小王', to: '小李', content: '花坛位置已确定，在社区中心南侧阳光最充足的区域。', time: '5天前' }
+    ],
+    messages: [
+      { id: 'm1', author: '小李', content: '下周六上午9点开始种植，欢迎志愿者参加。', time: '1小时前', me: false },
+      { id: 'm2', author: '小张', content: '我会带浇水工具过来，顺便多带几把铲子。', time: '30分钟前', me: false },
+      { id: 'm3', author: '小王', content: '我可以帮忙联系社区做宣传，让更多居民知道。', time: '15分钟前', me: false }
+    ]
+  },
+  {
+    id: 'p2',
+    name: '山区图书角建设',
+    description: '为偏远山区小学搭建图书角，募集适龄读物，培养孩子们的阅读习惯，打开看世界的窗口。',
+    updatedAt: '昨天',
+    tasks: [
+      { id: 't1', title: '确定合作学校名单', owner: '林老师', status: 'done' },
+      { id: 't2', title: '制定项目预算', owner: '陈会计', status: 'done' },
+      { id: 't3', title: '发起线上募捐', owner: '小周', status: 'done' },
+      { id: 't4', title: '收集捐赠图书', owner: '小周', status: 'in_progress' },
+      { id: 't5', title: '布置图书角', owner: '林老师', status: 'in_progress' },
+      { id: 't6', title: '采购书架', owner: '陈会计', status: 'todo' },
+      { id: 't7', title: '联系学校负责人对接', owner: '小周', status: 'todo' },
+      { id: 't8', title: '制定借阅规则', owner: '林老师', status: 'todo' }
+    ],
+    handovers: [
+      { id: 'h1', from: '小周', to: '林老师', content: '已收到 300 本捐赠图书，按年龄段分类打包好了。', time: '昨天' },
+      { id: 'h2', from: '陈会计', to: '小周', content: '书架采购预算已审批，可在周五前下单。', time: '3天前' }
+    ],
+    messages: [
+      { id: 'm1', author: '林老师', content: '孩子们看到新书特别开心，谢谢大家。', time: '昨天', me: false },
+      { id: 'm2', author: '小周', content: '下一批图书下周能到，请学校预留摆放空间。', time: '昨天', me: false }
+    ]
+  },
+  {
+    id: 'p3',
+    name: '独居老人陪伴计划',
+    description: '组织志愿者定期探访社区独居老人，陪他们聊天、帮忙买菜、检查用电安全，让关怀不缺席。',
+    updatedAt: '3天前',
+    tasks: [
+      { id: 't1', title: '联系社区获取老人名单', owner: '社工小刘', status: 'done' },
+      { id: 't2', title: '招募陪伴志愿者', owner: '社工小刘', status: 'done' },
+      { id: 't3', title: '制定每周探访排班表', owner: '社工小刘', status: 'done' },
+      { id: 't4', title: '准备探访物资包', owner: '社工小刘', status: 'done' }
+    ],
+    handovers: [
+      { id: 'h1', from: '社工小刘', to: '志愿者团队', content: '王奶奶家需要重点关注，她腿脚不太方便。', time: '3天前' }
+    ],
+    messages: [
+      { id: 'm1', author: '社工小刘', content: '本周探访已完成 5 户，老人们都很开心。', time: '3天前', me: false }
+    ]
+  }
+];
+
+/* ========== 运行时状态 ========== */
+let state = {
+  view: 'projects',          // 当前视图：projects | detail | mobile
+  adminTab: 'projects',      // 管理后台子视图：projects | detail
+  currentProjectId: null,    // 详情视图当前项目
+  mobileProjectId: 'p1',     // H5 视图当前项目
+  searchKeyword: '',         // 项目搜索关键词
+  sortBy: 'updated',         // 项目排序方式：updated | tasks | completion
+  taskFilter: 'all',         // 任务筛选负责人：'all' 或具体负责人名
+  movedTaskId: null,         // 刚刚切换状态的任务（用于动画）
+  nextTaskId: 100,           // 任务 id 自增起点
+  nextProjectId: 100,        // 项目 id 自增起点
+  mobileChatDrafts: {},      // 移动端留言草稿（按 projectId 索引）
+  detailChatDrafts: {}       // 详情页留言草稿（按 projectId 索引）
+};
+let projectsSkeletonShown = false; // 项目列表骨架屏只显示一次
+let impactPredictionTimer = null; // renderImpact 的 AI 预测 setTimeout 句柄
+let lastImpactKPIs = null;        // 上一次影响力 KPI 快照，用于计算趋势
+
+/* ========== DOM 引用 ========== */
+const elProjects = document.getElementById('view-projects');
+const elDetail = document.getElementById('view-detail');
+const elMobile = document.getElementById('view-mobile');
+const elImpact = document.getElementById('view-impact');
+const elModalRoot = document.getElementById('modal-root');
+const elToastRoot = document.getElementById('toast-root');
+let lastFocusedBeforeModal = null;
+
+/* ========== 工具函数 ========== */
+
+// 生成项目二维码链接
+function projectLink(p) {
+  return 'https://bridge.vannevar.org/p/' + p.id;
+}
+
+// 根据姓名生成稳定的头像颜色（读取 CSS token）
+function avatarColor(name) {
+  const palette = [
+    'var(--avatar-1)', 'var(--avatar-2)', 'var(--avatar-3)', 'var(--avatar-4)',
+    'var(--avatar-5)', 'var(--avatar-6)', 'var(--avatar-7)', 'var(--avatar-8)'
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    hash |= 0;
+  }
+  return palette[Math.abs(hash) % palette.length];
+}
+
+// 姓名首字作为头像文字
+function avatarText(name) {
+  return name ? name.charAt(0) : '?';
+}
+
+// 状态文案映射
+const STATUS_LABEL = { todo: '待办', in_progress: '进行中', done: '已完成' };
+const STATUS_SHORT = { todo: '待办', in_progress: '进行中', done: '完成' };
+const STATUS_CLASS = { todo: 'todo', in_progress: 'progress', done: 'done' };
+
+// 统计项目各状态任务数
+function countTasks(project) {
+  const counts = { todo: 0, in_progress: 0, done: 0 };
+  project.tasks.forEach(t => { counts[t.status] = (counts[t.status] || 0) + 1; });
+  return counts;
+}
+
+// 将相对时间文案（如"2小时前"）转换为可比较的小时数，越小表示越新
+function updatedAtScore(s) {
+  if (!s) return Infinity;
+  s = String(s);
+  if (s.indexOf('刚刚') >= 0) return 0;
+  if (s.indexOf('分钟前') >= 0) {
+    const m = parseInt(s, 10);
+    return (isNaN(m) ? 60 : m) / 60;
+  }
+  if (s.indexOf('小时前') >= 0) {
+    const h = parseInt(s, 10);
+    return isNaN(h) ? 1 : h;
+  }
+  if (s.indexOf('昨天') >= 0) return 24;
+  if (s.indexOf('天前') >= 0) {
+    const d = parseInt(s, 10);
+    return isNaN(d) ? 24 : d * 24;
+  }
+  if (s.indexOf('周前') >= 0) {
+    const w = parseInt(s, 10);
+    return isNaN(w) ? 168 : w * 168;
+  }
+  return Infinity;
+}
+
+// 按 id 查找项目
+function findProject(id) {
+  return PROJECTS.find(p => p.id === id);
+}
+
+/* ========== Toast ========== */
+function showToast(message, type) {
+  type = type || 'success';
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.setAttribute('role', type === 'error' ? 'alert' : 'status');
+  const icon = type === 'success' ? '✓' : (type === 'error' ? '✕' : 'ℹ');
+  el.innerHTML = '<span style="font-weight:600">' + icon + '</span><span>' + escapeHtml(message) + '</span>';
+  elToastRoot.appendChild(el);
+  // 2.2 秒后自动移除
+  setTimeout(function () {
+    el.classList.add('removing');
+    setTimeout(function () { el.remove(); }, 200);
+  }, 2200);
+}
+
+/* ========== 撤销 Toast（带撤销按钮，5 秒倒计时） ========== */
+let undoToastTimer = null;
+let undoToastEl = null;
+function undoToast(message, undoCallback, undoConfirmMessage) {
+  if (!undoConfirmMessage) undoConfirmMessage = '已撤销';
+  // 同一时刻只允许一个 undo toast：新的 undo 操作会取消旧的（旧操作视为确认）
+  if (undoToastTimer) {
+    clearTimeout(undoToastTimer);
+    undoToastTimer = null;
+  }
+  if (undoToastEl && undoToastEl.parentNode) {
+    undoToastEl.remove();
+    undoToastEl = null;
+  }
+
+  const t = document.createElement('div');
+  t.className = 'toast undo';
+  t.setAttribute('role', 'status');
+  t.innerHTML = '<span>' + escapeHtml(message) + '</span><button class="toast-undo-btn" type="button">撤销</button><div class="toast-undo-progress"></div>';
+  elToastRoot.appendChild(t);
+  undoToastEl = t;
+
+  const undoBtn = t.querySelector('.toast-undo-btn');
+  undoBtn.addEventListener('click', function () {
+    clearTimeout(undoToastTimer);
+    undoToastTimer = null;
+    t.classList.add('removing');
+    setTimeout(function () { t.remove(); }, 200);
+    undoToastEl = null;
+    if (typeof undoCallback === 'function') {
+      var undoResult = undoCallback();
+      // undoCallback 返回 false 表示撤销失败（已自行提示），跳过"已撤销"成功 toast 避免语义冲突
+      if (undoResult !== false) showToast(undoConfirmMessage, 'success');
+    }
+  });
+
+  // 5 秒后自动消失（确认删除，不执行 undoCallback）
+  undoToastTimer = setTimeout(function () {
+    t.classList.add('removing');
+    setTimeout(function () {
+      t.remove();
+      if (undoToastEl === t) undoToastEl = null;
+    }, 200);
+    undoToastTimer = null;
+  }, 5000);
+}
+
+/* ========== HTML 转义 ========== */
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/* ========== 模态框 ========== */
+function showModal(contentHtml) {
+  lastFocusedBeforeModal = document.activeElement;
+  elModalRoot.innerHTML = '<div class="modal-overlay" id="modal-overlay">' + contentHtml + '</div>';
+  const overlay = document.getElementById('modal-overlay');
+  // 点击遮罩关闭
+  overlay.addEventListener('click', function (e) {
+    if (e.target === overlay) closeModal();
+  });
+  // Tab 焦点陷阱
+  overlay.addEventListener('keydown', e => {
+    if (e.key !== 'Tab') return;
+    e.preventDefault();
+    e.stopPropagation();
+    const focusables = overlay.querySelectorAll('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (focusables.length === 0) return;
+    const idx = Array.from(focusables).indexOf(document.activeElement);
+    const next = e.shiftKey ? (idx <= 0 ? focusables[focusables.length-1] : focusables[idx-1]) : (idx >= focusables.length-1 ? focusables[0] : focusables[idx+1]);
+    if (next) next.focus();
+  });
+  // 焦点管理：打开后聚焦到模态框内第一个可交互元素
+  const modal = overlay.querySelector('.modal-card');
+  if (modal) {
+    const focusable = modal.querySelector('button, input, select, textarea, [tabindex]');
+    if (focusable) setTimeout(function () { focusable.focus(); }, 50);
+  }
+}
+
+function closeModal() {
+  const overlay = document.getElementById('modal-overlay');
+  if (!overlay) {
+    elModalRoot.innerHTML = '';
+    return;
+  }
+  const card = overlay.querySelector('.modal-card');
+  if (card) card.classList.add('closing');
+  overlay.classList.add('closing');
+  // 等待关闭动画（modalOut .2s）完成再清空 DOM
+  // 期间若重新打开了模态框（overlay 已被替换），则不清空，避免误删新模态框
+  const overlayRef = overlay;
+  setTimeout(function () {
+    if (overlayRef.isConnected && overlayRef.classList.contains('closing')) {
+      elModalRoot.innerHTML = '';
+      if (lastFocusedBeforeModal) lastFocusedBeforeModal.focus();
+    }
+  }, 200);
+}
+
+// ESC 关闭模态框
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && document.getElementById('modal-overlay')) closeModal();
+});
+
+/* ========== 视图切换 ========== */
+function switchView(viewName) {
+  state.view = viewName;
+  // 切换到非 impact 视图时清理 AI 预测定时器，避免过期回调操作失效 DOM
+  if (viewName !== 'impact' && impactPredictionTimer) {
+    clearTimeout(impactPredictionTimer);
+    impactPredictionTimer = null;
+  }
+  elProjects.classList.remove('active');
+  elDetail.classList.remove('active');
+  elMobile.classList.remove('active');
+  elImpact.classList.remove('active');
+  elProjects.hidden = true;
+  elDetail.hidden = true;
+  elMobile.hidden = true;
+  elImpact.hidden = true;
+
+  if (viewName === 'projects') {
+    renderProjectList();
+    elProjects.classList.add('active');
+    elProjects.hidden = false;
+    // 管理后台 tab 高亮
+    setTabSelected('tab-admin', true);
+    setTabSelected('tab-mobile', false);
+    setTabSelected('tab-impact', false);
+    document.getElementById('tab-admin').classList.add('active');
+    document.getElementById('tab-mobile').classList.remove('active');
+    document.getElementById('tab-impact').classList.remove('active');
+  } else if (viewName === 'detail') {
+    renderProjectDetail();
+    elDetail.classList.add('active');
+    elDetail.hidden = false;
+    setTabSelected('tab-admin', true);
+    setTabSelected('tab-mobile', false);
+    setTabSelected('tab-impact', false);
+    document.getElementById('tab-admin').classList.add('active');
+    document.getElementById('tab-mobile').classList.remove('active');
+    document.getElementById('tab-impact').classList.remove('active');
+  } else if (viewName === 'mobile') {
+    renderMobile();
+    elMobile.classList.add('active');
+    elMobile.hidden = false;
+    setTabSelected('tab-admin', false);
+    setTabSelected('tab-mobile', true);
+    setTabSelected('tab-impact', false);
+    document.getElementById('tab-admin').classList.remove('active');
+    document.getElementById('tab-mobile').classList.add('active');
+    document.getElementById('tab-impact').classList.remove('active');
+  } else if (viewName === 'impact') {
+    renderImpact();
+    elImpact.classList.add('active');
+    elImpact.hidden = false;
+    setTabSelected('tab-admin', false);
+    setTabSelected('tab-mobile', false);
+    setTabSelected('tab-impact', true);
+    document.getElementById('tab-admin').classList.remove('active');
+    document.getElementById('tab-mobile').classList.remove('active');
+    document.getElementById('tab-impact').classList.add('active');
+  }
+}
+
+function setTabSelected(id, selected) {
+  const tab = document.getElementById(id);
+  if (tab) tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+}
+
+/* ========== 视图1：项目列表 ========== */
+function renderProjectList() {
+  const keyword = state.searchKeyword.trim().toLowerCase();
+  const filtered = PROJECTS.filter(function (p) {
+    if (!keyword) return true;
+    return p.name.toLowerCase().indexOf(keyword) >= 0 || p.description.toLowerCase().indexOf(keyword) >= 0;
+  });
+
+  // 先过滤再排序
+  const sorted = filtered.slice().sort(function (a, b) {
+    if (state.sortBy === 'tasks') {
+      return b.tasks.length - a.tasks.length;
+    }
+    if (state.sortBy === 'completion') {
+      const ra = a.tasks.length ? countTasks(a).done / a.tasks.length : 0;
+      const rb = b.tasks.length ? countTasks(b).done / b.tasks.length : 0;
+      return rb - ra;
+    }
+    // 默认按更新时间降序（最新的在前）
+    return updatedAtScore(a.updatedAt) - updatedAtScore(b.updatedAt);
+  });
+
+  let html = '';
+  html += '<div class="page-header">';
+  html += '  <h1 class="page-title">项目列表</h1>';
+  html += '  <div class="search-box">';
+  html += '    <svg class="search-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>';
+  html += '    <label for="search-input" class="visually-hidden">搜索项目</label>';
+  html += '    <input type="text" id="search-input" placeholder="搜索项目…" aria-label="搜索项目" value="' + escapeHtml(state.searchKeyword) + '">';
+  html += '  </div>';
+  html += '  <select class="sort-select" id="sort-select" aria-label="排序方式">';
+  html += '    <option value="updated"' + (state.sortBy === 'updated' ? ' selected' : '') + '>按更新时间</option>';
+  html += '    <option value="tasks"' + (state.sortBy === 'tasks' ? ' selected' : '') + '>按任务数</option>';
+  html += '    <option value="completion"' + (state.sortBy === 'completion' ? ' selected' : '') + '>按完成率</option>';
+  html += '  </select>';
+  html += '  <button class="btn-primary" id="new-project-btn" type="button">+ 新建项目</button>';
+  html += '</div>';
+
+  // 首次进入项目列表：显示 4 个骨架卡片 600ms 后渲染真实内容
+  if (!projectsSkeletonShown) {
+    projectsSkeletonShown = true;
+    html += '<div class="skel-grid">';
+    for (let i = 0; i < 4; i++) {
+      html += '<div class="skel-card"><div class="skel-bar title"></div><div class="skel-bar desc"></div><div class="skel-bar desc short"></div><div class="skel-bar badge"></div></div>';
+    }
+    html += '</div>';
+    elProjects.innerHTML = html;
+    bindProjectListEvents();
+    setTimeout(renderProjectList, 600);
+    return;
+  }
+
+  if (filtered.length === 0) {
+    const isSearching = keyword.length > 0;
+    html += '<div class="empty-state">';
+    if (isSearching) {
+      // 搜索无结果：显示匹配关键词的提示
+      html += '  <div class="empty-state-icon" aria-hidden="true">🔍</div>';
+      html += '  <div class="empty-state-text">未找到匹配「' + escapeHtml(state.searchKeyword) + '」的项目</div>';
+    } else {
+      // 真正无项目：显示创建引导插画
+      html += '  <div class="empty-illustration" aria-hidden="true">';
+      html += '    <svg width="80" height="80" viewBox="0 0 80 80" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
+      html += '      <path class="bridge-deck" d="M8 50 Q 24 38 40 50 T 72 50" fill="none"/>';
+      html += '      <line x1="14" y1="50" x2="14" y2="68"/>';
+      html += '      <line x1="66" y1="50" x2="66" y2="68"/>';
+      html += '      <line x1="40" y1="44" x2="40" y2="68"/>';
+      html += '    </svg>';
+      html += '  </div>';
+      html += '  <div class="empty-state-text">还没有项目，创建第一个吧</div>';
+    }
+    html += '</div>';
+  } else {
+    html += '<div class="project-grid">';
+    sorted.forEach(function (p) {
+      const counts = countTasks(p);
+      html += '<button class="project-card' + (p.riskLevel === 'high' ? ' risk-high' : '') + '" type="button" data-project-id="' + p.id + '">';
+      html += '  <div class="project-card-name">' + escapeHtml(p.name);
+      if (p.riskLevel === 'high') {
+        html += '    <span style="background:var(--danger-soft-bg); color:var(--danger); padding:2px 8px; border-radius:4px; font-size:12px; font-weight:600; margin-left:8px; vertical-align:middle;"><span aria-hidden="true">⚠</span> 高风险</span>';
+      }
+      html += '</div>';
+      html += '  <div class="project-card-desc">' + escapeHtml(p.description) + '</div>';
+      html += '  <div class="project-card-footer">';
+      html += '    <div class="task-badges">';
+      html += '      <span class="task-badge todo">待办 ' + counts.todo + '</span>';
+      html += '      <span class="task-badge progress">进行中 ' + counts.in_progress + '</span>';
+      html += '      <span class="task-badge done">完成 ' + counts.done + '</span>';
+      html += '    </div>';
+      html += '    <span class="project-card-time">更新于 ' + escapeHtml(p.updatedAt) + '</span>';
+      html += '  </div>';
+      html += '</button>';
+    });
+    html += '</div>';
+  }
+
+  elProjects.innerHTML = html;
+  bindProjectListEvents();
+}
+
+// 项目列表事件绑定（头部 + 卡片 + 涟漪）
+function bindProjectListEvents() {
+  // 绑定搜索框
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) {
+    let isComposing = false;
+    searchInput.addEventListener('compositionstart', function () { isComposing = true; });
+    searchInput.addEventListener('compositionend', function (e) {
+      isComposing = false;
+      state.searchKeyword = e.target.value;
+      renderProjectList();
+      const newInput = document.getElementById('search-input');
+      newInput.focus();
+      newInput.setSelectionRange(e.target.selectionStart, e.target.selectionEnd);
+    });
+    let searchTimer = null;
+    searchInput.addEventListener('input', function (e) {
+      if (isComposing) return;
+      // 150ms 防抖，避免快速输入时频繁重渲染
+      if (searchTimer) clearTimeout(searchTimer);
+      const selStart = e.target.selectionStart;
+      const selEnd = e.target.selectionEnd;
+      searchTimer = setTimeout(function () {
+        searchTimer = null;
+        // 元素已被重渲染替换则放弃本次（防止陈旧 timer 误触发）
+        if (!searchInput.isConnected) return;
+        state.searchKeyword = searchInput.value;
+        renderProjectList();
+        // 保持焦点与光标位置
+        const newInput = document.getElementById('search-input');
+        if (newInput) {
+          newInput.focus();
+          newInput.setSelectionRange(selStart, selEnd);
+        }
+      }, 150);
+    });
+  }
+
+  // 绑定新建项目（含涟漪反馈）
+  const newProjectBtn = document.getElementById('new-project-btn');
+  if (newProjectBtn) {
+    newProjectBtn.addEventListener('click', showNewProjectModal);
+    attachRipple(newProjectBtn);
+  }
+
+  // 绑定排序下拉框
+  const sortSelect = document.getElementById('sort-select');
+  if (sortSelect) {
+    sortSelect.addEventListener('change', function (e) {
+      state.sortBy = e.target.value;
+      renderProjectList();
+    });
+  }
+
+  // 绑定项目卡片点击 → 进入详情
+  document.querySelectorAll('.project-card').forEach(function (card) {
+    card.addEventListener('click', function () {
+      const pid = card.getAttribute('data-project-id');
+      state.currentProjectId = pid;
+      state.taskFilter = 'all'; // 切换项目时重置任务筛选
+      switchView('detail');
+    });
+  });
+}
+
+// 按钮点击涟漪效果（不影响原有 click 事件）
+function attachRipple(btn) {
+  if (!btn) return;
+  btn.addEventListener('click', function (e) {
+    const rect = btn.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    const x = (e.clientX || rect.left + rect.width / 2) - rect.left - size / 2;
+    const y = (e.clientY || rect.top + rect.height / 2) - rect.top - size / 2;
+    const ripple = document.createElement('span');
+    ripple.className = 'ripple';
+    ripple.style.width = ripple.style.height = size + 'px';
+    ripple.style.left = x + 'px';
+    ripple.style.top = y + 'px';
+    btn.appendChild(ripple);
+    setTimeout(function () { ripple.remove(); }, 600);
+  });
+}
+
+/* ========== 新建项目模态框 ========== */
+function showNewProjectModal() {
+  const html = '<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title-new">' +
+    '<div class="modal-header">' +
+    '  <h2 class="modal-title" id="modal-title-new">新建项目</h2>' +
+    '  <button class="modal-close" id="modal-close" aria-label="关闭" type="button">×</button>' +
+    '</div>' +
+    '<div class="modal-body">' +
+    '  <div class="form-group">' +
+    '    <label class="form-label" for="np-name">项目名称</label>' +
+    '    <input type="text" class="form-input" id="np-name" placeholder="例如：社区环保宣讲活动" aria-required="true">' +
+    '  </div>' +
+    '  <div class="form-group">' +
+    '    <label class="form-label" for="np-desc">项目描述</label>' +
+    '    <textarea class="form-textarea" id="np-desc" placeholder="简要描述项目目标与意义…"></textarea>' +
+    '  </div>' +
+    '</div>' +
+    '<div class="modal-footer">' +
+    '  <button class="btn-ghost" id="np-cancel" type="button">取消</button>' +
+    '  <button class="btn-primary" id="np-confirm" type="button">确认创建</button>' +
+    '</div>' +
+    '</div>';
+
+  showModal(html);
+
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  document.getElementById('np-cancel').addEventListener('click', closeModal);
+  document.getElementById('np-confirm').addEventListener('click', function () {
+    const name = document.getElementById('np-name').value.trim();
+    const desc = document.getElementById('np-desc').value.trim();
+    if (!name) {
+      showToast('请输入项目名称', 'info');
+      return;
+    }
+    const newProject = {
+      id: 'p' + (state.nextProjectId++),
+      name: name,
+      description: desc || '暂无描述',
+      updatedAt: '刚刚',
+      createdAt: Date.now(),       // 真实创建时间戳，用于 estimateRunDays 准确计算
+      beneficiaries: 100,          // 新项目默认受益人数 100，避免 IMPACT_BENEFICIARIES 查不到导致回退 0
+      tasks: [],
+      handovers: [],
+      messages: []
+    };
+    PROJECTS.unshift(newProject);
+    state.searchKeyword = '';
+    closeModal();
+    renderProjectList();
+    showToast('项目已创建');
+  });
+
+  // 自动聚焦名称输入框
+  setTimeout(function () { document.getElementById('np-name').focus(); }, 50);
+}
+
+/* ========== 视图2：项目详情 ========== */
+function renderProjectDetail() {
+  const project = findProject(state.currentProjectId);
+  if (!project) {
+    switchView('projects');
+    return;
+  }
+
+  const counts = countTasks(project);
+  let html = '';
+
+  // 标题区
+  html += '<div class="detail-header">';
+  html += '  <div class="detail-title-block">';
+  html += '    <button class="detail-back" id="detail-back" type="button">← 返回项目列表</button>';
+  html += '    <h1 class="detail-title">' + escapeHtml(project.name) + '</h1>';
+  if (project.riskLevel === 'high') {
+    html += '    <span style="background:var(--danger-soft-bg); color:var(--danger); padding:2px 8px; border-radius:4px; font-size:12px; font-weight:600; margin-left:8px; vertical-align:middle; display:inline-block;"><span aria-hidden="true">⚠</span> 高风险</span>';
+  }
+  html += '    <p class="detail-desc">' + escapeHtml(project.description) + '</p>';
+  html += '  </div>';
+  html += '  <div class="detail-actions">';
+  html += '    <button class="btn-ghost" id="impact-btn" type="button">📊 查看影响力预测</button>';
+  html += '    <button class="btn-ghost" id="qr-btn" type="button">🔳 二维码</button>';
+  html += '    <button class="btn-danger" id="delete-btn" type="button">删除</button>';
+  html += '  </div>';
+  html += '</div>';
+
+  // 任务筛选栏（按负责人筛选）
+  const owners = [];
+  project.tasks.forEach(function (t) {
+    if (owners.indexOf(t.owner) < 0) owners.push(t.owner);
+  });
+  html += '<div class="task-filter-bar" id="task-filter-bar" role="radiogroup" aria-label="按负责人筛选">';
+  html += '  <span class="filter-label">筛选负责人：</span>';
+  const allSelected = state.taskFilter === 'all';
+  html += '  <button class="filter-chip' + (allSelected ? ' active' : '') + '" data-owner="all" type="button" role="radio" aria-checked="' + allSelected + '" tabindex="' + (allSelected ? '0' : '-1') + '">全部</button>';
+  owners.forEach(function (owner) {
+    const selected = state.taskFilter === owner;
+    html += '  <button class="filter-chip' + (selected ? ' active' : '') + '" data-owner="' + escapeHtml(owner) + '" type="button" role="radio" aria-checked="' + selected + '" tabindex="' + (selected ? '0' : '-1') + '">' + escapeHtml(owner) + '</button>';
+  });
+  html += '</div>';
+
+  // 任务看板
+  html += '<div class="section-label">任务看板</div>';
+  html += '<div class="kanban">';
+  html += renderKanbanColumn(project, 'todo', '待办', counts.todo);
+  html += renderKanbanColumn(project, 'in_progress', '进行中', counts.in_progress);
+  html += renderKanbanColumn(project, 'done', '已完成', counts.done);
+  html += '</div>';
+
+  // 交接记录
+  html += '<div class="section-block">';
+  html += '  <div class="section-label">交接记录</div>';
+  html += '  <h2 class="section-title">交接记录</h2>';
+  if (project.handovers.length === 0) {
+    html += '  <div class="empty-state"><div class="empty-state-text">暂无交接记录</div></div>';
+  } else {
+    html += '  <div class="timeline">';
+    project.handovers.forEach(function (h) {
+      html += '  <div class="timeline-item">';
+      html += '    <div class="timeline-card">';
+      html += '      <div class="timeline-from">' + escapeHtml(h.from) + ' → ' + escapeHtml(h.to) + '</div>';
+      html += '      <div class="timeline-content">' + escapeHtml(h.content) + '</div>';
+      html += '      <div class="timeline-time">' + escapeHtml(h.time) + '</div>';
+      html += '    </div>';
+      html += '  </div>';
+    });
+    html += '  </div>';
+  }
+  html += '</div>';
+
+  // 协作留言
+  html += '<div class="section-block">';
+  html += '  <div class="section-label">协作留言</div>';
+  html += '  <h2 class="section-title">协作留言</h2>';
+  html += '  <div class="chat-list" id="chat-list">';
+  if (project.messages.length === 0) {
+    html += '  <div class="empty-state" style="padding:24px 12px"><div class="empty-state-text">暂无留言，开始第一段对话吧</div></div>';
+  } else {
+    project.messages.forEach(function (m) {
+      html += renderChatBubble(m);
+    });
+  }
+  html += '  </div>';
+  html += '  <div class="chat-input">';
+  html += '    <label for="chat-input-field" class="visually-hidden">输入留言</label>';
+  html += '    <input type="text" id="chat-input-field" placeholder="输入留言，与志愿者协作…" aria-label="输入留言">';
+  html += '    <button id="chat-send-btn" type="button">发送</button>';
+  html += '  </div>';
+  html += '</div>';
+
+  elDetail.innerHTML = html;
+
+  // 回填留言草稿（避免切换任务状态等重渲染时丢失输入）
+  const detailChatInput = document.getElementById('chat-input-field');
+  if (detailChatInput) detailChatInput.value = state.detailChatDrafts[project.id] || '';
+
+  // 绑定事件
+  document.getElementById('detail-back').addEventListener('click', function () {
+    switchView('projects');
+  });
+  document.getElementById('qr-btn').addEventListener('click', function () {
+    showQRModal(project);
+  });
+  document.getElementById('impact-btn').addEventListener('click', function () {
+    // 切换到影响力仪表盘，并延迟滚动到该项目的预测卡片（预测网格在 800ms 后渲染）
+    const pid = project.id;
+    switchView('impact');
+    setTimeout(function () {
+      const card = document.querySelector('.prediction-card[data-project-id="' + pid + '"]');
+      if (card && typeof card.scrollIntoView === 'function') {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 900);
+  });
+  document.getElementById('delete-btn').addEventListener('click', function () {
+    deleteProjectWithUndo(project);
+  });
+
+  // 绑定任务卡片状态切换
+  document.querySelectorAll('.task-status-select').forEach(function (sel) {
+    sel.addEventListener('change', function (e) {
+      const taskId = e.target.getAttribute('data-task-id');
+      const newStatus = e.target.value;
+      changeTaskStatus(project.id, taskId, newStatus);
+    });
+  });
+
+  // 绑定添加任务按钮
+  document.querySelectorAll('.add-task-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const status = btn.getAttribute('data-status');
+      showAddTaskForm(status);
+    });
+  });
+
+  // 绑定任务筛选 chip（单选按钮组）
+  const filterBar = document.getElementById('task-filter-bar');
+  if (filterBar) {
+    filterBar.addEventListener('click', function (e) {
+      const chip = e.target.closest('.filter-chip');
+      if (!chip) return;
+      state.taskFilter = chip.getAttribute('data-owner');
+      renderProjectDetail();
+      const next = filterBar.querySelector('.filter-chip[aria-checked="true"]');
+      if (next) next.focus();
+    });
+    filterBar.addEventListener('keydown', function (e) {
+      const chips = Array.from(filterBar.querySelectorAll('.filter-chip'));
+      if (!chips.length) return;
+      const idx = chips.indexOf(document.activeElement);
+      if (idx === -1) return;
+      let nextIdx = idx;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        nextIdx = (idx + 1) % chips.length;
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        nextIdx = (idx - 1 + chips.length) % chips.length;
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        nextIdx = 0;
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        nextIdx = chips.length - 1;
+      } else {
+        return;
+      }
+      state.taskFilter = chips[nextIdx].getAttribute('data-owner');
+      renderProjectDetail();
+      const next = filterBar.querySelector('.filter-chip[aria-checked="true"]');
+      if (next) next.focus();
+    });
+  }
+
+  // 绑定发送留言
+  document.getElementById('chat-send-btn').addEventListener('click', function () {
+    sendDetailMessage(project.id);
+  });
+  document.getElementById('chat-input-field').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') sendDetailMessage(project.id);
+  });
+  // 实时同步留言草稿（input 事件）
+  if (detailChatInput) {
+    detailChatInput.addEventListener('input', function () {
+      state.detailChatDrafts[project.id] = detailChatInput.value;
+    });
+  }
+}
+
+// 渲染看板单列
+function renderKanbanColumn(project, status, label, count) {
+  const tasks = project.tasks.filter(function (t) {
+    if (t.status !== status) return false;
+    // 按负责人筛选
+    if (state.taskFilter !== 'all' && t.owner !== state.taskFilter) return false;
+    return true;
+  });
+  let html = '';
+  html += '<div class="kanban-column">';
+  html += '  <div class="kanban-column-header ' + STATUS_CLASS[status] + '">';
+  html += '    <span class="column-dot ' + STATUS_CLASS[status] + '"></span>';
+  html += '    <span class="column-title">' + label + '</span>';
+  html += '    <span class="column-count">' + tasks.length + '</span>';
+  html += '  </div>';
+  html += '  <div class="kanban-tasks" data-status="' + status + '" role="list" aria-label="' + escapeHtml(label) + '列">';
+  if (tasks.length === 0) {
+    html += '    <div class="kanban-empty"><div class="kanban-empty-icon">📝</div>暂无任务</div>';
+  } else {
+  tasks.forEach(function (t) {
+    const movedClass = (state.movedTaskId === t.id) ? ' just-moved' : '';
+    const taskAriaLabel = escapeHtml(t.title) + '，负责人：' + escapeHtml(t.owner) + '，状态：' + STATUS_LABEL[status];
+    html += '<div class="task-card' + movedClass + '" role="listitem" aria-label="' + taskAriaLabel + '">';
+    html += '  <div class="task-card-title">' + escapeHtml(t.title) + '</div>';
+    html += '  <div class="task-card-owner">👤 ' + escapeHtml(t.owner) + '</div>';
+    html += '  <span class="task-card-status ' + STATUS_CLASS[status] + '">' + STATUS_LABEL[status] + '</span>';
+    html += '  <select class="task-status-select" data-task-id="' + t.id + '" aria-label="任务状态：' + escapeHtml(t.title) + '">';
+    html += '    <option value="todo"' + (status === 'todo' ? ' selected' : '') + '>待办</option>';
+    html += '    <option value="in_progress"' + (status === 'in_progress' ? ' selected' : '') + '>进行中</option>';
+    html += '    <option value="done"' + (status === 'done' ? ' selected' : '') + '>已完成</option>';
+    html += '  </select>';
+    html += '</div>';
+  });
+  }
+  html += '  </div>';
+  // 添加任务按钮（占位，由 JS 替换为表单）
+  html += '  <button class="add-task-btn" data-status="' + status + '" type="button">+ 添加任务</button>';
+  html += '</div>';
+  return html;
+}
+
+// 显示添加任务内联表单
+function showAddTaskForm(status) {
+  const project = findProject(state.currentProjectId);
+  if (!project) return;
+  const column = document.querySelector('.kanban-tasks[data-status="' + status + '"]');
+  if (!column) return;
+  // 找到同列的 add-task-btn 并替换为表单
+  const addBtn = column.parentElement.querySelector('.add-task-btn[data-status="' + status + '"]');
+  if (!addBtn || addBtn.style.display === 'none') return;
+
+  // 关闭已存在的其它添加表单，确保同时只有一个添加表单（避免 ID 冲突与 DOM 污染）
+  document.querySelectorAll('.add-task-form').forEach(function (f) {
+    const btn = f.parentElement && f.parentElement.querySelector('.add-task-btn');
+    if (btn) btn.style.display = '';
+    f.remove();
+  });
+
+  addBtn.style.display = 'none';
+  const form = document.createElement('div');
+  form.className = 'add-task-form';
+  form.setAttribute('data-status', status);
+  // 使用 name 属性而非全局 id，相对 form 查询，避免多列同时打开时 ID 冲突
+  form.innerHTML =
+    '<label class="visually-hidden" for="task-title-' + status + '">任务标题</label>' +
+    '<input type="text" id="task-title-' + status + '" name="title" placeholder="任务标题" aria-label="任务标题">' +
+    '<label class="visually-hidden" for="task-owner-' + status + '">负责人</label>' +
+    '<input type="text" id="task-owner-' + status + '" name="owner" placeholder="负责人" aria-label="负责人">' +
+    '<div class="add-task-form-actions">' +
+    '  <button type="button" class="btn-ghost" data-act="cancel">取消</button>' +
+    '  <button type="button" class="btn-primary" data-act="confirm">确认</button>' +
+    '</div>';
+  column.appendChild(form);
+  const titleInput = form.querySelector('input[name=title]');
+  const ownerInput = form.querySelector('input[name=owner]');
+  if (titleInput) titleInput.focus();
+
+  form.querySelector('[data-act=cancel]').addEventListener('click', function () {
+    form.remove();
+    addBtn.style.display = '';
+  });
+  form.querySelector('[data-act=confirm]').addEventListener('click', function () {
+    const title = (titleInput.value || '').trim();
+    const owner = (ownerInput.value || '').trim() || '未指派';
+    if (!title) {
+      showToast('请输入任务标题', 'info');
+      return;
+    }
+    const newTask = {
+      id: 't' + (state.nextTaskId++),
+      title: title,
+      owner: owner,
+      status: status
+    };
+    project.tasks.push(newTask);
+    state.movedTaskId = newTask.id;
+    project.updatedAt = '刚刚';
+    renderProjectDetail();
+    showToast('任务已添加');
+    setTimeout(function () { state.movedTaskId = null; }, 400);
+  });
+}
+
+// 切换任务状态
+function changeTaskStatus(projectId, taskId, newStatus) {
+  const project = findProject(projectId);
+  if (!project) return;
+  const task = project.tasks.find(function (t) { return t.id === taskId; });
+  if (!task) return;
+  const oldStatus = task.status;
+  if (oldStatus === newStatus) return;
+  task.status = newStatus;
+  state.movedTaskId = taskId;
+  project.updatedAt = '刚刚';
+  renderProjectDetail();
+  // 桌面端与移动端一致：提供撤销能力
+  const newStatusLabel = STATUS_LABEL[newStatus] || newStatus;
+  undoToast('已标记为' + newStatusLabel, function () {
+    // 校验任务所属项目仍存在（项目可能在撤销窗口期被删除）
+    if (!PROJECTS.some(function (p) { return p.tasks.includes(task); })) {
+      showToast('项目已删除，无法撤销');
+      return false;  // 返回 false 阻止 undoToast 包装器显示"已撤销"成功 toast
+    }
+    task.status = oldStatus;
+    renderProjectDetail();
+  });
+  setTimeout(function () { state.movedTaskId = null; }, 400);
+}
+
+// 渲染单条留言气泡
+function renderChatBubble(m) {
+  const color = avatarColor(m.author);
+  const initial = avatarText(m.author);
+  let html = '<div class="chat-bubble' + (m.me ? ' me' : '') + '">';
+  html += '  <div class="chat-avatar" style="background:' + color + '" aria-hidden="true">' + escapeHtml(initial) + '</div>';
+  html += '  <div class="chat-content">';
+  if (!m.me) html += '    <div class="chat-author">' + escapeHtml(m.author) + '</div>';
+  html += '    <div class="chat-text">' + escapeHtml(m.content) + '</div>';
+  html += '    <div class="chat-time">' + escapeHtml(m.time) + '</div>';
+  html += '  </div>';
+  html += '</div>';
+  return html;
+}
+
+// 发送留言（详情视图）
+function sendDetailMessage(projectId) {
+  const input = document.getElementById('chat-input-field');
+  const content = input.value.trim();
+  if (!content) return;
+  const project = findProject(projectId);
+  if (!project) return;
+  const msg = {
+    id: 'm' + (state.nextTaskId++),
+    author: '我',
+    content: content,
+    time: '刚刚',
+    me: true
+  };
+  project.messages.push(msg);
+  // 仅追加新留言，避免整页重渲染打断输入
+  const list = document.getElementById('chat-list');
+  list.insertAdjacentHTML('beforeend', renderChatBubble(msg));
+  input.value = '';
+  state.detailChatDrafts[projectId] = '';
+  showToast('留言已发送');
+}
+
+/* ========== 二维码模态框 ========== */
+function showQRModal(project) {
+  const link = projectLink(project);
+  const qrSvg = generateQRSvg(link);
+  const html = '<div class="modal-card qr-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-qr">' +
+    '<div class="modal-header">' +
+    '  <h2 class="modal-title" id="modal-title-qr">项目二维码</h2>' +
+    '  <button class="modal-close" id="modal-close" aria-label="关闭" type="button">×</button>' +
+    '</div>' +
+    '<div class="modal-body">' +
+    '  <div style="font-weight:600;margin-bottom:4px">' + escapeHtml(project.name) + '</div>' +
+    '  <div class="qr-image">' + qrSvg + '</div>' +
+    '  <div class="qr-link-box">' +
+    '    <span class="qr-link-text" id="qr-link">' + escapeHtml(link) + '</span>' +
+    '    <button class="btn-ghost" id="copy-link-btn" style="padding:6px 12px;font-size:12px" type="button">复制链接</button>' +
+    '  </div>' +
+    '  <div class="qr-hint">志愿者扫描此二维码即可查看项目并参与协作</div>' +
+    '</div>' +
+    '<div class="modal-footer">' +
+    '  <button class="btn-primary" id="qr-done" type="button">完成</button>' +
+    '</div>' +
+    '</div>';
+
+  showModal(html);
+
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  document.getElementById('qr-done').addEventListener('click', closeModal);
+  document.getElementById('copy-link-btn').addEventListener('click', function () {
+    // 兼容性复制：优先用 Clipboard API，失败则降级选中文本
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(link).then(function () {
+        showToast('链接已复制');
+      }).catch(function () {
+        fallbackCopy(link);
+      });
+    } else {
+      fallbackCopy(link);
+    }
+  });
+}
+
+// 降级复制方案
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    showToast('链接已复制');
+  } catch (e) {
+    showToast('复制失败，请手动选择', 'info');
+  }
+  document.body.removeChild(ta);
+}
+
+/* ========== 二维码生成（伪 QR，纯装饰） ========== */
+// 用确定性伪随机数基于文本生成稳定图案，三个角放置定位符
+function generateQRSvg(text) {
+  const size = 25;          // 25×25 模块
+  const cell = 8;           // 每模块 8px
+  const total = size * cell;
+  const grid = [];
+  let i, r, c;
+
+  // 初始化空网格
+  for (r = 0; r < size; r++) {
+    grid.push([]);
+    for (c = 0; c < size; c++) grid[r].push(0);
+  }
+
+  // 绘制定位符（7×7，三个角）
+  function drawFinder(row, col) {
+    for (r = 0; r < 7; r++) {
+      for (c = 0; c < 7; c++) {
+        const border = (r === 0 || r === 6 || c === 0 || c === 6);
+        const center = (r >= 2 && r <= 4 && c >= 2 && c <= 4);
+        if (border || center) grid[row + r][col + c] = 1;
+      }
+    }
+  }
+  drawFinder(0, 0);
+  drawFinder(0, size - 7);
+  drawFinder(size - 7, 0);
+
+  // 基于文本的确定性伪随机填充
+  let seed = 0;
+  for (i = 0; i < text.length; i++) {
+    seed = (seed * 31 + text.charCodeAt(i)) & 0x7fffffff;
+  }
+  function rand() {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    return seed / 0x7fffffff;
+  }
+
+  // 填充数据区（跳过定位符保护区）
+  function inFinderZone(r, c) {
+    return (r < 8 && c < 8) || (r < 8 && c >= size - 8) || (r >= size - 8 && c < 8);
+  }
+  for (r = 0; r < size; r++) {
+    for (c = 0; c < size; c++) {
+      if (inFinderZone(r, c)) continue;
+      if (rand() > 0.52) grid[r][c] = 1;
+    }
+  }
+
+  // 拼接 SVG
+  let rects = '';
+  for (r = 0; r < size; r++) {
+    for (c = 0; c < size; c++) {
+      if (grid[r][c]) {
+        rects += '<rect x="' + (c * cell) + '" y="' + (r * cell) + '" width="' + cell + '" height="' + cell + '" fill="#0f172a"/>';
+      }
+    }
+  }
+  return '<svg width="200" height="200" viewBox="0 0 ' + total + ' ' + total + '" xmlns="http://www.w3.org/2000/svg" style="display:block" role="img" aria-label="项目二维码">' +
+    '<rect width="' + total + '" height="' + total + '" fill="#ffffff"/>' +
+    rects +
+    '</svg>';
+}
+
+/* ========== 删除项目（立即删除 + 可撤销） ========== */
+function deleteProjectWithUndo(project) {
+  const idx = PROJECTS.findIndex(function (p) { return p.id === project.id; });
+  if (idx < 0) return;
+  // 立即删除
+  PROJECTS.splice(idx, 1);
+  state.currentProjectId = null;
+  // 清理该项目对应的留言草稿，避免内存泄漏与脏数据残留
+  delete state.detailChatDrafts[project.id];
+  delete state.mobileChatDrafts[project.id];
+  switchView('projects');
+  var taskCount = (project.tasks && project.tasks.length) || 0;
+  var messageCount = (project.messages && project.messages.length) || 0;
+  undoToast('已删除「' + project.name + '」（含 ' + taskCount + ' 任务、' + messageCount + ' 留言）', function () {
+    // 撤销：直接 push 到末尾恢复，避免 _deletedIdx 在撤销期间被其他操作（如新建项目）失效导致位置错乱
+    PROJECTS.push(project);
+    renderProjectList();
+  }, '已撤销删除');
+}
+
+/* ========== 视图3：志愿者 H5 ========== */
+function renderMobile() {
+  const project = findProject(state.mobileProjectId) || PROJECTS[0];
+  if (!project) {
+    elMobile.innerHTML = '<div class="empty-state"><div class="empty-state-text">暂无项目</div></div>';
+    return;
+  }
+  state.mobileProjectId = project.id;
+
+  // 项目切换下拉
+  let options = '';
+  PROJECTS.forEach(function (p) {
+    options += '<option value="' + p.id + '"' + (p.id === project.id ? ' selected' : '') + '>' + escapeHtml(p.name) + '</option>';
+  });
+
+  let html = '';
+  html += '<div class="mobile-stage">';
+  html += '  <div class="phone-frame">';
+  html += '    <div class="phone-screen">';
+
+  // 顶部
+  html += '      <div class="phone-header">';
+  html += '        <div class="phone-header-top">';
+  html += '          <div class="phone-project-name">' + escapeHtml(project.name) + '</div>';
+  html += '          <select class="phone-project-selector" id="mobile-project-selector" aria-label="选择项目">' + options + '</select>';
+  html += '        </div>';
+  html += '        <span class="phone-status-badge progress">志愿者协作中</span>';
+  html += '      </div>';
+
+  // 主体
+  html += '      <div class="phone-body">';
+
+  // 项目描述
+  html += '        <div class="phone-section">';
+  html += '          <div class="phone-section-title">项目简介</div>';
+  html += '          <div class="phone-desc-card">' + escapeHtml(project.description) + '</div>';
+  html += '        </div>';
+
+  // 任务列表
+  html += '        <div class="phone-section">';
+  html += '          <div class="phone-section-title">任务清单</div>';
+  if (project.tasks.length === 0) {
+    html += '          <div class="phone-desc-card" style="text-align:center">暂无任务</div>';
+  } else {
+    project.tasks.forEach(function (t) {
+      html += renderMobileTask(t, project.id);
+    });
+  }
+  html += '        </div>';
+
+  // 交接记录
+  html += '        <div class="phone-section">';
+  html += '          <div class="phone-section-title">交接记录</div>';
+  if (project.handovers.length === 0) {
+    html += '          <div class="phone-desc-card" style="text-align:center">暂无交接记录</div>';
+  } else {
+    html += '          <div class="mobile-timeline">';
+    project.handovers.forEach(function (h) {
+      html += '          <div class="mobile-timeline-item">';
+      html += '            <div class="mobile-timeline-from">' + escapeHtml(h.from) + ' → ' + escapeHtml(h.to) + '</div>';
+      html += '            <div class="mobile-timeline-content">' + escapeHtml(h.content) + '</div>';
+      html += '            <div class="mobile-timeline-time">' + escapeHtml(h.time) + '</div>';
+      html += '          </div>';
+    });
+    html += '          </div>';
+  }
+  html += '        </div>';
+
+  // 协作留言
+  html += '        <div class="phone-section">';
+  html += '          <div class="phone-section-title">协作留言</div>';
+  html += '          <div id="mobile-chat-list">';
+  if (project.messages.length === 0) {
+    html += '          <div class="phone-desc-card" style="text-align:center">暂无留言，开始第一段对话吧</div>';
+  } else {
+    project.messages.forEach(function (m) {
+      html += renderMobileChatBubble(m);
+    });
+  }
+  html += '          </div>';
+  html += '        </div>';
+
+  html += '      </div>'; // phone-body
+
+  // 底部输入
+  html += '      <div class="mobile-chat-input">';
+  html += '        <label for="mobile-chat-field" class="visually-hidden">输入留言</label>';
+  html += '        <input type="text" id="mobile-chat-field" placeholder="说点什么…" aria-label="输入留言">';
+  html += '        <button id="mobile-chat-send" type="button">发送</button>';
+  html += '      </div>';
+
+  html += '    </div>'; // phone-screen
+  html += '  </div>'; // phone-frame
+  html += '</div>';
+
+  elMobile.innerHTML = html;
+
+  // 回填当前项目的留言草稿
+  const chatField = document.getElementById('mobile-chat-field');
+  if (chatField) chatField.value = state.mobileChatDrafts[state.mobileProjectId] || '';
+
+  // 绑定项目切换
+  document.getElementById('mobile-project-selector').addEventListener('change', function (e) {
+    const oldField = document.getElementById('mobile-chat-field');
+    if (oldField) state.mobileChatDrafts[state.mobileProjectId] = oldField.value;
+    state.mobileProjectId = e.target.value;
+    renderMobile();
+  });
+
+  // 绑定任务状态按钮组（单选按钮组）
+  document.querySelectorAll('.status-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const taskId = btn.getAttribute('data-task-id');
+      const newStatus = btn.getAttribute('data-status');
+      const task = project.tasks.find(function (t) { return t.id === taskId; });
+      if (!task || task.status === newStatus) return;
+      const oldStatus = task.status;
+      const statusLabelMap = { todo: '待办', in_progress: '进行中', done: '完成' };
+      const newStatusLabel = statusLabelMap[newStatus] || newStatus;
+      task.status = newStatus;
+      project.updatedAt = '刚刚';
+      renderMobile();
+      undoToast('已标记为' + newStatusLabel, function () {
+        // 校验任务所属项目仍存在（项目可能在撤销窗口期被删除）
+        if (!PROJECTS.some(function (p) { return p.tasks.includes(task); })) {
+          showToast('项目已删除，无法撤销');
+          return false;  // 返回 false 阻止 undoToast 包装器显示"已撤销"成功 toast
+        }
+        task.status = oldStatus;
+        renderMobile();
+      });
+    });
+  });
+  document.querySelectorAll('.status-btn-group').forEach(function (group) {
+    group.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowDown' && e.key !== 'ArrowLeft' && e.key !== 'ArrowUp') return;
+      const buttons = Array.from(group.querySelectorAll('.status-btn'));
+      const idx = buttons.indexOf(document.activeElement);
+      if (idx === -1) return;
+      e.preventDefault();
+      const nextIdx = (e.key === 'ArrowRight' || e.key === 'ArrowDown')
+        ? (idx + 1) % buttons.length
+        : (idx - 1 + buttons.length) % buttons.length;
+      const nextBtn = buttons[nextIdx];
+      nextBtn.click();
+      const taskId = nextBtn.getAttribute('data-task-id');
+      const newStatus = nextBtn.getAttribute('data-status');
+      const fresh = document.querySelector('.status-btn[data-task-id="' + taskId + '"][data-status="' + newStatus + '"]');
+      if (fresh) fresh.focus();
+    });
+  });
+
+  // 绑定发送留言
+  document.getElementById('mobile-chat-send').addEventListener('click', function () {
+    sendMobileMessage(project.id);
+  });
+  document.getElementById('mobile-chat-field').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') sendMobileMessage(project.id);
+  });
+  chatField.addEventListener('input', function () {
+    state.mobileChatDrafts[state.mobileProjectId] = chatField.value;
+  });
+}
+
+// 渲染移动端任务卡片
+function renderMobileTask(t, projectId) {
+  let html = '<div class="mobile-task">';
+  html += '  <div class="mobile-task-title">' + escapeHtml(t.title) + '</div>';
+  html += '  <div class="mobile-task-owner">负责人：' + escapeHtml(t.owner) + '</div>';
+  html += '  <div class="status-btn-group" role="radiogroup" aria-label="任务状态切换">';
+  html += '    <button class="status-btn ' + (t.status === 'todo' ? 'active todo' : '') + '" role="radio" aria-checked="' + (t.status === 'todo') + '" tabindex="' + (t.status === 'todo' ? '0' : '-1') + '" data-task-id="' + escapeHtml(String(t.id)) + '" data-status="todo" type="button">待办</button>';
+  html += '    <button class="status-btn ' + (t.status === 'in_progress' ? 'active progress' : '') + '" role="radio" aria-checked="' + (t.status === 'in_progress') + '" tabindex="' + (t.status === 'in_progress' ? '0' : '-1') + '" data-task-id="' + escapeHtml(String(t.id)) + '" data-status="in_progress" type="button">进行中</button>';
+  html += '    <button class="status-btn ' + (t.status === 'done' ? 'active done' : '') + '" role="radio" aria-checked="' + (t.status === 'done') + '" tabindex="' + (t.status === 'done' ? '0' : '-1') + '" data-task-id="' + escapeHtml(String(t.id)) + '" data-status="done" type="button">完成</button>';
+  html += '  </div>';
+  html += '</div>';
+  return html;
+}
+
+// 渲染移动端留言气泡
+function renderMobileChatBubble(m) {
+  const color = avatarColor(m.author);
+  const initial = avatarText(m.author);
+  let html = '<div class="mobile-chat-bubble' + (m.me ? ' me' : '') + '">';
+  html += '  <div class="mobile-chat-avatar" style="background:' + color + '" aria-hidden="true">' + escapeHtml(initial) + '</div>';
+  html += '  <div class="mobile-chat-content">';
+  html += '    <div class="mobile-chat-text">' + escapeHtml(m.content) + '</div>';
+  html += '  </div>';
+  html += '</div>';
+  return html;
+}
+
+// 发送留言（H5 视图）
+function sendMobileMessage(projectId) {
+  const input = document.getElementById('mobile-chat-field');
+  const content = input.value.trim();
+  if (!content) return;
+  const project = findProject(projectId);
+  if (!project) return;
+  const msg = {
+    id: 'm' + (state.nextTaskId++),
+    author: '我',
+    content: content,
+    time: '刚刚',
+    me: true
+  };
+  project.messages.push(msg);
+  const list = document.getElementById('mobile-chat-list');
+  list.insertAdjacentHTML('beforeend', renderMobileChatBubble(msg));
+  input.value = '';
+  state.mobileChatDrafts[state.mobileProjectId] = '';
+  // 滚动到底部
+  const body = document.querySelector('.phone-body');
+  if (body) body.scrollTop = body.scrollHeight;
+  showToast('留言已发送');
+}
+
+/* ========== 主题切换 ========== */
+function safeGetItem(key) {
+  try { return localStorage.getItem(key); } catch (e) { return null; }
+}
+function safeSetItem(key, value) {
+  try { localStorage.setItem(key, value); } catch (e) {}
+}
+function safeRemoveItem(key) {
+  try { localStorage.removeItem(key); } catch (e) {}
+}
+function initTheme() {
+  const toggle = document.getElementById('theme-toggle');
+  const isDarkSystem = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  // 读取本地存储
+  const saved = safeGetItem('bridge-theme');
+  if (saved === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    toggle.innerHTML = '<span aria-hidden="true">☀️</span>';
+  } else if (saved === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+    toggle.innerHTML = '<span aria-hidden="true">🌙</span>';
+  } else {
+    // 无本地存储时跟随系统偏好，设置对应图标
+    toggle.innerHTML = isDarkSystem ? '<span aria-hidden="true">☀️</span>' : '<span aria-hidden="true">🌙</span>';
+  }
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const effectivelyDark = currentTheme === 'dark' || (!currentTheme && isDarkSystem);
+  toggle.setAttribute('aria-pressed', String(effectivelyDark));
+  toggle.addEventListener('click', function () {
+    const current = document.documentElement.getAttribute('data-theme');
+    const isDarkSystem = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const effectivelyDark = current === 'dark' || (!current && isDarkSystem);
+    if (effectivelyDark) {
+      document.documentElement.setAttribute('data-theme', 'light');
+      safeSetItem('bridge-theme', 'light');
+      toggle.innerHTML = '<span aria-hidden="true">🌙</span>';
+      toggle.setAttribute('aria-pressed', 'false');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      safeSetItem('bridge-theme', 'dark');
+      toggle.innerHTML = '<span aria-hidden="true">☀️</span>';
+      toggle.setAttribute('aria-pressed', 'true');
+    }
+  });
+}
+
+/* ========== 影响力仪表盘 ========== */
+// 各项目模拟受益人数（按项目 id 索引，保证稳定）
+// 使用 let 以便新项目动态注册（const 会导致新项目永远查不到受益人数）
+let IMPACT_BENEFICIARIES = { p1: 320, p2: 580, p3: 384 };
+
+// 统一受益人数查询：优先取 project.beneficiaries，其次查 IMPACT_BENEFICIARIES，最后回退 100
+// 修复 P1-12：原 computeKPIs 回退 0、排行榜/predictProjectImpact 回退 100 不一致
+function getProjectBeneficiaries(p) {
+  if (!p) return 100;
+  if (p.beneficiaries != null) return p.beneficiaries;
+  if (IMPACT_BENEFICIARIES[p.id] != null) return IMPACT_BENEFICIARIES[p.id];
+  return 100;
+}
+
+function computeKPIs() {
+  let totalTasks = 0, doneTasks = 0, activeVolunteers = new Set();
+  PROJECTS.forEach(p => {
+    if (p.tasks) {
+      p.tasks.forEach(t => {
+        totalTasks++;
+        if (t.status === 'done') doneTasks++;
+        if (t.owner) activeVolunteers.add(t.owner);
+      });
+    }
+  });
+  const completionRate = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+  // 项目完成率：所有任务均为 done 的项目占比
+  const completedProjects = PROJECTS.filter(p => {
+    if (!p.tasks || p.tasks.length === 0) return false;
+    return p.tasks.every(t => t.status === 'done');
+  }).length;
+  const projectCompletionRate = PROJECTS.length > 0 ? Math.round((completedProjects / PROJECTS.length) * 100) : 0;
+  return {
+    completionRate: completionRate,
+    projectCompletionRate: projectCompletionRate,
+    activeVolunteers: activeVolunteers.size,
+    totalProjects: PROJECTS.length,
+    totalBeneficiaries: PROJECTS.reduce((s, p) => s + getProjectBeneficiaries(p), 0)
+  };
+}
+
+function renderImpact() {
+  // 防止重复进入累积定时器
+  if (impactPredictionTimer) { clearTimeout(impactPredictionTimer); impactPredictionTimer = null; }
+  // 已在 impact 视图且预测网格已有真实内容（非骨架屏）时，
+  // 备份已采纳的 prediction-grid DOM，重建整页（更新 KPI/环形图/排行榜），再恢复 grid 并刷新预测，
+  // 避免采纳建议后 adopted 视觉态在 800ms 骨架屏期间短暂消失，同时保证 KPI 实时更新
+  var savedGrid = null;
+  var existingGrid = document.getElementById('prediction-grid');
+  if (state.view === 'impact' && existingGrid && existingGrid.children.length > 0 && !existingGrid.querySelector('.prediction-skeleton')) {
+    savedGrid = existingGrid.cloneNode(true);  // 保留已采纳的卡片视觉态
+  }
+  // ---- A. 顶部 KPI 卡片 ----（动态计算，趋势与上一次快照对比）
+  const kpiData = computeKPIs();
+  const prev = lastImpactKPIs;
+  function formatTrend(current, previous, isPercentagePoint) {
+    if (prev == null || previous == null) return '—';
+    const delta = current - previous;
+    if (delta === 0) return '—';
+    const sign = delta > 0 ? '+' : '';
+    return isPercentagePoint ? sign + delta + 'pt' : sign + delta;
+  }
+  const kpis = [
+    { icon: '👥', value: kpiData.totalBeneficiaries.toLocaleString(), suffix: ' 人', label: '累计受益人数', trend: formatTrend(kpiData.totalBeneficiaries, prev && prev.totalBeneficiaries, false), trendLabel: '较上周' },
+    { icon: '📁', value: String(kpiData.totalProjects), suffix: ' 个', label: '进行中项目', trend: formatTrend(kpiData.totalProjects, prev && prev.totalProjects, false), trendLabel: '本月新增' },
+    { icon: '✅', value: String(kpiData.completionRate), suffix: '%', label: '任务完成率', trend: formatTrend(kpiData.completionRate, prev && prev.completionRate, true), trendLabel: '较上周' },
+    { icon: '🙌', value: String(kpiData.activeVolunteers), suffix: ' 人', label: '活跃志愿者', trend: formatTrend(kpiData.activeVolunteers, prev && prev.activeVolunteers, false), trendLabel: '本周新增' }
+  ];
+  lastImpactKPIs = {
+    totalBeneficiaries: kpiData.totalBeneficiaries,
+    totalProjects: kpiData.totalProjects,
+    completionRate: kpiData.completionRate,
+    activeVolunteers: kpiData.activeVolunteers
+  };
+
+  let kpiHtml = '<div class="kpi-grid">';
+  kpis.forEach(function (k) {
+    kpiHtml += '<div class="kpi-card">';
+    kpiHtml += '  <div class="kpi-top">';
+    kpiHtml += '    <div class="kpi-icon" aria-hidden="true">' + k.icon + '</div>';
+    kpiHtml += '    <span class="kpi-trend"><span aria-hidden="true">↑</span> ' + escapeHtml(k.trend) + '</span>';
+    kpiHtml += '    <span class="kpi-trend-label">' + escapeHtml(k.trendLabel) + '</span>';
+    kpiHtml += '  </div>';
+    kpiHtml += '  <div class="kpi-value">' + escapeHtml(k.value) + escapeHtml(k.suffix) + '</div>';
+    kpiHtml += '  <div class="kpi-label">' + escapeHtml(k.label) + '</div>';
+    kpiHtml += '  <div class="kpi-footnote" style="font-size:11px;color:var(--text-subtle);margin-top:4px;">实时计算 · 基于 ' + kpiData.totalProjects + ' 个项目</div>';
+    kpiHtml += '</div>';
+  });
+  kpiHtml += '</div>';
+
+  // ---- B. 中间环形进度图 ----
+  // 三个同心环：r=80/60/40，分别代表项目完成率/任务完成率/志愿者参与率
+  // 任务完成率与活跃志愿者参与率复用顶部 KPI 计算结果，避免重复调用 computeKPIs()
+  const ringData = kpiData;
+  const volunteerParticipation = ringData.activeVolunteers > 0 ? Math.min(100, Math.round((ringData.activeVolunteers / 12) * 100)) : 0;
+  // 环颜色使用 CSS token，自动适配深色模式
+  const rings = [
+    { r: 80, percent: ringData.projectCompletionRate, cssVar: '--status-completed', label: '项目完成率' },
+    { r: 60, percent: ringData.completionRate, cssVar: '--status-active', label: '任务完成率' },
+    { r: 40, percent: volunteerParticipation, cssVar: '--status-pending', label: '志愿者参与率' }
+  ];
+
+  let svgHtml = '<svg class="ring-svg" viewBox="0 0 200 200" aria-label="影响力环形图">';
+  rings.forEach(function (ring) {
+    const circumference = 2 * Math.PI * ring.r;
+    const offset = circumference * (1 - ring.percent / 100);
+    svgHtml += '<circle class="ring-track" cx="100" cy="100" r="' + ring.r + '"/>';
+    svgHtml += '<circle class="ring-bar ring-bar-anim" cx="100" cy="100" r="' + ring.r + '" stroke="var(' + ring.cssVar + ')" transform="rotate(-90 100 100)" stroke-dasharray="' + circumference.toFixed(2) + '" style="--ring-circumference:' + circumference.toFixed(2) + ';--ring-offset:' + offset.toFixed(2) + '"/>';
+  });
+  svgHtml += '</svg>';
+
+  let midHtml = '<div class="impact-mid">';
+  midHtml += '  <div class="ring-wrap">';
+  midHtml += '    <div class="ring-figure">' + svgHtml;
+  midHtml += '      <div class="ring-center">';
+  midHtml += '        <div class="ring-center-value">' + ringData.projectCompletionRate + '%</div>';
+  midHtml += '        <div class="ring-center-label">项目完成率</div>';
+  midHtml += '      </div>';
+  midHtml += '    </div>';
+  midHtml += '  </div>';
+  midHtml += '  <div class="ring-legend">';
+  rings.forEach(function (ring) {
+    midHtml += '    <div class="ring-legend-item">';
+    midHtml += '      <span class="ring-legend-dot" style="background:var(' + ring.cssVar + ')"></span>';
+    midHtml += '      <span class="ring-legend-text">' + escapeHtml(ring.label) + '</span>';
+    midHtml += '      <span class="ring-legend-value">' + ring.percent + '%</span>';
+    midHtml += '    </div>';
+  });
+  midHtml += '  </div>';
+  midHtml += '</div>';
+
+  // ---- C. 项目影响力排行 ----
+  // 影响力得分 = 受益人数 × 任务完成率
+  const ranked = PROJECTS.map(function (p) {
+    const counts = countTasks(p);
+    const total = counts.todo + counts.in_progress + counts.done;
+    const rate = total > 0 ? counts.done / total : 0;
+    const beneficiaries = getProjectBeneficiaries(p);
+    const score = Math.round(beneficiaries * rate);
+    return { name: p.name, score: score };
+  }).sort(function (a, b) { return b.score - a.score; });
+
+  const maxScore = ranked.length > 0
+    ? Math.max.apply(null, ranked.map(function (r) { return r.score; }))
+    : 1;
+
+  let rankHtml = '<div class="impact-rank">';
+  rankHtml += '  <h3 class="impact-rank-title">项目影响力排行</h3>';
+  if (ranked.length === 0) {
+    rankHtml += '  <div class="rank-row"><div class="rank-name">暂无数据</div></div>';
+  } else {
+    ranked.forEach(function (item, idx) {
+      const widthPct = maxScore > 0 ? (item.score / maxScore * 100) : 0;
+      rankHtml += '  <div class="rank-row">';
+      rankHtml += '    <div class="rank-index">' + (idx + 1) + '</div>';
+      rankHtml += '    <div class="rank-name">' + escapeHtml(item.name) + '</div>';
+      rankHtml += '    <div class="rank-bar"><div class="rank-bar-fill" style="width:' + widthPct.toFixed(1) + '%"></div></div>';
+      rankHtml += '    <div class="rank-score">' + item.score + '</div>';
+      rankHtml += '  </div>';
+    });
+  }
+  rankHtml += '</div>';
+
+  // ---- 组装 ----
+  let html = '<div class="impact-page">';
+  html += '  <div class="impact-header">';
+  html += '    <h1 class="impact-title">影响力仪表盘</h1>';
+  html += '    <div class="impact-subtitle">量化公益项目的社会价值，让每一份善意都被看见</div>';
+  html += '  </div>';
+  html += kpiHtml;
+  html += midHtml;
+  html += rankHtml;
+
+  // ---- D. AI 影响力预测（骨架屏，800ms 后填充）----
+  html += '<div class="impact-prediction">';
+  html += '  <div class="prediction-header">';
+  html += '    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>';
+  html += '    <h3>AI 影响力预测</h3>';
+  html += '    <span class="prediction-confidence medium">AI 计算中…</span>';
+  html += '  </div>';
+  html += '  <div class="prediction-grid" id="prediction-grid">';
+  html += '    <div class="prediction-skeleton"></div>';
+  html += '    <div class="prediction-skeleton"></div>';
+  html += '    <div class="prediction-skeleton"></div>';
+  html += '  </div>';
+  html += '</div>';
+
+  html += '</div>';
+
+  elImpact.innerHTML = html;
+
+  // 守卫命中时：用备份的已采纳 grid 替换骨架屏，直接刷新预测（跳过 800ms 骨架屏）
+  if (savedGrid) {
+    var newGrid = document.getElementById('prediction-grid');
+    if (newGrid) newGrid.parentNode.replaceChild(savedGrid, newGrid);
+    renderImpactPrediction();
+    return;
+  }
+
+  // 模拟 AI 计算：800ms 后渲染预测结果
+  impactPredictionTimer = setTimeout(renderImpactPrediction, 800);
+}
+
+/* ========== AI 影响力预测算法 ========== */
+// 估算项目已运行天数：优先使用 project.createdAt 真实运行天数
+// 否则按 updatedAt 外推（"刚刚"时 hoursAgo≈0，会导致永远 10 天）
+function estimateRunDays(project) {
+  if (project.createdAt) {
+    const days = (Date.now() - project.createdAt) / 86400000;
+    if (days > 0) return Math.max(1, days);
+  }
+  const hoursAgo = updatedAtScore(project.updatedAt);
+  return Math.max(1, 10 + hoursAgo / 24);
+}
+
+// 日期格式化为 "M月D日"
+function formatCNDate(d) {
+  return (d.getMonth() + 1) + '月' + d.getDate() + '日';
+}
+
+// 基于任务完成速率、志愿者活跃度、历史数据预测项目影响力
+function predictProjectImpact(project) {
+  const counts = countTasks(project);
+  const total = counts.todo + counts.in_progress + counts.done;
+  const done = counts.done;
+
+  if (total === 0) {
+    return {
+      empty: true,
+      confidence: 0,
+      factors: [],
+      recommendation: '数据不足，建议补充更多任务记录',
+      recommendationLevel: 'danger'
+    };
+  }
+
+  const progressRate = done / total;
+
+  // A. 完成时间预测（线性回归）
+  const runDays = estimateRunDays(project);
+  const completionSpeed = done / runDays; // 任务/天
+  const remaining = total - done;
+  const stalled = completionSpeed <= 0;
+  const remainingDays = stalled ? Infinity : (remaining / completionSpeed);
+  const completionDate = new Date(Date.now() + (isFinite(remainingDays) ? remainingDays * 86400000 : 0));
+
+  // B. 受益人数预测
+  const targetBeneficiaries = getProjectBeneficiaries(project);
+  const predictedCompletionRate = stalled ? progressRate : 1;
+  const finalRate = Math.min(1, predictedCompletionRate);
+  let estimatedBeneficiaries = targetBeneficiaries * finalRate;
+  if (predictedCompletionRate < 0.7) {
+    estimatedBeneficiaries *= (predictedCompletionRate / 0.7);
+  }
+  estimatedBeneficiaries = Math.round(estimatedBeneficiaries);
+
+  // C. 置信度计算（0-100%）
+  const volunteers = {};
+  project.tasks.forEach(function (t) { if (t.owner) volunteers[t.owner] = true; });
+  const volunteerCount = Object.keys(volunteers).length;
+  let confidence = 0;
+  if (total > 5) confidence += 20;                                  // 数据点充足
+  if (progressRate > 0 && progressRate < 1) confidence += 20;       // 完成速率稳定（仍在推进）
+  if (volunteerCount > 3) confidence += 20;                          // 志愿者活跃
+  if (runDays > 7) confidence += 20;                                 // 运行时间充足
+  if (IMPACT_BENEFICIARIES[project.id] != null) confidence += 20;   // 历史相似项目参考
+  confidence = Math.min(100, confidence);
+
+  // D. 影响因素
+  const factors = [
+    '任务完成速率：' + completionSpeed.toFixed(2) + ' 任务/天',
+    '志愿者活跃度：' + volunteerCount + ' 人',
+    '当前进度：' + Math.round(progressRate * 100) + '%',
+    stalled ? '项目已停滞' : '预计还需 ' + Math.ceil(remainingDays) + ' 天'
+  ];
+
+  // E. 建议
+  let recommendation, recommendationLevel;
+  if (confidence < 40) {
+    recommendation = '数据不足，建议补充更多任务记录';
+    recommendationLevel = 'danger';
+  } else if (!stalled && remainingDays > 30) {
+    recommendation = '进度滞后，建议增加志愿者或拆分任务';
+    recommendationLevel = 'warning';
+  } else if (estimatedBeneficiaries < targetBeneficiaries * 0.5) {
+    recommendation = '预计无法达成目标，建议调整策略';
+    recommendationLevel = 'danger';
+  } else if (stalled) {
+    recommendation = '进度停滞，建议增加志愿者或拆分任务';
+    recommendationLevel = 'warning';
+  } else {
+    recommendation = '进度健康，按当前节奏可如期完成';
+    recommendationLevel = 'healthy';
+  }
+
+  return {
+    empty: false,
+    total: total,
+    done: done,
+    progressRate: progressRate,
+    runDays: runDays,
+    completionSpeed: completionSpeed,
+    stalled: stalled,
+    remainingDays: remainingDays,
+    completionDate: completionDate,
+    targetBeneficiaries: targetBeneficiaries,
+    estimatedBeneficiaries: estimatedBeneficiaries,
+    confidence: confidence,
+    factors: factors,
+    recommendation: recommendation,
+    recommendationLevel: recommendationLevel,
+    volunteerCount: volunteerCount
+  };
+}
+
+// 渲染 AI 影响力预测卡片
+function renderImpactPrediction() {
+  impactPredictionTimer = null;
+  // 切出 impact 视图后不再渲染预测结果，避免无效 DOM 操作
+  if (state.view !== 'impact') return;
+  const grid = document.getElementById('prediction-grid');
+  if (!grid) return;
+
+  // 头部置信度徽标使用平均置信度
+  const predictions = PROJECTS.map(predictProjectImpact);
+  const valid = predictions.filter(function (p) { return !p.empty; });
+  const confidenceBadge = document.querySelector('.impact-prediction .prediction-confidence');
+  if (confidenceBadge) {
+    if (valid.length === 0) {
+      // 所有项目均无可用预测，避免显示误导性的"置信度 0%"
+      confidenceBadge.textContent = '暂无可用预测';
+      confidenceBadge.classList.remove('low', 'medium', 'high');
+    } else {
+      const avgConfidence = Math.round(valid.reduce(function (s, p) { return s + p.confidence; }, 0) / valid.length);
+      confidenceBadge.textContent = '置信度 ' + avgConfidence + '%';
+      confidenceBadge.classList.remove('medium', 'low');
+      if (avgConfidence < 40) {
+        confidenceBadge.classList.add('low');
+      } else if (avgConfidence < 70) {
+        confidenceBadge.classList.add('medium');
+      }
+    }
+  }
+
+  let html = '';
+  PROJECTS.forEach(function (p, idx) {
+    const pred = predictions[idx];
+    if (pred.empty) {
+      html += '<div class="prediction-card" data-project-id="' + escapeHtml(p.id) + '">';
+      html += '  <div class="prediction-card-header"><div class="prediction-card-name">' + escapeHtml(p.name) + '</div></div>';
+      html += '  <div class="prediction-empty">暂无数据</div>';
+      html += '</div>';
+      return;
+    }
+    const confClass = pred.confidence < 40 ? 'low' : (pred.confidence < 70 ? 'medium' : '');
+    const dateStr = pred.stalled ? '—' : formatCNDate(pred.completionDate);
+    const daysSub = pred.stalled ? '已停滞' : '还有 ' + Math.ceil(pred.remainingDays) + ' 天';
+    const benePct = pred.targetBeneficiaries > 0
+      ? Math.min(100, Math.round(pred.estimatedBeneficiaries / pred.targetBeneficiaries * 100))
+      : 0;
+    const progressPct = Math.round(pred.progressRate * 100);
+    const ringCirc = 2 * Math.PI * 7;
+    const ringOffset = ringCirc * (1 - progressPct / 100);
+    const recIcon = pred.recommendationLevel === 'healthy' ? '✓' : (pred.recommendationLevel === 'warning' ? '⚠' : '✕');
+    const factorsTitle = pred.factors.join('\n');
+    // 检查该 recommendationLevel 是否已被采纳，已采纳则禁用按钮防止重复触发
+    p.adoptedActions = p.adoptedActions || [];
+    const isAdopted = p.adoptedActions.indexOf(pred.recommendationLevel) >= 0;
+    const recClass = pred.recommendationLevel + (isAdopted ? ' adopted' : '');
+    const recDisabledAttr = isAdopted ? ' disabled' : '';
+
+    html += '<div class="prediction-card" data-project-id="' + escapeHtml(p.id) + '" title="' + escapeHtml(factorsTitle) + '">';
+    html += '  <div class="prediction-card-header">';
+    html += '    <div class="prediction-card-name">' + escapeHtml(p.name) + '</div>';
+    html += '    <span class="prediction-confidence ' + confClass + '">置信度 ' + pred.confidence + '%</span>';
+    html += '  </div>';
+    html += '  <div class="prediction-metrics">';
+    html += '    <div class="prediction-metric">';
+    html += '      <div class="prediction-metric-label">预计完成</div>';
+    html += '      <div class="prediction-metric-value">' + escapeHtml(dateStr) + '</div>';
+    html += '      <div class="prediction-metric-sub">' + escapeHtml(daysSub) + '</div>';
+    html += '    </div>';
+    html += '    <div class="prediction-metric">';
+    html += '      <div class="prediction-metric-label">预计受益</div>';
+    html += '      <div class="prediction-metric-value">' + pred.estimatedBeneficiaries + ' 人</div>';
+    html += '      <div class="prediction-metric-bar"><div class="prediction-metric-bar-fill" style="width:' + benePct + '%"></div></div>';
+    html += '    </div>';
+    html += '    <div class="prediction-metric">';
+    html += '      <div class="prediction-metric-label">当前进度</div>';
+    html += '      <div class="prediction-metric-value">' + progressPct + '%';
+    html += '        <svg class="prediction-mini-ring" viewBox="0 0 18 18" aria-hidden="true">';
+    html += '          <circle class="prediction-mini-ring-track" cx="9" cy="9" r="7"/>';
+    html += '          <circle class="prediction-mini-ring-bar" cx="9" cy="9" r="7" transform="rotate(-90 9 9)" stroke-dasharray="' + ringCirc.toFixed(2) + '" stroke-dashoffset="' + ringOffset.toFixed(2) + '"/>';
+    html += '        </svg>';
+    html += '      </div>';
+    html += '      <div class="prediction-metric-sub">' + pred.done + '/' + pred.total + ' 任务</div>';
+    html += '    </div>';
+    html += '    <div class="prediction-metric">';
+    html += '      <div class="prediction-metric-label">任务速率</div>';
+    html += '      <div class="prediction-metric-value">' + pred.completionSpeed.toFixed(2) + '</div>';
+    html += '      <div class="prediction-metric-sub">任务/天</div>';
+    html += '    </div>';
+    html += '  </div>';
+    html += '  <div class="prediction-factors">';
+    pred.factors.forEach(function (f) {
+      html += '    <span class="prediction-factor">' + escapeHtml(f) + '</span>';
+    });
+    html += '  </div>';
+    html += '  <button type="button" class="prediction-recommendation ' + recClass + '" data-pred-idx="' + idx + '" aria-label="采纳建议"' + recDisabledAttr + '>';
+    html += '    <span class="prediction-recommendation-icon">' + recIcon + '</span>';
+    html += '    <span class="prediction-recommendation-text">' + escapeHtml(pred.recommendation) + '</span>';
+    html += '    <span class="prediction-recommendation-adopt">采纳</span><span class="adopt-mark"> ✓</span>';
+    html += '  </button>';
+    html += '</div>';
+  });
+  grid.innerHTML = html;
+
+  // 采纳建议：事件委托
+  grid.onclick = function(e) {
+    const card = e.target.closest('.prediction-recommendation');
+    if (!card) return;
+    if (card.disabled) return;
+    const idx = parseInt(card.dataset.predIdx, 10);
+    const pred = predictions[idx];
+    if (!pred) return;
+    card.disabled = true;
+    card.classList.add('adopted');
+    const project = PROJECTS[idx];
+    // 在 project 上记录已采纳的 recommendationLevel，renderImpact 重建 DOM 后据此恢复 adopted 状态
+    if (project) {
+      project.adoptedActions = project.adoptedActions || [];
+      if (project.adoptedActions.indexOf(pred.recommendationLevel) < 0) {
+        project.adoptedActions.push(pred.recommendationLevel);
+      }
+    }
+    // 按 recommendationLevel 执行真实闭环动作
+    if (pred.recommendationLevel === 'healthy') {
+      // 进度健康：在项目留言中添加一条 AI 系统建议
+      if (project) {
+        project.messages.push({
+          id: 'm' + (state.nextTaskId++),
+          author: 'AI助手',
+          content: 'AI 建议：项目进度健康，可考虑提前下一阶段',
+          time: '刚刚',
+          me: false
+        });
+      }
+      showToast('已采纳：已记录建议到项目留言', 'success');
+      renderImpact();
+    } else if (pred.recommendationLevel === 'warning') {
+      // 滞后：为该项目创建一条新关注任务
+      if (project) {
+        project.tasks.push({
+          id: 't' + (state.nextTaskId++),
+          title: 'AI 建议关注：' + pred.recommendation,
+          owner: 'AI助手',
+          status: 'todo'
+        });
+        project.updatedAt = '刚刚';
+      }
+      showToast('已采纳：已创建关注任务', 'success');
+      renderImpact();
+    } else {
+      // 停滞：标记为高风险项目
+      if (project) project.riskLevel = 'high';
+      showToast('已采纳：已标记为高风险项目', 'success');
+      // 当前在 impact 视图时只刷新仪表盘；在 projects 视图时才调 renderProjectList
+      if (state.view === 'projects') {
+        renderProjectList();
+      } else {
+        renderImpact();
+      }
+    }
+  };
+}
+
+/* ========== 顶部 Tab 绑定 ========== */
+function initTabs() {
+  document.getElementById('tab-admin').addEventListener('click', function () {
+    // 管理后台：若在详情则留在详情，否则回列表
+    if (state.view === 'detail' && state.currentProjectId) {
+      switchView('detail');
+    } else {
+      switchView('projects');
+    }
+  });
+  document.getElementById('tab-mobile').addEventListener('click', function () {
+    switchView('mobile');
+  });
+  document.getElementById('tab-impact').addEventListener('click', function () {
+    switchView('impact');
+  });
+
+  // 方向键切换 tab
+  const tabs = Array.prototype.slice.call(document.querySelectorAll('.tab-btn'));
+  tabs.forEach(function (tab, index) {
+    tab.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      const dir = e.key === 'ArrowRight' ? 1 : -1;
+      const next = tabs[(index + dir + tabs.length) % tabs.length];
+      next.focus();
+      next.click();
+    });
+  });
+}
+
+/* ========== 初始化 ========== */
+function init() {
+  initTheme();
+  initTabs();
+  switchView('projects');
+}
+
+// DOM 就绪后启动
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+
+/* ============================================================
+   Onboarding Tour（首次使用引导）
+   ============================================================ */
+const ONBOARDING_KEY = 'onboarding-completed-bridge';
+const onboardingSteps = [
+  {
+    selector: '.project-card',
+    title: '项目卡片',
+    desc: 'Bridge 的主页展示所有公益项目卡片，点击任意卡片可进入项目详情与任务看板。',
+    prepare: function () { switchView('projects'); }
+  },
+  {
+    selector: '.kanban',
+    title: '任务看板',
+    desc: '项目详情页的任务看板，按待办、进行中、已完成三列组织交接任务。',
+    prepare: function () {
+      // 不假设 p1 一定存在，用 PROJECTS[0] 兜底；空则直接结束引导
+      const p = PROJECTS[0];
+      if (!p) { completeOnboarding(); return; }
+      state.currentProjectId = p.id;
+      state.taskFilter = 'all';
+      switchView('detail');
+    }
+  },
+  {
+    selector: '#tab-impact',
+    title: '影响力视图',
+    desc: '点击这里查看项目的影响力数据，量化公益的辐射范围与受助人数。',
+    prepare: function () {
+      switchView('impact');
+    }
+  },
+  {
+    selector: '#tab-mobile',
+    title: '志愿者视角',
+    desc: '切换到志愿者的移动端视角，看看他们如何接收任务。开始你的 Bridge 之旅吧。',
+    prepare: function () {
+      switchView('mobile');
+    }
+  }
+];
+let onboardingIndex = 0;
+let onboardingActive = false;
+let onboardingRetryCount = 0;   // target 缺失时的重试计数器（P0-5）
+let onboardingTriggerEl = null; // Onboarding 触发元素，用于结束时恢复焦点（P1-17）
+
+function buildOnboardingDom() {
+  if (document.querySelector('.onboarding-overlay')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'onboarding-overlay';
+  document.body.appendChild(overlay);
+  const highlight = document.createElement('div');
+  highlight.className = 'onboarding-highlight';
+  document.body.appendChild(highlight);
+  const tooltip = document.createElement('div');
+  tooltip.className = 'onboarding-tooltip';
+  tooltip.setAttribute('role', 'dialog');
+  tooltip.setAttribute('aria-modal', 'true');
+  tooltip.setAttribute('aria-labelledby', 'onboarding-title');
+  tooltip.setAttribute('aria-live', 'polite');
+  tooltip.style.visibility = 'hidden';
+  document.body.appendChild(tooltip);
+}
+
+function onboardingKeydown(e) {
+  if (e.key === 'Escape' && onboardingActive) { skipOnboarding(); return; }
+  // Tab/Shift+Tab 焦点陷阱：将焦点限制在 tooltip 内
+  if (e.key !== 'Tab' || !onboardingActive) return;
+  const tooltip = document.querySelector('.onboarding-tooltip');
+  if (!tooltip) return;
+  const focusables = tooltip.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+  if (focusables.length === 0) return;
+  e.preventDefault();
+  const idx = Array.from(focusables).indexOf(document.activeElement);
+  const next = e.shiftKey
+    ? (idx <= 0 ? focusables[focusables.length - 1] : focusables[idx - 1])
+    : (idx >= focusables.length - 1 ? focusables[0] : focusables[idx + 1]);
+  if (next) next.focus();
+}
+
+function startOnboarding() {
+  if (onboardingActive) return;
+  onboardingActive = true;
+  onboardingIndex = 0;
+  onboardingRetryCount = 0;
+  // 保存触发元素，用于结束时恢复焦点
+  onboardingTriggerEl = document.activeElement;
+  // 给 body 加 onboarding-active 类，从根源消除 viewFade 干扰 getBoundingClientRect()
+  document.body.classList.add('onboarding-active');
+  buildOnboardingDom();
+  showStep();
+  window.addEventListener('resize', onboardingReposition);
+  window.addEventListener('scroll', onboardingReposition, true);
+  document.addEventListener('keydown', onboardingKeydown);
+}
+
+let onboardingRafId = null;
+
+function positionOnboarding(isScrollReposition) {
+  if (onboardingRafId) { cancelAnimationFrame(onboardingRafId); onboardingRafId = null; }
+  const step = onboardingSteps[onboardingIndex];
+  if (!step) return;
+  const target = document.querySelector(step.selector);
+  const highlight = document.querySelector('.onboarding-highlight');
+  const tooltip = document.querySelector('.onboarding-tooltip');
+  if (!target || !highlight || !tooltip) return;
+  // 滚动/resize 重定位时禁用过渡，避免高亮框与 tooltip 滞后于目标造成视觉偏移
+  if (isScrollReposition) {
+    highlight.classList.add('no-transition');
+    tooltip.classList.add('no-transition');
+  } else {
+    highlight.classList.remove('no-transition');
+    tooltip.classList.remove('no-transition');
+  }
+  const rect = target.getBoundingClientRect();
+  const pad = 6;
+  highlight.style.left = (rect.left - pad) + 'px';
+  highlight.style.top = (rect.top - pad) + 'px';
+  highlight.style.width = (rect.width + pad * 2) + 'px';
+  highlight.style.height = (rect.height + pad * 2) + 'px';
+  const tipH = tooltip.offsetHeight || 180;
+  const tipW = 320;
+  const placeBelow = (rect.bottom + tipH + 24 <= window.innerHeight);
+  const top = placeBelow ? rect.bottom + 16 : rect.top - tipH - 16;
+  let left = rect.left + (rect.width / 2) - (tipW / 2);
+  if (left < 12) left = 12;
+  if (left + tipW > window.innerWidth - 12) left = window.innerWidth - tipW - 12;
+  tooltip.style.left = left + 'px';
+  tooltip.style.top = Math.max(12, top) + 'px';
+  tooltip.style.visibility = 'visible';
+}
+
+function onboardingReposition() {
+  if (!onboardingActive) return;
+  if (onboardingRafId) cancelAnimationFrame(onboardingRafId);
+  onboardingRafId = requestAnimationFrame(function() { positionOnboarding(true); });
+}
+
+function showStep() {
+  const step = onboardingSteps[onboardingIndex];
+  if (!step) return completeOnboarding();
+  // 前置准备（如切换视图）
+  const hadPrepare = typeof step.prepare === 'function';
+  if (hadPrepare) {
+    step.prepare();
+  }
+  const target = document.querySelector(step.selector);
+  const highlight = document.querySelector('.onboarding-highlight');
+  const tooltip = document.querySelector('.onboarding-tooltip');
+  if (!target || !highlight || !tooltip) {
+    // target 缺失（如骨架屏阶段）时不递增 index，setTimeout 重试
+    // 最多重试 10 次（约 1 秒）后放弃，避免无限循环
+    onboardingRetryCount++;
+    if (onboardingRetryCount > 10) {
+      onboardingRetryCount = 0;
+      return completeOnboarding();
+    }
+    return setTimeout(showStep, 100);
+  }
+  onboardingRetryCount = 0;
+
+  const isLast = onboardingIndex === onboardingSteps.length - 1;
+  tooltip.innerHTML =
+    '<div class="onboarding-step">第 ' + (onboardingIndex + 1) + ' / ' + onboardingSteps.length + ' 步</div>' +
+    '<div class="onboarding-title" id="onboarding-title">' + step.title + '</div>' +
+    '<div class="onboarding-desc">' + step.desc + '</div>' +
+    '<div class="onboarding-actions">' +
+      '<span class="onboarding-progress">' + (onboardingIndex + 1) + ' / ' + onboardingSteps.length + '</span>' +
+      '<div class="onboarding-btns">' +
+        (!isLast ? '<button class="onboarding-btn-skip" id="onboarding-skip" type="button">跳过</button>' : '') +
+        '<button class="onboarding-btn-next" id="onboarding-next" type="button">' + (isLast ? '开始体验' : '下一步') + '</button>' +
+      '</div>' +
+    '</div>';
+
+  // 高亮 + tooltip 定位（抽成独立函数，scroll 时复用，避免重建 innerHTML）
+  // prepare 切换视图后会触发 viewFade 入场动画(transform: translateY(8px))，污染 getBoundingClientRect()
+  // 用 rAF 延迟一帧让动画推进，避免 highlight 定位偏移 8px
+  if (hadPrepare) {
+    requestAnimationFrame(positionOnboarding);
+  } else {
+    positionOnboarding();
+  }
+
+  const nextBtn = document.getElementById('onboarding-next');
+  if (nextBtn) nextBtn.onclick = nextStep;
+  const skipBtn = document.getElementById('onboarding-skip');
+  if (skipBtn) skipBtn.onclick = skipOnboarding;
+  if (nextBtn) nextBtn.focus();
+}
+
+let onboardingTransitioning = false;
+function nextStep() {
+  if (onboardingTransitioning) return;
+  onboardingTransitioning = true;
+  setTimeout(function () { onboardingTransitioning = false; }, 350);
+  onboardingIndex++;
+  if (onboardingIndex >= onboardingSteps.length) {
+    completeOnboarding();
+  } else {
+    showStep();
+  }
+}
+
+function skipOnboarding() {
+  completeOnboarding();
+}
+
+function completeOnboarding() {
+  onboardingActive = false;
+  if (onboardingRafId) cancelAnimationFrame(onboardingRafId);
+  safeSetItem(ONBOARDING_KEY, '1');
+  window.removeEventListener('resize', onboardingReposition);
+  window.removeEventListener('scroll', onboardingReposition, true);
+  document.removeEventListener('keydown', onboardingKeydown);
+  document.body.classList.remove('onboarding-active');
+  ['onboarding-overlay', 'onboarding-highlight', 'onboarding-tooltip'].forEach(cls => {
+    const el = document.querySelector('.' + cls);
+    if (el) el.remove();
+  });
+  // 恢复焦点到触发元素
+  if (onboardingTriggerEl && typeof onboardingTriggerEl.focus === 'function') {
+    onboardingTriggerEl.focus();
+    onboardingTriggerEl = null;
+  }
+}
+
+function initOnboarding() {
+  const btn = document.getElementById('help-btn');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      safeRemoveItem(ONBOARDING_KEY);
+      startOnboarding();
+    });
+  }
+  if (!safeGetItem(ONBOARDING_KEY)) {
+    setTimeout(startOnboarding, 900);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initOnboarding);
+} else {
+  initOnboarding();
+}
+</script>
+</body>
+</html>
