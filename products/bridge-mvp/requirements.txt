@@ -1,6 +1,6 @@
 # 运行时依赖（版本锁定）
 # V6 修复：测试依赖已移至 requirements-dev.txt，生产镜像不再包含 pytest
-fastapi==0.136.1
+fastapi==0.159.1
 uvicorn[standard]==0.46.0
 sqlalchemy==2.0.50
 pydantic==2.12.5
