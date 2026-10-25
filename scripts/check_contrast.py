@@ -354,9 +354,9 @@ def format_ratio(ratio):
 # 键格式：(产品名, 模式, CSS 变量名)
 # ---------------------------------------------------------------------------
 KNOWN_BASELINE = {
-    ("Bridge", "dark", "--v-ink-light"),
-    ("Bridge", "dark", "--v-ink-faded"),
-    ("Bridge", "dark", "--v-danger"),
+    # （2026-10-25）Bridge 档案纸主题深色模式的 3 项已通过调整墨色令牌修复
+    #   （--v-ink-light / --v-ink-faded / --v-danger），基线已清空。
+    #   若将来因其他改动再次不达标，会自动重新变成阻断项。
 }
 
 

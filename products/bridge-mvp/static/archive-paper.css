@@ -186,8 +186,8 @@
   /* —— 褪色墨 —— */
   --v-ink:          #d4c5a9;   /* 褪色墨(主文字) */
   --v-ink-medium:   #b8a878;   /* 中墨 */
-  --v-ink-light:    #8b7355;   /* 淡墨 */
-  --v-ink-faded:    #6b5a35;   /* 褪色 */
+  --v-ink-light:    #a2835b;   /* 淡墨 — WCAG AA 4.5:1 on #2a2018 */
+  --v-ink-faded:    #a08548;   /* 褪色 — WCAG AA 4.5:1 on #2a2018 */
 
   /* —— 褪色松烟绿点缀 —— */
   --v-primary:      #d4c5a9;
@@ -200,7 +200,7 @@
   --v-success-bg:   rgba(139, 154, 120, 0.12);
   --v-warning:      #a06342;
   --v-warning-bg:   rgba(160, 99, 66, 0.12);
-  --v-danger:       #a04535;
+  --v-danger:       #ae4e3d;   /* WCAG AA 3:1 on #2a2018 */
   --v-danger-bg:    rgba(160, 69, 53, 0.12);
 
   /* —— 状态色(褪色) —— */

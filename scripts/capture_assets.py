@@ -1,10 +1,18 @@
 """
 生成 Vannevar 品牌视觉资产：
 - 三产品独立主视觉海报（shared/media/poster-*.png）
+- 品牌海报（shared/media/vannevar-brand-poster.png）
+- 5 秒品牌开场视频（shared/media/vannevar-brand-intro.mp4）
 - 10 秒品牌开场视频（shared/media/vannevar-brand-intro-extended.mp4）
 
 依赖：Playwright、ffmpeg、Python 3.8+
-用法：python scripts/capture_assets.py
+用法：
+    python scripts/capture_assets.py            # 全部
+    python scripts/capture_assets.py --posters  # 只重出海报
+    python scripts/capture_assets.py --videos   # 只重出视频
+
+注：ffmpeg 需在 PATH 中；若用 winget 安装后当前终端仍找不到，
+新开一个终端，或把 ffmpeg 的 bin 目录加进 PATH。
 """
 import os
 import shutil
@@ -18,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SHARED = ROOT / "shared"
 MEDIA = SHARED / "media"
 FRAMES_DIR = SHARED / "frames-extended"
+FRAMES_DIR_SHORT = SHARED / "frames-short"
 
 POSTERS = [
     ("Focus", SHARED / "poster-focus.html", MEDIA / "poster-focus.png", 1200, 1600),
@@ -25,12 +34,29 @@ POSTERS = [
     ("Bridge", SHARED / "poster-bridge.html", MEDIA / "poster-bridge.png", 1200, 1600),
 ]
 
-VIDEO_HTML = SHARED / "brand-showcase-extended.html"
-VIDEO_OUT = MEDIA / "vannevar-brand-intro-extended.mp4"
+# 品牌总海报（由 brand-showcase.html 渲染）
+BRAND_POSTER = ("Brand", SHARED / "brand-showcase.html", MEDIA / "vannevar-brand-poster.png", 1200, 800)
+
+# 两个开场视频：短版来自 brand-showcase.html，长版来自 brand-showcase-extended.html
 VIDEO_WIDTH = 1920
 VIDEO_HEIGHT = 1080
 FPS = 25
-DURATION = 10
+VIDEOS = [
+    {
+        "name": "5s",
+        "html": SHARED / "brand-showcase.html",
+        "frames": FRAMES_DIR_SHORT,
+        "out": MEDIA / "vannevar-brand-intro.mp4",
+        "duration": 5,
+    },
+    {
+        "name": "10s",
+        "html": SHARED / "brand-showcase-extended.html",
+        "frames": FRAMES_DIR,
+        "out": MEDIA / "vannevar-brand-intro-extended.mp4",
+        "duration": 10,
+    },
+]
 
 
 def file_url(path: Path) -> str:
@@ -38,11 +64,11 @@ def file_url(path: Path) -> str:
 
 
 def capture_posters():
-    print("[capture] 开始截取三产品海报...")
+    print("[capture] 开始截取海报...")
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page(viewport={"width": 1200, "height": 1600})
-        for name, html_path, out_path, width, height in POSTERS:
+        for name, html_path, out_path, width, height in POSTERS + [BRAND_POSTER]:
             if not html_path.exists():
                 raise FileNotFoundError(f"海报源文件不存在: {html_path}")
             page.set_viewport_size({"width": width, "height": height})
@@ -54,26 +80,29 @@ def capture_posters():
         browser.close()
 
 
-def capture_video_frames():
-    print("[capture] 开始生成品牌视频帧序列...")
-    if FRAMES_DIR.exists():
-        shutil.rmtree(FRAMES_DIR)
-    FRAMES_DIR.mkdir(parents=True, exist_ok=True)
+def capture_video_frames(spec):
+    frames_dir = spec["frames"]
+    print(f"[capture] 开始生成 {spec['name']} 品牌视频帧序列...")
+    if frames_dir.exists():
+        shutil.rmtree(frames_dir)
+    frames_dir.mkdir(parents=True, exist_ok=True)
 
-    total_frames = FPS * DURATION
+    total_frames = FPS * spec["duration"]
 
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page(viewport={"width": VIDEO_WIDTH, "height": VIDEO_HEIGHT})
-        page.goto(file_url(VIDEO_HTML), wait_until="networkidle")
+        page.goto(file_url(spec["html"]), wait_until="networkidle")
         page.wait_for_timeout(1200)
 
         # 接管时间轴，确保首帧为空白
-        page.evaluate("""
+        page.evaluate(
+            """
             window.__brandManual = true;
             window.__brandTime = 0;
             window.__updateBrandFrame();
-        """)
+        """
+        )
         page.wait_for_timeout(100)
 
         for frame_idx in range(total_frames):
@@ -89,38 +118,48 @@ def capture_video_frames():
             )
             # 给一帧时间让浏览器完成渲染
             page.wait_for_timeout(5)
-            frame_path = FRAMES_DIR / f"frame-{frame_idx:04d}.png"
+            frame_path = frames_dir / f"frame-{frame_idx:04d}.png"
             page.screenshot(path=str(frame_path), full_page=False)
             if (frame_idx + 1) % 50 == 0:
-                print(f"  [progress] {frame_idx + 1}/{total_frames} 帧")
+                print(f"  [progress] {spec['name']} {frame_idx + 1}/{total_frames} 帧")
 
         browser.close()
-    print(f"  [OK] 共生成 {total_frames} 帧 -> {FRAMES_DIR}")
+    print(f"  [OK] 共生成 {total_frames} 帧 -> {frames_dir}")
 
 
-def build_video():
-    print("[capture] 开始用 ffmpeg 合成 10s 视频...")
+def build_video(spec):
+    print(f"[capture] 开始用 ffmpeg 合成 {spec['name']} 视频...")
     cmd = [
         "ffmpeg",
         "-y",
         "-framerate", str(FPS),
-        "-i", str(FRAMES_DIR / "frame-%04d.png"),
+        "-i", str(spec["frames"] / "frame-%04d.png"),
         "-c:v", "libx264",
         "-pix_fmt", "yuv420p",
         "-movflags", "+faststart",
         "-vf", f"scale={VIDEO_WIDTH}:{VIDEO_HEIGHT}:force_original_aspect_ratio=decrease,pad={VIDEO_WIDTH}:{VIDEO_HEIGHT}:(ow-iw)/2:(oh-ih)/2",
-        str(VIDEO_OUT),
+        str(spec["out"]),
     ]
     subprocess.run(cmd, check=True)
-    print(f"  [OK] 视频 -> {VIDEO_OUT}")
+    print(f"  [OK] 视频 -> {spec['out']}")
 
 
 def main():
+    args = set(sys.argv[1:])
+    only_posters = "--posters" in args
+    only_videos = "--videos" in args
+    if only_posters and only_videos:
+        print("[capture] --posters 与 --videos 不能同时使用", file=sys.stderr)
+        return 2
+
     MEDIA.mkdir(parents=True, exist_ok=True)
     try:
-        capture_posters()
-        capture_video_frames()
-        build_video()
+        if not only_videos:
+            capture_posters()
+        if not only_posters:
+            for spec in VIDEOS:
+                capture_video_frames(spec)
+                build_video(spec)
         print("[capture] 全部资产生成完成。")
         return 0
     except Exception as e:
