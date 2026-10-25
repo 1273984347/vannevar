@@ -342,6 +342,8 @@ Vannevar/
 
 给后续 AI Agent 与协作者的仓库工作约定写在 **[AGENTS.md](AGENTS.md)**。
 
+想了解「为什么这么设计」——每个技术取舍的理由、**代价**与影响面，见 **[docs/architecture-decisions.md](docs/architecture-decisions.md)**（架构决策记录）。改动既有决策时请在该文件的「决策变更日志」里追加，而不是直接改写历史。
+
 ---
 
 ## 许可
