@@ -3,8 +3,12 @@
 # 全仓文本文件统一以 LF 存储与检出，避免跨平台 CRLF/LF 噪声
 * text=auto eol=lf
 
+# Windows 批处理脚本例外：.bat / .cmd 由 cmd.exe 执行，CRLF 更稳妥，
+# 因此覆盖上面的 eol=lf 规则（gitattributes 中后出现的规则优先）。
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
 # 二进制资源：不做行尾转换，不参与文本差异
-*.(png|jpg|jpeg|gif|webp|mp4|wasm|ico) binary
 *.png binary
 *.jpg binary
 *.jpeg binary

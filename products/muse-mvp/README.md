@@ -96,11 +96,33 @@ python tests/e2e/test_muse.py
 node --import ./tests/loader.mjs tests/test_media_session.mjs
 ```
 
+> `--import ./tests/loader.mjs` **必须带**：loader 把 `core/muse.js` 的 `./db.js` 重定向到
+> `tests/mocks/db.js`，绕开真实 `lib/sql-wrapper.js` / `lib/sql-wasm.js` 的 UMD 挂载
+> （Node 没有浏览器全局 `self`）。
+> 不带 loader 实测为 7/18 通过、11 失败（`ReferenceError: self is not defined`）——那是运行方式不对，不是缺陷。
+> 同理，Focus 的 `test_sync_crypto.mjs` 也必须带 loader；而 Focus 的 `test_crypto.mjs` 不需要。
+
 测试覆盖：
 - `saveInspiration` 写入 / 读取 media 字段（mediaType/mediaArtist/mediaAlbum/mediaArtworkUrl）
 - `captureMediaMetadata` URL 启发式 source 推断（YouTube→video / 喜马拉雅→podcast / 默认→music）
 - `captureMediaMetadata` artwork 数组按 size 降序取最大（pageMetadata 模式实际调用注入 func）
 - `groupByMusic` 纯函数分组逻辑（artist 优先 / title 兜底 / 无媒体归入"(未关联媒体)"组且始终在最后）
+
+## 已知限制与设计取舍
+
+### `optional_host_permissions` 包含 `https://*/*`
+
+`manifest.json` 的 `optional_host_permissions` 声明了 `https://*/*`，这是有意保留的取舍，不是疏漏：
+`captureInspiration` 需要读取任意页面内容（标题、选中文本、媒体元数据等），没有该权限就只能覆盖
+用户主动打开的当前标签页，无法在后台标签页上捕获灵感。
+
+它是**可选**权限：安装时**不默认启用**，需用户在安装时或扩展详情页按需手动授权。
+`permissions` 中的 `activeTab` + `scripting` 已足够覆盖「捕获当前标签页」这一默认场景，
+所以安装时不会提示「读取所有网站数据」。
+
+未来可改为按用户实际访问的域名动态申请 `host_permissions`，进一步收窄授权范围。
+
+---
 
 ## 技术说明
 

@@ -2,6 +2,8 @@
 
 ## 快速开始（Docker Compose）
 
+> 以下命令均在**仓库根目录**执行（`.env.example` 与 `docker-compose.yml` 都在仓库根目录）。
+
 ### 1. 准备环境配置
 
 ```bash
@@ -13,6 +15,10 @@ cp .env.example .env
 ```bash
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
+
+> `.env` 中 `BRIDGE_ADMIN_PASS` 与 `BRIDGE_JWT_SECRET` **两项都必须填**：compose 文件用
+> `${VAR:?提示}` 强制校验，缺任意一项 `docker-compose up` 会在启动前就报错退出。
+> `BRIDGE_ADMIN_PASS` 的生成方式：`python -c "import secrets; print(secrets.token_urlsafe(16))"`。
 
 ### 2. 启动服务
 
@@ -69,7 +75,26 @@ export BRIDGE_PORT=8000            # 端口，默认 8000
 python main.py
 ```
 
-> `BRIDGE_BIND_ADDR` 与 `BRIDGE_PORT` 仅在方式 B（`python main.py`）下生效；方式 A 由 uvicorn 的 `--host` / `--port` 决定。
+> `BRIDGE_BIND_ADDR` 与 `BRIDGE_PORT` 仅在方式 B（`python main.py`）下生效；方式 A 由 uvicorn 的 `--host` / `--port` 决定。详见下方「监听地址与端口」。
+
+---
+
+## 监听地址与端口
+
+`BRIDGE_PORT` 与 `BRIDGE_BIND_ADDR` **只在 `python main.py` 直接启动时生效**，启动方式决定最终监听地址：
+
+| 启动方式 | host / port 由谁决定 |
+|---|---|
+| `python main.py` | 环境变量 `BRIDGE_BIND_ADDR`（默认 `127.0.0.1`）、`BRIDGE_PORT`（默认 `8000`） |
+| `uvicorn main:app --host ... --port ...` | **uvicorn 的命令行参数**；此时这两个环境变量被忽略 |
+| `docker-compose up -d` | compose 的端口映射 `${BRIDGE_BIND_ADDR:-127.0.0.1}:${BRIDGE_PORT:-8000}:8000`，容器内固定监听 8000 |
+
+> 原因见 `products/bridge-mvp/main.py` 的 `if __name__ == "__main__":` 分支：只有该分支读取这两个
+> 环境变量并传给 `uvicorn.run(host=..., port=...)`。用 uvicorn 直接起进程时，`main.py` 的
+> `__main__` 分支根本不会执行，环境变量自然不生效。
+>
+> `BRIDGE_PORT` 取值非法（非整数，或不在 1-65535）时，`python main.py` 会往 stderr 打印错误并以
+> **退出码 2** 终止，不会带着非法端口继续跑。
 
 ---
 
@@ -113,14 +138,46 @@ BRIDGE_AI_MODEL=llama3
 
 ## 数据备份
 
+### 备份工具
+
+备份逻辑在 `products/bridge-mvp/backup.py`，对外接口如下：
+
+| 函数 | 签名 | 行为 |
+|---|---|---|
+| `backup_db()` | **无参数** | 把 `DB_PATH`（默认 `products/bridge-mvp/bridge_mvp.db`）备份到**与数据库文件同级的 `backups/` 目录**，文件名 `bridge_mvp_YYYYMMDD_HHMMSS.db`，返回备份文件路径；失败返回 `None` |
+| `list_backups()` | 无参数 | 列出 `backups/` 下的可用备份 |
+| `restore_db(name)` | 备份文件名 | 从指定备份恢复 |
+
+> ⚠️ `database.py` 里**没有** `backup_database` 这个函数。早期文档里的
+> `from database import backup_database` 会直接 `ImportError`，请改用上面的 `backup.py`。
+
 ### SQLite 备份
 
+**本地 / 源码部署**（`python main.py` 启动）：
+
 ```bash
-docker exec vannevar-bridge python -c "
-from database import backup_database
-backup_database('/app/data/backup.db')
-"
+cd products/bridge-mvp
+python -c "from backup import backup_db; print(backup_db())"
 ```
+
+> - `backup_db()` **不接收参数**，备份目录固定为数据库文件同级的 `backups/`，并只保留最近
+>   `BRIDGE_MAX_BACKUPS`（默认 7）份。
+> - **数据库文件不存在时会直接跳过并返回 `None`**（不会创建空库，也不会抛错）。
+>   首次启动、库文件还没生成时跑这条命令是空操作。
+
+**Docker 部署**：
+
+容器内 `BRIDGE_DATABASE_URL=sqlite:///data/bridge.db`，真正在用的数据库是 `/app/data/bridge.db`；
+而 `backup_db()` 只认 `database.py` 的 `DB_PATH`（镜像内为 `/app/bridge_mvp.db`，而 `.dockerignore`
+已排除 `*.db`，该文件在容器中并不存在）。**所以在容器里直接调用 `backup_db()` 是空操作**，
+要备份容器真正在用的库，请对实际库文件执行 SQLite 在线备份：
+
+```bash
+docker exec vannevar-bridge python -c "import os,sqlite3; os.makedirs('/app/data/backups',exist_ok=True); s=sqlite3.connect('/app/data/bridge.db'); d=sqlite3.connect('/app/data/backups/bridge-backup.db'); s.backup(d); d.close(); s.close()"
+```
+
+> `/app/data` 是 compose 声明的数据卷（可写），备份目录由上面的 `os.makedirs` 自动创建。
+> 该命令走 SQLite 的在线备份 API，WAL 模式下也不会拷到不一致的半截文件。
 
 ### 数据卷备份
 
@@ -129,19 +186,29 @@ docker run --rm -v vannevar_bridge-data:/data -v $(pwd):/backup \
     alpine tar czf /backup/bridge-backup-$(date +%Y%m%d).tar.gz /data
 ```
 
-### 自动化备份（V12 修复）
+### 自动化备份
 
-建议通过宿主机 cron 定时执行数据库备份，防止单点数据丢失：
+建议通过宿主机 cron 定时执行数据库备份，防止单点数据丢失。
+用 `cat` + heredoc 写 cron 文件，避免 `echo` 与命令内引号互相打架：
 
 ```bash
-# 每日凌晨 3 点自动备份 SQLite 数据库到 /app/data/backup.db
-echo "0 3 * * * docker exec vannevar-bridge python -c \"from database import backup_database; backup_database('/app/data/backup.db')\"" | crontab -
-
-# 可选：同时备份到宿主机本地目录（配合数据卷备份）
-# echo "30 3 * * * docker run --rm -v vannevar_bridge-data:/data -v /backups:/backup alpine tar czf /backup/bridge-$(date +\%Y\%m\%d).tar.gz /data" | crontab -
+cat > /tmp/bridge-backup.cron <<'CRON'
+0 3 * * * docker exec vannevar-bridge python -c "import os,sqlite3; os.makedirs('/app/data/backups',exist_ok=True); s=sqlite3.connect('/app/data/bridge.db'); d=sqlite3.connect('/app/data/backups/bridge-backup.db'); s.backup(d); d.close(); s.close()"
+CRON
+crontab /tmp/bridge-backup.cron
 ```
 
-> 注意：cron 表达式中 `%` 需转义为 `\%`。备份文件应定期清理旧版本或上传到异地存储。
+若不需要容器内的一致性备份、只想把整个数据卷归档，可改用下面这条（配合上面的「数据卷备份」）：
+
+```bash
+cat > /tmp/bridge-volume-backup.cron <<'CRON'
+30 3 * * * docker run --rm -v vannevar_bridge-data:/data -v /backups:/backup alpine tar czf /backup/bridge-$(date +\%Y\%m\%d).tar.gz /data
+CRON
+crontab /tmp/bridge-volume-backup.cron
+```
+
+> 注意：cron 表达式中 `%` 需转义为 `\%`（见上面第二条）。备份文件应定期清理旧版本或上传到异地存储。
+> 两条 cron 择一使用即可，`crontab <文件>` 会**覆盖**已有的 crontab。
 
 ---
 

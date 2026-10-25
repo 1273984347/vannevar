@@ -39,13 +39,54 @@
 **一句话**：志愿者扫码查看项目任务与协作留言，管理员通过看板管理进度。
 
 **30 秒体验**：
+
+Bridge 在**非调试模式**下必须同时设置 `BRIDGE_JWT_SECRET` 与 `BRIDGE_ADMIN_PASS`，
+缺任意一个服务都会**直接拒绝启动**（抛 `RuntimeError`），不会带着弱凭据跑起来。二选一：
+
+**方式一（推荐）：显式设置两个环境变量**
+
+```powershell
+# Windows PowerShell
+cd products/bridge-mvp
+py -m pip install -r requirements.txt
+$env:BRIDGE_JWT_SECRET = python -c "import secrets; print(secrets.token_hex(32))"
+$env:BRIDGE_ADMIN_PASS = "改成你的密码"
+python main.py
+```
+
 ```bash
+# Linux / macOS
 cd products/bridge-mvp
 pip install -r requirements.txt
+export BRIDGE_JWT_SECRET="$(python -c 'import secrets; print(secrets.token_hex(32))')"
+export BRIDGE_ADMIN_PASS="改成你的密码"
 python main.py
-# 终端会打印 [BRIDGE] Dev admin password: xxxx，用 admin + 该密码登录
 ```
-1. 浏览器访问 `http://127.0.0.1:8000/` → 输入 `admin` + 终端打印的密码
+
+**方式二：本地开发用 `BRIDGE_DEBUG=1`**（JWT 密钥与管理员密码随机生成并打印到 stderr）
+
+```powershell
+# Windows PowerShell
+cd products/bridge-mvp
+py -m pip install -r requirements.txt
+$env:BRIDGE_DEBUG = "1"
+python main.py
+# 启动后终端（stderr）会打印 [BRIDGE] Dev admin password: xxxx
+```
+
+```bash
+# Linux / macOS
+cd products/bridge-mvp
+pip install -r requirements.txt
+export BRIDGE_DEBUG=1
+python main.py
+# 启动后终端（stderr）会打印 [BRIDGE] Dev admin password: xxxx
+```
+
+> `BRIDGE_DEBUG=1` 只适用于本地开发：它会打开 `/demo` 等调试入口；未设置 `BRIDGE_ADMIN_PASS` 时，
+> 管理员口令是每次启动随机生成的一次性值（重启即变）。生产部署请走方式一并显式设置强密码与强密钥。
+
+1. 浏览器访问 `http://127.0.0.1:8000/` → 输入 `admin` + 你设置的（或终端打印的）密码
 2. 「新建项目」→ 进入项目详情 → 添加任务（拖拽看板）
 3. 点「交接」→ 自动生成交接摘要
 4. 访问「统计仪表盘」查看任务分布、趋势、贡献榜
@@ -60,7 +101,7 @@ python main.py
 | 问题 | 答案 |
 |------|------|
 | Focus/Muse 需要 API key 吗？ | 不需要。无 key 时使用规则引擎，有 key 时升级为 AI 增强 |
-| Bridge 密码是什么？ | 启动时自动生成并打印到终端，也可用 `BRIDGE_ADMIN_PASS` 指定 |
+| Bridge 密码是什么？ | 由 `BRIDGE_ADMIN_PASS` 指定；非调试模式下该变量与 `BRIDGE_JWT_SECRET` 都必须设置，否则服务拒绝启动。用 `BRIDGE_DEBUG=1` 时改为随机生成并打印到 stderr |
 | 数据存储在哪？ | 全部本地：扩展用 SQLite WASM，Bridge 用本地 SQLite 文件 |
 | 支持哪些浏览器？ | Chrome / Edge（Chromium 内核，Manifest V3） |
 | 如何查看 API 文档？ | Bridge 启动后访问 `/docs`（仅 dev 模式） |

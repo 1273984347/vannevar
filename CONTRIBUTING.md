@@ -86,7 +86,7 @@ cd products/muse-mvp
 node --import ./tests/loader.mjs tests/test_media_session.mjs
 ```
 
-当前基线：Bridge 430 passed / 9 skipped / 0 failed；Focus 16/16 与 11/11；Muse 18/18。
+当前基线：Bridge 435 passed / 9 skipped / 0 failed；Focus 16/16 与 11/11；Muse 18/18。
 
 Bridge 的 pytest 使用内存数据库（`sqlite:///:memory:`），不会写入你本地的 `bridge_mvp.db`。
 
@@ -95,15 +95,27 @@ Bridge 的 pytest 使用内存数据库（`sqlite:///:memory:`），不会写入
 仓库**没有**配置 ESLint、Black、flake8、pre-commit 等独立 lint 工具链，请不要在 PR 里引入它们（会带来大量无关 diff）。目前的检查方式：
 
 ```bash
-# JavaScript 语法检查
+# JavaScript 语法检查（在仓库根目录执行）
 node --check products/focus-mvp/background.js
 
-# Python 语法检查
+# Python 语法检查（在仓库根目录执行）
 python -m py_compile products/bridge-mvp/main.py
 
 # Python 逻辑检查（等价于静态检查 + 行为验证）
-python -m pytest tests/ -q
+# 注意：必须先进入 products/bridge-mvp，否则 pytest 找不到 tests/ 与 tests/conftest.py
+cd products/bridge-mvp
+python -m pytest tests/ -q --ignore=tests/e2e
 ```
+
+> **`--ignore=tests/e2e` 不可省略**：`tests/e2e/test_bridge_e2e.py` 顶层 `import playwright`，
+> 而 playwright 在 `requirements-dev.txt` 里默认被注释掉，未安装时 pytest 会在收集阶段直接报错
+> （collection error），整轮测试无法开始。根 `README.md`、Bridge README 与 CI 用的是同一条命令。
+>
+> e2e 需要 Playwright + Chromium，本地按需安装（约 150MB 下载，不在日常与 CI 流程内）：
+>
+> ```bash
+> pip install playwright && playwright install chromium
+> ```
 
 CI 会执行上述测试与语法检查。
 
@@ -171,7 +183,7 @@ docs(readme): 更新 Muse 测试命令，补上 --import 参数
 2. PR 描述必须包含：
    - **改了什么、为什么**；
    - **影响范围**（是否触及共享层、是否需要同步改文档）；
-   - **验证证据**（实际跑过的命令 + 结果，例如 `423 passed / 9 skipped`）。
+   - **验证证据**（实际跑过的命令 + 结果，例如 `435 passed / 9 skipped / 0 failed`）。
 3. CI 通过后等待维护者查看。
 4. 维护者可能提出修改意见；请在原分支追加提交，不要 force-push 已评审过的提交。
 5. 通过后由维护者合并（ squash 合并为主）。

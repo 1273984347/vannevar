@@ -60,13 +60,16 @@ jobs:
         # 该目录当前仅 1 个用例（tests/e2e/test_bridge_e2e.py::test_bridge_e2e），
         # 建议由发布前的本地 e2e 流程覆盖。
         #
-        # 本地实测基线（2026-10-25，Windows / Python 3.12.10，耗时约 112 秒）：
-        #   430 passed / 9 skipped / 0 failed
+        # 判据（不随代码变动）：0 failed。
+        # 用例数会随新用例增加而漂移，因此除「0 failed」外的任何数量都不作为失败条件，
+        # 只在下方标注截至 2026-10-25 的实测值供人工对照：
+        #   435 passed / 9 skipped / 0 failed
+        #   （2026-10-25 实测，Windows / Python 3.12.10，耗时约 112 秒）
         # 9 个 skipped 全部有据：7 个来自 tests/test_performance.py（需 --run-slow），
         # 2 个为标注「V26 自指测试」的待重构用例。
-        # 其中 tests/test_backup_recovery.py 是数据库恢复流程的回归测试（7 项），
-        # 锁定「恢复后必须通过完整性检查」「必须清除 WAL 侧车」「坏备份不得覆盖好库」
-        # 四个不变量——改动 backup.py 时必须让它保持全绿。
+        # 其中 tests/test_backup_recovery.py 是数据库恢复流程的回归测试，
+        # 截至 2026-10-25 实测 12 项，锁定「恢复后必须通过完整性检查」「必须清除 WAL 侧车」
+        # 「坏备份不得覆盖好库」四个不变量——改动 backup.py 时必须让它保持全绿。
         run: python -m pytest tests/ -q --ignore=tests/e2e
 
   # ------------------------------------------------------------ Extensions
@@ -151,6 +154,11 @@ jobs:
     name: Docs · markdown relative links
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # 显式声明 shell：脚本用 python3 heredoc，需要 bash 语义（Linux 默认即 bash，
+    # 但显式声明可避免 runner 镜像默认值变化导致 heredoc 行为漂移）。
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -159,8 +167,10 @@ jobs:
         # 检查仓库源码树中 markdown 的相对链接是否指向真实文件。
         # 跳过 .git / node_modules / __pycache__ / .pytest_cache / dist / dogfood-output
         # 等运行时目录，以及 archive/（过程资产迁往独立 archive 仓，主仓不保留）。
-        # 本地实测（2026-10-25）：15 条相对链接、0 断链 → ALL LINKS OK
-        # （markdown 文件总数随并行施工会变，故此处只固定「断链数」这一判据。）
+        #
+        # 判据（不随代码变动）：断链数必须为 0。
+        # markdown 文件数量与相对链接条数会随并行施工漂移，因此既不写死这些数字，
+        # 也不把它们作为失败条件；脚本只报告实际断链数，存在断链即以退出码 1 结束。
         #
         # 说明：这是「源码树」版链接检查。scripts/check_links.py 是「最终总包 zip」版，
         # 依赖打包产物（仓库不保留 zip），故不在每次 push 跑；详见文件末尾说明。
@@ -172,7 +182,6 @@ jobs:
           root = pathlib.Path('.')
           files = [p for p in root.rglob('*.md') if not (set(p.relative_to(root).parts) & SKIP)]
           broken = []
-          checked = 0
           for md in files:
               content = md.read_text(encoding='utf-8', errors='replace')
               for label, link in LINK_RE.findall(content):
@@ -181,12 +190,10 @@ jobs:
                   path_part = link.split('#')[0].split('?')[0]
                   if not path_part:
                       continue
-                  checked += 1
                   if not (md.parent / path_part).resolve().exists():
                       broken.append((md, link))
-          print(f'checked {checked} links in {len(files)} markdown files')
+          print(f'broken links: {len(broken)}')
           if broken:
-              print(f'BROKEN: {len(broken)}')
               for md, link in broken[:30]:
                   print(f'  {md}: {link}')
               sys.exit(1)

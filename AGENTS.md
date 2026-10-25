@@ -62,7 +62,7 @@
 # Bridge：全量单元/集成测试（内存库，不污染本地数据）
 cd products/bridge-mvp
 py -m pytest tests/ -q --ignore=tests/e2e
-# 基线：430 passed / 9 skipped / 0 failed
+# 基线：435 passed / 9 skipped / 0 failed
 
 # Focus：端到端加密
 cd products/focus-mvp

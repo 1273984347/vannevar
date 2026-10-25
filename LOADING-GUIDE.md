@@ -11,15 +11,39 @@
 1. 打开 Chrome / Edge，访问 `chrome://extensions/`
 2. 开启右上角「开发者模式」
 3. 点击「加载已解压的扩展程序」
-4. 选择 `Vannevar/products/focus-mvp` 文件夹
+4. 选择仓库内的 `products/focus-mvp` 文件夹
 5. 工具栏出现 Vannevar 图标后即可使用
 
 ### 方式 B：从 zip 包加载（发布分发）
 
-1. 解压 `products/focus-mvp.zip` 到任意文件夹（如 `focus-mvp/`）
+> 仓库**不保留 zip 包**：`.gitignore` 同时排除了 `dist/` 与 `*.zip`，所以 clone 下来的工作树里
+> 没有任何 zip，需要自己先生成。
+
+在**仓库根目录**执行打包脚本：
+
+```bash
+python scripts/pack_mvps.py
+```
+
+产物在仓库根目录的 `dist/` 下：
+
+| 产物 | 内容 |
+|---|---|
+| `dist/focus-mvp.zip` | Focus 扩展包 |
+| `dist/muse-mvp.zip` | Muse 扩展包 |
+| `dist/bridge-mvp.zip` | Bridge 服务端包 |
+
+每个 zip 同名还会生成一份 `*.zip.manifest.json`（含 SHA256 校验和），可用于校验包完整性。
+`dist/` 同样是 gitignored 的本地产物，不随仓库分发。
+
+加载步骤：
+
+1. 解压 `dist/focus-mvp.zip` 到任意文件夹（如 `focus-mvp/`）
 2. 按方式 A 的第 1-3 步进入开发者模式
 3. 选择解压后的 `focus-mvp/` 文件夹
 4. 检查扩展详情页是否显示「Vannevar · Focus MVP v0.1.0」
+
+> 正式发布后也可直接从 GitHub Releases 下载打包好的 zip，无需自行生成。
 
 ### 快速验证
 
@@ -38,15 +62,24 @@
 
 1. 打开 `chrome://extensions/`，开启「开发者模式」
 2. 点击「加载已解压的扩展程序」
-3. 选择 `Vannevar/products/muse-mvp` 文件夹
+3. 选择仓库内的 `products/muse-mvp` 文件夹
 
 ### 方式 B：从 zip 包加载
 
-1. 解压 `products/muse-mvp.zip` 到 `muse-mvp/` 文件夹
+zip 包需自行生成（仓库不保留 zip，原因与产物清单见上文 Focus 的方式 B）：
+
+```bash
+# 在仓库根目录执行
+python scripts/pack_mvps.py
+```
+
+1. 解压 `dist/muse-mvp.zip` 到 `muse-mvp/` 文件夹
 2. 按方式 A 加载该文件夹
 3. 检查扩展详情页是否显示「Vannevar · Muse MVP v0.1.0」
 
-> **权限说明**：Muse 默认仅请求 `activeTab + scripting` 即可捕获当前标签页灵感，安装时不会提示「读取所有网站数据」。若未来需要后台标签页捕获，可在扩展详情页手动授予可选权限。
+> **权限说明**：Muse 默认仅请求 `activeTab + scripting` 即可捕获当前标签页灵感，安装时不会提示「读取所有网站数据」。
+> `optional_host_permissions` 里的 `https://*/*` 需用户在安装时按需手动授权，非默认启用（详见产品 README 的「已知限制与设计取舍」）。
+> 若未来需要后台标签页捕获，可在扩展详情页手动授予可选权限。
 
 ### 快速验证
 
@@ -65,18 +98,57 @@ Bridge 无需浏览器扩展，直接运行 Python 服务即可。
 
 ### 本地启动
 
-```bash
-cd Vannevar/products/bridge-mvp
-pip install -r requirements.txt
+Bridge 在**非调试模式**下必须同时设置 `BRIDGE_JWT_SECRET` 与 `BRIDGE_ADMIN_PASS`，
+缺任意一个服务都会**直接拒绝启动**（抛 `RuntimeError`）。二选一：
+
+**方式一（推荐）：显式设置两个环境变量**
+
+```powershell
+# Windows PowerShell
+cd products/bridge-mvp
+py -m pip install -r requirements.txt
+$env:BRIDGE_JWT_SECRET = python -c "import secrets; print(secrets.token_hex(32))"
+$env:BRIDGE_ADMIN_PASS = "改成你的密码"
 python main.py
+```
+
+```bash
+# Linux / macOS
+cd products/bridge-mvp
+pip install -r requirements.txt
+export BRIDGE_JWT_SECRET="$(python -c 'import secrets; print(secrets.token_hex(32))')"
+export BRIDGE_ADMIN_PASS="改成你的密码"
+python main.py
+```
+
+**方式二：本地开发用 `BRIDGE_DEBUG=1`**（JWT 密钥与管理员密码随机生成并打印到 stderr）
+
+```powershell
+# Windows PowerShell
+cd products/bridge-mvp
+py -m pip install -r requirements.txt
+$env:BRIDGE_DEBUG = "1"
+python main.py
+# 启动后终端（stderr）会打印 [BRIDGE] Dev admin password: xxxx
+```
+
+```bash
+# Linux / macOS
+cd products/bridge-mvp
+pip install -r requirements.txt
+export BRIDGE_DEBUG=1
+python main.py
+# 启动后终端（stderr）会打印 [BRIDGE] Dev admin password: xxxx
 ```
 
 默认监听 `http://127.0.0.1:8000/`。
 
 ### 默认凭据
 
-- 管理员账号：`admin`，密码在服务启动时自动生成并打印到终端（stderr），形如 `[BRIDGE] Dev admin password: xxxx`
-- 如需固定密码：启动前设置环境变量 `BRIDGE_ADMIN_PASS=你的密码`
+- 管理员账号：`admin`（可用 `BRIDGE_ADMIN_USER` 覆盖）
+- 管理员密码：`BRIDGE_ADMIN_PASS` 指定的值。**非调试模式下该变量必填**，缺失或仍为内置弱口令时服务拒绝启动
+- 随机 dev 密码：仅当 `BRIDGE_DEBUG=1` 且**未**设置 `BRIDGE_ADMIN_PASS` 时，服务启动时在 stderr 打印一行
+  `[BRIDGE] Dev admin password: xxxx` —— 只有这一种情况下才会有这行输出
 - 志愿者入口：在项目详情页扫描二维码或访问 `/p/{qr_token}`
 
 ### 快速验证
@@ -108,6 +180,8 @@ python main.py
 ### Bridge 端口被占用
 
 - 使用其他端口：`uvicorn main:app --host 127.0.0.1 --port 8080`
+- 若用 `python main.py` 启动，也可改环境变量 `BRIDGE_PORT=8080`（该变量**只在 `python main.py` 下生效**；
+  用 `uvicorn main:app --host ... --port ...` 直接启动时，监听地址与端口由 uvicorn 参数决定）
 - 部署到自定义域名时设置 `BRIDGE_BASE_URL=https://your-domain/`
 
 ---
@@ -116,6 +190,6 @@ python main.py
 
 | 产物 | 文件 | 加载方式 |
 |------|------|----------|
-| Focus | `products/focus-mvp.zip` | 解压后加载已解压扩展 |
-| Muse | `products/muse-mvp.zip` | 解压后加载已解压扩展 |
-| Bridge | `products/bridge-mvp/` 目录 | `python main.py` |
+| Focus | `products/focus-mvp/` 目录，或自行打包得到的 `dist/focus-mvp.zip` | 目录直接加载；zip 需先解压 |
+| Muse | `products/muse-mvp/` 目录，或自行打包得到的 `dist/muse-mvp.zip` | 目录直接加载；zip 需先解压 |
+| Bridge | `products/bridge-mvp/` 目录 | `python main.py`（需先设置 `BRIDGE_JWT_SECRET` + `BRIDGE_ADMIN_PASS`，或设 `BRIDGE_DEBUG=1`） |

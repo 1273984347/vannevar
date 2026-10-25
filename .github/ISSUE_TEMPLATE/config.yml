@@ -1,13 +1,18 @@
 # Issue 模板配置 —— 允许自由格式 Issue，并给出贡献 / 安全入口
 #
-# 注意：下面两条链接使用占位仓库坐标 `vannevar/vannevar`。
-# 仓库正式发布（确定 GitHub owner/repo 名）前，请把 url 中的
-# `vannevar/vannevar` 整体替换为真实的 `OWNER/REPO`。
+# 发布前必做：下面两条 contact_links 的 url 使用占位仓库坐标 `OWNER/REPO`。
+# 仓库正式发布（确定 GitHub owner/repo 名）后，请把 url 中的 `OWNER/REPO`
+# 整体替换为真实的仓库坐标（如 `OWNER/REPO` → `真实账号/真实仓库名`）。
+# 占位值刻意写成 `OWNER/REPO` 这种一眼可辨的形式（而不是形似真实坐标的假值），
+# 便于 grep 复查残留：
+#   grep -rn "OWNER/REPO" .github products shared
 blank_issues_enabled: true
 contact_links:
   - name: 贡献指南 / Contributing Guide
-    url: https://github.com/vannevar/vannevar/blob/main/CONTRIBUTING.md
+    # 发布前替换为实际仓库坐标：OWNER/REPO
+    url: https://github.com/OWNER/REPO/blob/main/CONTRIBUTING.md
     about: 提交代码前请先阅读贡献指南（分支命名、提交规范、PR 流程）。
   - name: 安全策略 / Security Policy
-    url: https://github.com/vannevar/vannevar/blob/main/SECURITY.md
+    # 发布前替换为实际仓库坐标：OWNER/REPO
+    url: https://github.com/OWNER/REPO/blob/main/SECURITY.md
     about: 如需报告安全漏洞或敏感信息泄露问题，请按安全策略私下上报，勿直接开公开 Issue。

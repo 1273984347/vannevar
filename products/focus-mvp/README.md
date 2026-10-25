@@ -94,11 +94,18 @@ python tests/e2e/test_focus.py
 
 ```bash
 # crypto.js 单测：AES-GCM-256 加密 / PBKDF2 派生 / 密钥不出边界
-node --import ./tests/loader.mjs tests/test_crypto.mjs
+# crypto.js 是真实模块，不需要 mock 重定向 → 不带 --import
+node tests/test_crypto.mjs
 
 # sync.js + crypto.js 集成测试：加密锁定时跳过 push / pullSync 解密 / 跨上下文 unlock
+# 必须带 --import ./tests/loader.mjs
 node --import ./tests/loader.mjs tests/test_sync_crypto.mjs
 ```
+
+> `test_crypto.mjs` **不带** `--import` 即可（实测 16 通过 / 0 失败）；而 `test_sync_crypto.mjs`
+> 与 Muse 的 `test_media_session.mjs` **必须**带 `--import ./tests/loader.mjs`——否则 mock 缺失，
+> 加载真实 `lib/sql-wrapper.js` 时会抛 `ReferenceError: self is not defined`（Node 没有浏览器全局 `self`），
+> 导致大量用例失败。
 
 ESM resolver（`tests/loader-hooks.mjs`）把 `sync.js` 内部的 `./auth.js` / `./db.js` 重定向到 `tests/mocks/`，避免加载 SQLite WASM 和真实 auth 模块。crypto.js 保持原样加载（真实模块，需 WebCrypto API）。
 
@@ -114,11 +121,30 @@ ESM resolver（`tests/loader-hooks.mjs`）把 `sync.js` 内部的 `./auth.js` / 
 - 查看 Console 是否有红色报错
 - 把报错内容贴出来即可定位问题
 
+## 已知限制与设计取舍
+
+### CSP 的 `connect-src` 允许任意 HTTPS 源
+
+`manifest.json` 的 `content_security_policy.extension_pages` 写作
+`script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; ...`，
+其中 **`connect-src` 允许任意 HTTPS 源**。
+
+这是有意保留的取舍，不是疏漏：产品需要支持用户在 Options 页**自配置的 AI 端点**（可以是任意 HTTPS API URL），
+一旦收紧 `connect-src`，用户填的自定义端点会被 CSP 直接拦掉。
+
+未来可通过 `activeTab` 权限或动态 `host_permissions` 进一步细化收紧（例如按用户实际填写的端点域名申请权限）。
+
+---
+
 ## 技术说明
 
 - **SQLite 实现**：使用 [sql.js](https://sql.js.org/) 在浏览器环境中运行 SQLite，数据库以 Uint8Array 形式导出并存储到 `chrome.storage.local`
 - **本地优先**：所有数据默认保存在本地，不上传任何服务器
-- **权限最小化**：仅申请 `tabs`、`storage`、`activeTab`、`windows`、`contextMenus` 权限
+- **权限最小化**（以 `manifest.json` 为准）：
+  - `host_permissions` 为**空** —— 不申请任何站点范围的访问权
+  - `permissions`：`tabs`、`storage`、`unlimitedStorage`、`activeTab`、`windows`、`alarms`、`notifications`
+  - `optional_permissions`：`contextMenus` —— 属**可选**权限，需用户在扩展详情页按需手动授予；
+    代码里对应逻辑统一用 `if (chrome.contextMenus)` 做了存在性判断，未授权时自动跳过
 
 ## 后续优化方向
 
