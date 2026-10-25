@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#fff7ed" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1a120b" media="(prefers-color-scheme: dark)">
+  <title>Vannevar · Muse — 灵感博物馆</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/notosanssc/v36/k3kCo84MPvpLmixcA63oeAL7Iqp5IZJF9bmaG9_FnYxNbPzS5CHYo3zVmQ-HbA.woff2">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/vannevar-brand.css">
+  <link rel="stylesheet" href="dashboard.css">
+  <style>
+    /* NameThatUI Muse 令牌系统（:root 定义，供 muse-guides 等组件复用，与 Bridge --v-* 同族但独立色系） */
+    :root {
+      --muse-gradient: linear-gradient(to right, #c2410c, #d97706, #c2410c);
+      --muse-primary: #c2410c;
+      --muse-primary-bg: rgba(194, 65, 12, 0.12);
+      --muse-accent: #d97706;
+      --muse-surface: rgba(255, 247, 237, 0.6);
+      --muse-surface-strong: #fff;
+      --muse-border: rgba(194, 65, 12, 0.18);
+      --muse-text: #1a120b;
+      --muse-text-secondary: #6b5444;
+      --muse-text-muted: #9c8270;
+      --muse-bg-light: #fff7ed;
+    }
+    /* NameThatUI 深色模式：灯泡发光区域降为暖深色，避免在深色背景上刺眼 */
+    @media (prefers-color-scheme: dark) {
+      :root { --muse-bg-light: #2a1a0e; }
+    }
+    /* NameThatUI Guides 决策前置：sidebar 底部使用指南，用户一眼看出 Muse 工作流 */
+    .muse-guides {
+      margin-top: auto;
+      padding: 0.85rem 0.95rem;
+      background: var(--muse-surface);
+      border: 1px solid var(--muse-border);
+      border-radius: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+    .muse-guides::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; right: 0;
+      height: 3px;
+      background: var(--muse-gradient);
+    }
+    .muse-guides-head {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muse-text);
+      margin-bottom: 0.55rem;
+    }
+    .muse-guides-head svg { width: 14px; height: 14px; color: var(--muse-primary); flex-shrink: 0; }
+    .muse-guides-tag {
+      font-size: 0.62rem;
+      font-weight: 500;
+      color: var(--muse-primary);
+      background: var(--muse-primary-bg);
+      padding: 0.08rem 0.35rem;
+      border-radius: 999px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      margin-left: auto;
+    }
+    .muse-guides-steps {
+      margin: 0;
+      padding-left: 1rem;
+      font-size: 0.72rem;
+      line-height: 1.5;
+      color: var(--muse-text-secondary);
+    }
+    .muse-guides-steps li { margin-bottom: 0.18rem; }
+    .muse-guides-steps li::marker { color: var(--muse-accent); }
+    .muse-guides-compare {
+      display: flex;
+      gap: 0.3rem;
+      margin-top: 0.45rem;
+    }
+    .muse-guides-compare-item {
+      flex: 1;
+      background: var(--muse-surface-strong);
+      border: 1px solid var(--muse-border);
+      border-radius: 6px;
+      padding: 0.3rem 0.4rem;
+      font-size: 0.68rem;
+      line-height: 1.3;
+    }
+    .muse-guides-compare-item .compare-name {
+      display: block;
+      font-weight: 600;
+      color: var(--muse-text);
+      margin-bottom: 0.1rem;
+    }
+    .muse-guides-compare-item .compare-desc {
+      color: var(--muse-text-muted);
+      font-size: 0.64rem;
+    }
+    @media (max-width: 768px) {
+      .muse-guides { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <a href="#main" class="skip-link">跳转到主要内容</a>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M3 4L12 20L21 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1 translate="no">
+            Muse
+            <span class="scene-icon" aria-hidden="true" title="生活娱乐 · 灵感博物馆">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 12h20"/>
+                <path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/>
+                <path d="M12 2v10"/>
+              </svg>
+            </span>
+          </h1>
+          <p translate="no">Vannevar · 灵感博物馆</p>
+        </div>
+        <button class="nav-toggle" id="navToggle" type="button" aria-label="切换筛选器" aria-expanded="false" aria-controls="nav">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+      <nav class="nav" id="nav" aria-label="氛围筛选">
+        <button class="nav-item active" type="button" data-filter="all" aria-pressed="true">全部</button>
+        <div id="moodFilters"></div>
+      </nav>
+
+      <div class="view-switcher" role="tablist" aria-label="视图模式">
+        <button class="view-switcher-item active" type="button" data-view="time" role="tab" id="viewTabTime" aria-selected="true" aria-controls="timeline" tabindex="0">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>按时间</span>
+        </button>
+        <button class="view-switcher-item" type="button" data-view="source" role="tab" id="viewTabSource" aria-selected="false" aria-controls="timeline" tabindex="-1">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+            <path d="M3 12h18M12 3c2.5 2.5 4 5.5 4 9s-1.5 6.5-4 9c-2.5-2.5-4-5.5-4-9s1.5-6.5 4-9z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+          <span>按来源</span>
+        </button>
+        <button class="view-switcher-item" type="button" data-view="music" role="tab" id="viewTabMusic" aria-selected="false" aria-controls="timeline" tabindex="-1" title="按媒体/音乐分组">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M9 18V5l12-2v13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="6" cy="18" r="3" stroke="currentColor" stroke-width="2"/>
+            <circle cx="18" cy="16" r="3" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          <span>按音乐</span>
+        </button>
+      </div>
+
+      {# NameThatUI Guides 决策前置：首屏看到"如何使用 Muse"，与 Bridge project_detail 同族 #}
+      <div class="muse-guides" id="museGuides" aria-labelledby="museGuidesTitle">
+        <div class="muse-guides-head" id="museGuidesTitle">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          使用指南
+          <span class="muse-guides-tag">Guides</span>
+        </div>
+        <ol class="muse-guides-steps">
+          <li>浏览网页时点 Muse 图标捕捉灵感</li>
+          <li>选氛围标签归类（克制 / 治愈 / 热血…）</li>
+          <li>在 Dashboard 按时间/来源/音乐回顾</li>
+        </ol>
+        <div class="muse-guides-compare">
+          <div class="muse-guides-compare-item">
+            <span class="compare-name">时间</span>
+            <span class="compare-desc">按捕捉时间线倒序</span>
+          </div>
+          <div class="muse-guides-compare-item">
+            <span class="compare-name">来源</span>
+            <span class="compare-desc">按网页域名分组</span>
+          </div>
+          <div class="muse-guides-compare-item">
+            <span class="compare-name">音乐</span>
+            <span class="compare-desc">按媒体元数据聚合</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main" id="main">
+      <header class="topbar">
+        <input id="searchInput" class="search-input" type="search" placeholder="搜索标题、备注、选中片段或链接…" autocomplete="off" aria-label="搜索灵感">
+        <button id="importCardBtn" class="secondary-btn" type="button" title="从 .vcf 文件导入 Context Card" aria-label="导入 Context Card">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span class="btn-label">导入卡片</span>
+        </button>
+        <input id="importCardInput" type="file" accept=".vcf,application/json" class="visually-hidden" aria-label="选择要导入的 Context Card 文件">
+        <button id="refreshBtn" class="secondary-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M4 12C4 7.58 7.58 4 12 4C14.5 4 16.74 5.15 18.2 6.95M20 4V9H15M20 12C20 16.42 16.42 20 12 20C9.5 20 7.26 18.85 5.8 17.05M4 20V15H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="btn-label">刷新</span>
+        </button>
+        <button id="exportMarkdownBtn" class="secondary-btn" type="button" title="导出为 Markdown 文件" aria-label="导出为 Markdown">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span class="btn-label">导出 Markdown</span>
+        </button>
+        <a href="#museGuides" class="primary-btn v-quick-start" title="查看 Muse 使用指南" aria-label="查看 Muse 使用指南">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="btn-label">使用指南</span>
+        </a>
+      </header>
+
+      <section class="resume-panel" id="resumePanel" aria-label="灵感回顾" aria-live="polite">
+        <div class="resume-loading" id="resumeLoading">灵感回顾将在有数据后生成</div>
+        <div class="resume-content" id="resumeContent" style="display: none;"></div>
+      </section>
+
+      <section class="pinned-panel" id="pinnedPanel" aria-label="置顶灵感" style="display: none;" aria-live="polite">
+        <div class="pinned-header">
+          <svg class="pinned-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M9 4h6l-1 5 4 3v2h-5v6l-1 2-1-2v-6H6v-2l4-3-1-5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+          <span class="pinned-title">置顶</span>
+          <span class="pinned-count" id="pinnedCount">0</span>
+        </div>
+        <div class="pinned-list" id="pinnedList"></div>
+      </section>
+
+      <section class="timeline" id="timeline" role="tabpanel" aria-labelledby="viewTabTime">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-illustration">
+            <div class="empty-glow"></div>
+            <svg class="empty-icon" viewBox="0 0 120 120" width="80" height="80" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M60 30 C45 30 35 42 35 55 C35 65 42 72 48 78 L48 85 L72 85 L72 78 C78 72 85 65 85 55 C85 42 75 30 60 30 Z" fill="var(--muse-bg-light)" stroke="var(--muse-primary)"/>
+              <line x1="50" y1="90" x2="70" y2="90" stroke="var(--muse-primary)"/>
+              <line x1="52" y1="95" x2="68" y2="95" stroke="var(--muse-primary)"/>
+              <circle cx="60" cy="55" r="3" fill="var(--muse-accent)" stroke="none"/>
+              <path d="M60 45 L60 40" stroke="var(--muse-accent)" opacity="0.6"/>
+              <path d="M50 55 L45 55" stroke="var(--muse-accent)" opacity="0.6"/>
+              <path d="M70 55 L75 55" stroke="var(--muse-accent)" opacity="0.6"/>
+            </svg>
+          </div>
+          <div class="empty-title">还没有灵感记录</div>
+          <div class="empty-desc">浏览网页时点击 Vannevar · Muse 图标，即可捕捉此刻的灵感与氛围</div>
+          <div class="empty-seeds" id="emptySeeds" role="group" aria-label="推荐氛围">
+            <span class="empty-seeds-label">试试这些氛围开始：</span>
+            <button type="button" class="seed-tag" data-mood="克制">克制</button>
+            <button type="button" class="seed-tag" data-mood="专注">专注</button>
+            <button type="button" class="seed-tag" data-mood="治愈">治愈</button>
+            <button type="button" class="seed-tag" data-mood="热血">热血</button>
+          </div>
+          <a href="#museGuides" class="v-empty-cta">查看使用指南 →</a>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="v-toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
+  <script type="module" src="dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,1366 @@
+/* ============================================================
+   Vannevar · Focus — Popup 样式
+   自包含：内联设计令牌（复制自 shared/vannevar-brand.css）
+   扩展不能跨目录引用，故全部变量内联于此
+   ============================================================ */
+
+/* ---------- 设计令牌 ---------- */
+:root {
+  color-scheme: light;
+  /* 品牌主色 — slate + blue 蓝灰色系 */
+  --v-primary: #1e293b;          /* slate-800 */
+  --v-primary-dark: #0f172a;     /* slate-900 */
+  --v-primary-light: #3b82f6;    /* blue-500 */
+  --v-accent: #3b82f6;           /* blue-500 */
+  --v-gradient: linear-gradient(135deg, #1e293b, #334155);
+  --v-gradient-soft: linear-gradient(135deg, rgba(30,41,59,0.06), rgba(59,130,246,0.06));
+  --v-card-stripe: linear-gradient(90deg, #1e293b, #3b82f6, #334155);
+
+  /* 语义色 */
+  --v-success: #10b981;
+  --v-success-bg: #ecfdf5;
+  --v-warning: #f59e0b;
+  --v-warning-bg: #fffbeb;
+  --v-danger: #ef4444;
+  --v-danger-bg: #fef2f2;
+
+  /* 中性色 */
+  --v-bg: #f8fafc;               /* slate-50 */
+  --v-bg-radial: radial-gradient(circle at 50% 0%, #f1f5f9, #f8fafc 70%);
+  --v-surface: #ffffff;
+  --v-surface-hover: #f1f5f9;    /* slate-100 */
+  --v-surface-glass: rgba(255, 255, 255, 0.72);
+  --v-border: #e2e8f0;           /* slate-200 */
+  --v-border-hover: #cbd5e1;     /* slate-300 */
+  --v-border-soft: rgba(15, 23, 42, 0.06);
+  --v-text: #1e293b;             /* slate-800 */
+  --v-text-secondary: #64748b;   /* slate-500 */
+  --v-text-muted: #94a3b8;       /* slate-400 */
+
+  /* 圆角 — 升级更柔和 */
+  --v-radius-sm: 8px;
+  --v-radius: 14px;
+  --v-radius-lg: 20px;
+
+  /* 阴影 — 多层柔和，营造立体感 */
+  --v-shadow-sm: 0 1px 2px rgba(15,23,42,0.04), 0 1px 3px rgba(15,23,42,0.06);
+  --v-shadow: 0 2px 4px rgba(15,23,42,0.04), 0 4px 8px rgba(15,23,42,0.06);
+  --v-shadow-md: 0 4px 8px rgba(15,23,42,0.06), 0 8px 16px rgba(15,23,42,0.08);
+  --v-shadow-lg: 0 8px 24px rgba(15,23,42,0.10), 0 16px 48px rgba(15,23,42,0.12);
+  --v-shadow-brand: 0 8px 24px -4px rgba(59,130,246,0.20);
+  --v-shadow-brand-lg: 0 12px 28px -6px rgba(59,130,246,0.28);
+
+  /* 过渡 — 弹性曲线 */
+  --v-transition: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --v-transition-fast: 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* 卡片操作色（本地补充，随深色模式适配） */
+  --restore-bg: #eef2ff;
+  --restore-text: var(--v-primary-dark);
+  --delete-bg: var(--v-danger-bg);
+  --delete-text: #991b1b;
+}
+
+/* ---------- 深色模式 ---------- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --v-primary: #3b82f6;        /* blue-500 — 深色模式下品牌主色提亮，保证对比度 */
+    --v-bg: #0f172a;             /* slate-900 */
+    --v-bg-radial: radial-gradient(circle at 50% 0%, #1e293b, #0f172a 70%);
+    --v-surface: #1e293b;        /* slate-800 */
+    --v-surface-hover: #334155;  /* slate-700 */
+    --v-surface-glass: rgba(30, 41, 59, 0.72);
+    --v-border: #334155;         /* slate-700 */
+    --v-border-hover: #475569;   /* slate-600 */
+    --v-border-soft: rgba(255, 255, 255, 0.06);
+    --v-text: #f1f5f9;           /* slate-100 */
+    --v-text-secondary: #94a3b8; /* slate-400 */
+    --v-text-muted: #94a3b8;     /* slate-400，与 privacy.html 对齐，对比度 ~6.5:1 */
+    /* 深色模式阴影加深 */
+    --v-shadow-sm: 0 1px 2px rgba(0,0,0,0.30), 0 1px 3px rgba(0,0,0,0.40);
+    --v-shadow: 0 2px 4px rgba(0,0,0,0.36), 0 4px 8px rgba(0,0,0,0.44);
+    --v-shadow-md: 0 4px 8px rgba(0,0,0,0.40), 0 8px 16px rgba(0,0,0,0.48);
+    --v-shadow-lg: 0 8px 24px rgba(0,0,0,0.50), 0 16px 48px rgba(0,0,0,0.56);
+    --v-shadow-brand: 0 8px 24px -4px rgba(59,130,246,0.32);
+    --v-shadow-brand-lg: 0 12px 28px -6px rgba(59,130,246,0.40);
+    --v-card-stripe: linear-gradient(90deg, #3b82f6, #1e293b, #475569);
+
+    --restore-bg: rgba(59, 130, 246, 0.16);
+    --restore-text: var(--v-primary-light);
+    --delete-bg: rgba(239, 68, 68, 0.16);
+    --delete-text: #fca5a5;
+  }
+}
+
+/* ---------- 重置 ---------- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--v-primary);
+  outline-offset: 2px;
+  border-radius: var(--v-radius-sm);
+}
+
+/* ---------- 基础 ---------- */
+body {
+  width: 360px;
+  min-height: 420px;
+  font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.7;            /* 中文行高更舒展 */
+  background: var(--v-bg-radial);
+  background-color: var(--v-bg);
+  color: var(--v-text);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background var(--v-transition), color var(--v-transition);
+}
+
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  z-index: 10001;
+  padding: 8px 12px;
+  background: var(--v-surface);
+  color: var(--v-text);
+  border: 1px solid var(--v-border);
+  border-radius: var(--v-radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: top var(--v-transition);
+}
+
+.skip-link:focus {
+  top: 8px;
+  left: 8px;
+  outline: 2px solid var(--v-primary);
+  outline-offset: 2px;
+}
+
+.container {
+  padding: 18px 18px 20px;
+}
+
+/* ---------- 顶栏（玻璃态 sticky） ---------- */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  margin: -18px -18px 16px;
+  padding: 14px 18px;
+  background: var(--v-surface-glass);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
+  border-bottom: 1px solid var(--v-border-soft);
+  /* 顶部装饰渐变线 */
+  box-shadow: inset 0 3px 0 0 transparent, 0 1px 0 rgba(15,23,42,0.02);
+}
+
+.header::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: var(--v-card-stripe);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.v-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--v-radius-sm);
+  background: var(--v-gradient);
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px -3px rgba(30,41,59,0.45), var(--v-shadow-brand);
+  transition: transform var(--v-transition), box-shadow var(--v-transition);
+}
+
+.v-logo:hover {
+  transform: translateY(-1px) rotate(-2deg);
+}
+
+.v-logo svg {
+  width: 22px;
+  height: 22px;
+}
+
+.brand-text {
+  min-width: 0;
+}
+
+.brand h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--v-text);
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.brand p {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--v-text-secondary);
+  margin-top: 2px;
+  letter-spacing: 0.01em;
+}
+
+.scene-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 5px;
+  color: var(--v-text-secondary);
+  vertical-align: middle;
+}
+
+.scene-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ---------- 保存按钮 ---------- */
+.primary-btn {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--v-gradient);
+  color: #fff;
+  border: none;
+  border-radius: var(--v-radius);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px -2px rgba(59, 130, 246, 0.4), var(--v-shadow);
+  transition: transform var(--v-transition), box-shadow var(--v-transition), opacity var(--v-transition);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 顶部高光 */
+.primary-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+  pointer-events: none;
+}
+
+.primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px -4px rgba(59, 130, 246, 0.5), var(--v-shadow-brand);
+}
+
+.primary-btn:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 6px -1px rgba(59, 130, 246, 0.35);
+}
+
+.primary-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.85;
+  transform: none;
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.btn-label {
+  line-height: 1;
+}
+
+.btn-spinner {
+  display: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: v-spin 0.7s linear infinite;
+}
+
+.primary-btn.is-loading .btn-spinner { display: inline-block; }
+.primary-btn.is-loading .btn-icon { display: none; }
+
+@keyframes v-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- 状态文字（保留 #status 容器，空时折叠） ---------- */
+.status {
+  font-size: 12px;
+  color: var(--v-text-secondary);
+  text-align: center;
+  overflow: hidden;
+  max-height: 0;
+  margin-top: 0;
+  transition: max-height var(--v-transition), margin-top var(--v-transition);
+}
+
+.status:not(:empty) {
+  max-height: 40px;
+  margin-top: 10px;
+}
+
+.status.success { color: var(--v-success); }
+.status.error { color: var(--v-danger); }
+
+/* ---------- 列表区 ---------- */
+.list-section {
+  margin-top: 24px;
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--v-text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+  margin-bottom: 10px;
+  text-wrap: balance;
+}
+
+.snapshot-list {
+  list-style: none;
+}
+
+/* ---------- 快照卡片 ---------- */
+.snapshot-item {
+  position: relative;
+  background: var(--v-surface);
+  border: 1px solid var(--v-border);
+  border-radius: var(--v-radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  box-shadow: var(--v-shadow-sm);
+  transition: box-shadow var(--v-transition), transform var(--v-transition), border-color var(--v-transition);
+  overflow: hidden;
+}
+
+/* 卡片顶部 3px 渐变装饰线 */
+.snapshot-item::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: var(--v-card-stripe);
+  opacity: 0;
+  transition: opacity var(--v-transition);
+  pointer-events: none;
+}
+
+.snapshot-item:hover::before,
+.snapshot-item:focus-within::before,
+.snapshot-item--expanded::before {
+  opacity: 1;
+}
+
+.snapshot-item:last-child {
+  margin-bottom: 0;
+}
+
+.snapshot-item:hover {
+  box-shadow: var(--v-shadow-brand), var(--v-shadow-md);
+  transform: translateY(-2px);
+  border-color: var(--v-primary-light);
+}
+
+/* 深色模式：卡片表面微妙边框光 */
+@media (prefers-color-scheme: dark) {
+  .snapshot-item {
+    border-color: rgba(255, 255, 255, 0.05);
+    box-shadow: var(--v-shadow-sm), inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+  }
+  .snapshot-item:hover {
+    border-color: rgba(59, 130, 246, 0.45);
+  }
+}
+
+.snapshot-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.snapshot-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--v-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+  letter-spacing: -0.005em;
+}
+
+.snapshot-meta {
+  font-size: 11px;
+  color: var(--v-text-secondary);
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 卡片操作（hover / focus 显现） ---------- */
+.snapshot-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  opacity: 0;
+  transform: translateX(4px);
+  transition: opacity var(--v-transition), transform var(--v-transition);
+}
+
+.snapshot-item:hover .snapshot-actions,
+.snapshot-item:focus-within .snapshot-actions,
+.snapshot-item:has(.confirm-delete) .snapshot-actions {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+@media (hover: none) {
+  .snapshot-actions {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.snapshot-actions button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 12px;
+  border-radius: var(--v-radius-sm);
+  border: none;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--v-transition-fast), color var(--v-transition-fast), transform var(--v-transition-fast), box-shadow var(--v-transition-fast);
+}
+
+.snapshot-actions button:hover {
+  transform: translateY(-1px);
+}
+
+.snapshot-actions button:active {
+  transform: translateY(0) scale(0.96);
+}
+
+.restore-btn {
+  background: var(--restore-bg);
+  color: var(--restore-text);
+}
+.restore-btn:hover {
+  background: var(--v-primary);
+  color: #fff;
+}
+
+.delete-btn {
+  background: var(--delete-bg);
+  color: var(--delete-text);
+}
+.delete-btn:hover,
+.delete-btn.confirm-delete {
+  background: var(--v-danger);
+  color: #fff;
+}
+
+/* ---------- 空状态 ---------- */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px 24px;
+  color: var(--v-text-muted);
+}
+
+.empty-state .v-empty-icon {
+  display: block;
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 14px;
+  opacity: 0.4;
+  color: var(--v-text-muted);
+}
+
+.empty-state .v-empty-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--v-text-secondary);
+  margin-bottom: 4px;
+}
+
+.empty-state .v-empty-desc {
+  font-size: 12px;
+  color: var(--v-text-secondary);
+  line-height: 1.5;
+}
+
+/* NameThatUI 空态 CTA（第三段：行动按钮，与 Bridge .v-empty-cta 同族） */
+/* R2-P1 修复：显式 width: auto 覆盖 .primary-btn 的 width:100%，避免 CTA 撑满空态 */
+.empty-state .v-empty-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.82rem;
+  width: auto;
+  text-decoration: none;
+}
+.empty-state .v-empty-cta svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ---------- Toast ---------- */
+.v-toast-container {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.v-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--v-radius);
+  background: var(--v-surface-glass);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
+  backdrop-filter: blur(8px) saturate(140%);
+  box-shadow: var(--v-shadow-lg);
+  border: 1px solid var(--v-border-soft);
+  font-size: 13px;
+  color: var(--v-text);
+  animation: v-toast-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.v-toast.v-toast-out {
+  animation: v-toast-out 0.2s ease forwards;
+}
+
+.v-toast--success { border-left: 3px solid var(--v-success); }
+.v-toast--error   { border-left: 3px solid var(--v-danger); }
+.v-toast--info    { border-left: 3px solid var(--v-primary); }
+
+.v-toast-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.v-toast--success .v-toast-icon { color: var(--v-success); }
+.v-toast--error .v-toast-icon { color: var(--v-danger); }
+.v-toast--info .v-toast-icon { color: var(--v-primary); }
+
+.v-toast-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.v-toast-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.4;
+  color: var(--v-text-secondary);
+}
+
+@keyframes v-toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes v-toast-out {
+  to { opacity: 0; transform: translateY(-8px); }
+}
+
+/* ---------- 无障碍：降低动效 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ============================================================
+   以下样式从 popup.html 内联 <style> 迁移而来
+   ============================================================ */
+
+/* ---------- 区段头（搜索框 + 区段标题） ---------- */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.section-header .section-title {
+  margin-bottom: 0;
+}
+
+/* ---------- 搜索框 ---------- */
+.search-input {
+  width: 140px;
+  min-height: 44px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--v-text);
+  background: var(--v-surface);
+  border: 1px solid var(--v-border);
+  border-radius: var(--v-radius-sm);
+  outline: none;
+  transition: border-color var(--v-transition), box-shadow var(--v-transition), background var(--v-transition);
+}
+.search-input:focus-visible {
+  border-color: var(--v-primary-light);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  background: var(--v-surface);
+}
+.search-input::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+
+/* ---------- 区段头右侧操作组（搜索 + 导入卡片） ---------- */
+.section-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.import-card-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border-radius: var(--v-radius-sm);
+  border: 1px solid var(--v-border);
+  background: var(--v-surface);
+  color: var(--v-text);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--v-transition-fast), color var(--v-transition-fast), transform var(--v-transition-fast);
+}
+.import-card-btn svg {
+  width: 14px;
+  height: 14px;
+}
+.import-card-btn:hover {
+  background: var(--v-primary);
+  color: #fff;
+  transform: translateY(-1px);
+}
+.import-card-btn:active {
+  transform: translateY(0) scale(0.96);
+}
+
+/* ---------- Context Card 导出按钮 + 推送到 Bridge 按钮（详情面板内） ---------- */
+.snapshot-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.export-card-btn,
+.push-bridge-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border-radius: var(--v-radius-sm);
+  border: 1px solid var(--v-border);
+  background: var(--v-surface);
+  color: var(--v-text);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--v-transition-fast), color var(--v-transition-fast), transform var(--v-transition-fast);
+}
+.export-card-btn svg,
+.push-bridge-btn svg {
+  width: 12px;
+  height: 12px;
+}
+.export-card-btn:hover {
+  background: var(--v-primary);
+  color: #fff;
+  transform: translateY(-1px);
+}
+.export-card-btn:active {
+  transform: translateY(0) scale(0.96);
+}
+.push-bridge-btn:hover {
+  background: var(--v-accent);
+  color: #fff;
+  transform: translateY(-1px);
+}
+.push-bridge-btn:active {
+  transform: translateY(0) scale(0.96);
+}
+
+/* ---------- 详情面板：卡片为 flex 行，展开时换行显示在下方 ---------- */
+.snapshot-item--expanded {
+  flex-wrap: wrap;
+}
+.snapshot-detail {
+  display: none;
+  flex-basis: 100%;
+  width: 100%;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--v-border);
+}
+.snapshot-item--expanded .snapshot-detail {
+  display: block;
+}
+.snapshot-tabs {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.snapshot-tab {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 6px;
+  border-radius: var(--v-radius-sm);
+  background: var(--v-bg);
+  min-width: 0;
+}
+.snapshot-tab-link {
+  font-size: 12px;
+  color: var(--v-text);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.snapshot-tab-link:hover {
+  text-decoration: underline;
+}
+.snapshot-tab-url {
+  font-size: 10px;
+  color: var(--v-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+.snapshot-tab-more {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-size: 11px;
+  color: var(--v-text-muted);
+  padding: 6px 8px;
+  font-style: italic;
+  background: transparent;
+  border: 1px dashed var(--v-border);
+  border-radius: var(--v-radius-sm);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+.snapshot-tab-more:hover {
+  color: var(--v-text-secondary);
+  background-color: var(--v-surface-hover);
+  border-color: var(--v-border-hover);
+}
+.snapshot-tab-more:focus-visible {
+  outline: 2px solid var(--v-primary);
+  outline-offset: 2px;
+}
+
+/* ---------- 标题编辑输入框 ---------- */
+.snapshot-title-edit {
+  width: 100%;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--v-text);
+  background: var(--v-bg);
+  border: 1px solid var(--v-primary);
+  border-radius: var(--v-radius-sm);
+  padding: 2px 6px;
+  outline: none;
+  line-height: 1.3;
+}
+
+/* ---------- 详情按钮（与 restore/delete 一致的轻量风格） ---------- */
+.detail-btn {
+  background: var(--v-bg);
+  color: var(--v-text-secondary);
+  position: relative;
+  overflow: hidden;
+}
+.detail-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--v-primary);
+  opacity: 0;
+  transition: opacity var(--v-transition-fast);
+  z-index: 0;
+}
+.detail-btn:hover::before {
+  opacity: 1;
+}
+.detail-btn:hover {
+  color: #fff;
+}
+.detail-btn span,
+.detail-btn svg {
+  position: relative;
+  z-index: 1;
+}
+.detail-btn.is-active {
+  background: var(--v-primary-light);
+  color: #fff;
+}
+
+/* ---------- Resume 摘要区域：详情面板顶部，与标签页列表用边框分隔 ---------- */
+.resume-section {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--v-border);
+}
+.resume-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-bottom: 6px;
+}
+.resume-badge--ai {
+  background: var(--v-success-bg);
+  color: var(--v-success);
+}
+.resume-badge--rule {
+  background: var(--v-surface-hover);
+  color: var(--v-text-muted);
+}
+.resume-ai-hint {
+  font-size: 11px;
+  color: var(--v-primary-light);
+  cursor: pointer;
+  margin-bottom: 6px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.resume-ai-hint:hover,
+.resume-ai-hint:focus-visible {
+  opacity: 0.8;
+  outline: 2px solid var(--v-primary-light);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.resume-loading {
+  font-size: 11px;
+  color: var(--v-text-muted);
+  font-style: italic;
+  padding: 4px 0;
+}
+.resume-summary {
+  font-size: 12px;
+  color: var(--v-text-secondary);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+.resume-scenes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.scene-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--v-primary-light);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+.scene-pill-icon {
+  font-size: 12px;
+  line-height: 1;
+}
+.resume-suggestions {
+  margin-bottom: 8px;
+}
+.resume-suggestions .resume-subtitle {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--v-text-secondary);
+  margin-bottom: 4px;
+}
+.resume-suggestions ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.resume-suggestions li {
+  font-size: 11px;
+  color: var(--v-text-secondary);
+  line-height: 1.5;
+}
+.resume-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.keyword-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  font-size: 10px;
+  color: var(--v-text-secondary);
+  background: var(--v-bg);
+  border: 1px solid var(--v-border);
+  border-radius: var(--v-radius-sm);
+}
+/* P0-AI: AI 上下文标签 */
+/* W079b: AI 增强与规则引擎视觉区分——AI 用品牌色 pill，规则引擎用灰色 pill */
+.resume-context-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+/* 规则引擎标签：灰色 pill（默认） */
+.resume-context-tags:not(.ai-enhanced) .context-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--v-text-secondary);
+  background: var(--v-surface-hover);
+  border: 1px solid var(--v-border);
+  border-radius: 99px;
+  letter-spacing: 0.02em;
+}
+/* AI 增强标签：品牌色 pill（蓝色背景、白字、圆角） */
+.resume-context-tags.ai-enhanced .context-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--v-primary-light);
+  border: 1px solid var(--v-primary-light);
+  border-radius: 99px;
+  letter-spacing: 0.02em;
+  box-shadow: 0 1px 2px rgba(59, 130, 246, 0.25);
+}
+/* AI 增强容器前的 ✨ AI 标识 */
+.resume-context-tags .ai-context-label {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--v-primary-light);
+  letter-spacing: 0.02em;
+  margin-right: 2px;
+}
+
+/* ---------- 加载更多按钮（分页） ---------- */
+.load-more-btn {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: 1px dashed var(--v-border);
+  background: transparent;
+  color: var(--v-text-secondary);
+  border-radius: var(--v-radius);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--v-transition), color var(--v-transition), background var(--v-transition), transform var(--v-transition);
+}
+.load-more-btn:hover:not(:disabled) {
+  border-color: var(--v-primary-light);
+  color: var(--v-primary);
+  background: var(--v-surface);
+  transform: translateY(-1px);
+}
+.load-more-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.99);
+}
+.load-more-btn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.load-more-btn[hidden] {
+  display: none;
+}
+
+/* ============================================================
+   品牌空状态插画 + 入场动画 + hover 微交互（增强）
+   ============================================================ */
+
+/* ---------- 空状态插画（品牌定制 SVG：标签页堆叠 + 保存） ---------- */
+.empty-illustration {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  width: 120px;
+  height: 120px;
+}
+
+.empty-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, #eff6ff 0%, transparent 70%);
+  opacity: 0.8;
+}
+
+.empty-state .empty-icon {
+  position: relative;
+  display: block;
+  width: 80px;
+  height: 80px;
+  color: var(--v-primary);
+  opacity: 0.8;
+  animation: float 3s ease-in-out infinite;
+}
+
+/* 深色模式：光晕改用 blue 半透明，避免在深色背景上过亮 */
+@media (prefers-color-scheme: dark) {
+  .empty-glow {
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.18) 0%, transparent 70%);
+  }
+  .empty-state .empty-icon {
+    color: var(--v-text);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* ---------- 入场动画（fade + slide-up，弹性曲线，stagger） ----------
+   注：使用 backwards 而非 both，避免动画终态持续覆盖
+   .primary-btn / .snapshot-item 的 :hover transform */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.header        { animation: fadeSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.primary-btn   { animation: fadeSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) 0.05s backwards; }
+.list-section  { animation: fadeSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) 0.1s backwards; }
+.snapshot-list { animation: fadeSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards; }
+
+/* 卡片 stagger 入场（50ms 间隔，最多前 12 项） */
+.snapshot-item {
+  animation: fadeSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+.snapshot-item:nth-child(1)  { animation-delay: 0.15s; }
+.snapshot-item:nth-child(2)  { animation-delay: 0.20s; }
+.snapshot-item:nth-child(3)  { animation-delay: 0.25s; }
+.snapshot-item:nth-child(4)  { animation-delay: 0.30s; }
+.snapshot-item:nth-child(5)  { animation-delay: 0.35s; }
+.snapshot-item:nth-child(6)  { animation-delay: 0.40s; }
+.snapshot-item:nth-child(7)  { animation-delay: 0.45s; }
+.snapshot-item:nth-child(8)  { animation-delay: 0.50s; }
+.snapshot-item:nth-child(9)  { animation-delay: 0.55s; }
+.snapshot-item:nth-child(10) { animation-delay: 0.60s; }
+.snapshot-item:nth-child(11) { animation-delay: 0.65s; }
+.snapshot-item:nth-child(12) { animation-delay: 0.70s; }
+
+/* 显式降低动效（与全局规则叠加，确保入场与浮动均禁用） */
+@media (prefers-reduced-motion: reduce) {
+  .empty-state .empty-icon,
+  .header,
+  .primary-btn,
+  .list-section,
+  .snapshot-list,
+  .snapshot-item {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ============================================================
+   快照列表搜索框 + 时间分组 + 搜索空状态
+   ============================================================ */
+
+/* ---------- 快照列表搜索框（全宽，列表上方） ---------- */
+.snapshot-search {
+  margin-bottom: 10px;
+}
+
+#snapshotSearchInput {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--v-text);
+  background: var(--v-surface);
+  border: 1px solid var(--v-border);
+  border-radius: var(--v-radius-sm);
+  outline: none;
+  transition: border-color var(--v-transition), box-shadow var(--v-transition), background var(--v-transition);
+}
+
+#snapshotSearchInput:focus-visible {
+  border-color: var(--v-primary-light);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  background: var(--v-surface);
+}
+
+#snapshotSearchInput::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+
+/* ---------- 时间分组标题 ---------- */
+.snapshot-group-header {
+  list-style: none;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--v-text-muted);
+  letter-spacing: 0.02em;
+  margin: 14px 0 6px;
+  padding: 0 4px;
+  user-select: none;
+}
+
+.snapshot-group-header:first-child {
+  margin-top: 4px;
+}
+
+/* ---------- 搜索无结果空状态 ---------- */
+.snapshot-empty {
+  text-align: center;
+  padding: 32px 20px;
+  color: var(--v-text-muted);
+  font-size: 13px;
+}
+
+.snapshot-empty[hidden] {
+  display: none;
+}
+
+/* ---------- 后续渲染禁用入场动画（避免搜索/过滤时反复闪动） ---------- */
+.snapshot-list.snapshot-list--static .snapshot-item {
+  animation: none !important;
+}
+
+/* ============================================================
+   阶段2.1: Agent 主动建议区域
+   琥珀色系（与 badge #f59e0b 一致），区别于品牌蓝主按钮
+   ============================================================ */
+
+.agent-section {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  background: var(--v-warning-bg);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--v-radius);
+  box-shadow: var(--v-shadow-sm);
+}
+
+.agent-section[hidden] {
+  display: none;
+}
+
+/* NameThatUI 方向 F a11y：visually-hidden 辅助类（WCAG 2.4.1 / 4.1.2）
+   用于隐藏 file input 等需保持可访问性树但视觉隐藏的元素 */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.agent-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  color: #b45309; /* amber-700，浅色模式保证对比度 */
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.agent-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--v-warning);
+}
+
+.agent-title {
+  line-height: 1;
+}
+
+/* 深色模式：amber 文字提亮 */
+@media (prefers-color-scheme: dark) {
+  .agent-section {
+    background: rgba(245, 158, 11, 0.10);
+    border-color: rgba(245, 158, 11, 0.30);
+  }
+  .agent-header {
+    color: #fbbf24; /* amber-400 */
+  }
+}
+
+.agent-suggestion-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agent-suggestion-item {
+  padding: 10px 12px;
+  background: var(--v-surface);
+  border: 1px solid var(--v-border);
+  border-radius: var(--v-radius-sm);
+  box-shadow: var(--v-shadow-sm);
+  transition: border-color var(--v-transition), box-shadow var(--v-transition);
+}
+
+.agent-suggestion-item:hover {
+  border-color: var(--v-border-hover);
+  box-shadow: var(--v-shadow);
+}
+
+.agent-suggestion-item.is-acted {
+  opacity: 0.6;
+}
+
+.agent-suggestion-item.is-acted .agent-suggestion-body {
+  text-decoration: line-through;
+}
+
+.agent-suggestion-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--v-text);
+  margin-bottom: 3px;
+  line-height: 1.3;
+}
+
+.agent-suggestion-body {
+  font-size: 12px;
+  color: var(--v-text-secondary);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.agent-suggestion-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.agent-suggestion-actions button {
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--v-border);
+  border-radius: var(--v-radius-sm);
+  background: var(--v-surface);
+  color: var(--v-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--v-transition-fast), color var(--v-transition-fast), border-color var(--v-transition-fast);
+}
+
+.agent-suggestion-actions button:hover {
+  background: var(--v-surface-hover);
+  border-color: var(--v-border-hover);
+}
+
+.agent-suggestion-actions .agent-act-btn {
+  background: var(--v-warning);
+  border-color: var(--v-warning);
+  color: #fff;
+}
+
+.agent-suggestion-actions .agent-act-btn:hover {
+  background: #d97706; /* amber-600 */
+  border-color: #d97706;
+}
+
+.agent-suggestion-meta {
+  font-size: 10px;
+  color: var(--v-text-muted);
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Agent 区域入场动画 */
+.agent-section {
+  animation: fadeSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) 0.05s backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-section {
+    animation: none !important;
+  }
+}

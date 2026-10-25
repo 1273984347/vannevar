@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+  <title>Vannevar · Focus</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/notosanssc/v37/k3kCo84MPvpLmixcA63oeAL7Iqp5ZJX.woff2">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <a href="#main" class="skip-link">跳转到主要内容</a>
+  <main class="container" id="main">
+    <header class="header">
+      <div class="brand">
+        <div class="v-logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M4 6 L12 18 L20 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1 translate="no">
+            Focus
+            <span class="scene-icon" aria-hidden="true" title="学习工作 · 浏览器上下文管理">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                <line x1="8" y1="21" x2="16" y2="21"/>
+                <line x1="12" y1="17" x2="12" y2="21"/>
+              </svg>
+            </span>
+          </h1>
+          <p>保存并恢复浏览器标签页</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- 阶段2.1: Agent 主动建议 -->
+    <section id="agentSection" class="agent-section" hidden aria-label="Agent 建议">
+      <div class="agent-header">
+        <span class="agent-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v1a3 3 0 0 0-3 3v1a3 3 0 0 0 0 6v1a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3v-1a3 3 0 0 0 0-6V9a3 3 0 0 0-3-3V5a3 3 0 0 0-3-3z"/>
+          </svg>
+        </span>
+        <span class="agent-title">智能建议</span>
+      </div>
+      <ul id="agentSuggestionList" class="agent-suggestion-list"></ul>
+    </section>
+
+    <button id="saveBtn" class="primary-btn" type="button">
+      <span class="btn-spinner" aria-hidden="true"></span>
+      <span class="btn-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M8 3v10M3 8h10"/>
+        </svg>
+      </span>
+      <span class="btn-label">保存当前上下文</span>
+    </button>
+
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+
+    <section class="list-section">
+      <div class="section-header">
+        <h2 class="section-title">已保存的上下文</h2>
+        <div class="section-header-actions">
+          <input id="searchInput" type="search" name="q" placeholder="搜索上下文…" autocomplete="off" spellcheck="false" aria-label="搜索上下文" class="search-input">
+          <button id="importCardBtn" type="button" class="import-card-btn" title="从 .vcf 文件导入 Context Card" aria-label="导入 Context Card">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <span>导入卡片</span>
+          </button>
+          <input id="importCardInput" type="file" accept=".vcf,application/json" class="visually-hidden" aria-label="选择要导入的 Context Card 文件">
+        </div>
+      </div>
+      <div class="snapshot-search" role="search">
+        <input type="search" id="snapshotSearchInput"
+               placeholder="搜索快照（标题、URL、标签）…"
+               aria-label="搜索快照"
+               autocomplete="off"
+               spellcheck="false">
+      </div>
+      <ul id="snapshotList" class="snapshot-list"></ul>
+      <div id="snapshotEmpty" class="snapshot-empty" role="status" aria-live="polite" hidden>未找到匹配的快照</div>
+      <button id="loadMoreBtn" class="load-more-btn" type="button" hidden>加载更多</button>
+      <div id="emptyState" class="empty-state">
+        <div class="empty-illustration">
+          <div class="empty-glow"></div>
+          <svg class="empty-icon" viewBox="0 0 120 120" width="80" height="80" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <!-- 三个标签页堆叠 -->
+            <rect x="20" y="30" width="60" height="50" rx="6" opacity="0.3"/>
+            <rect x="30" y="25" width="60" height="50" rx="6" opacity="0.5"/>
+            <rect x="40" y="20" width="60" height="50" rx="6" opacity="0.9"/>
+            <!-- 保存按钮（R2-P2 令牌化：#3b82f6→var(--v-primary-light) / white→var(--v-surface)） -->
+            <circle cx="70" cy="75" r="14" fill="var(--v-primary-light)" stroke="none" opacity="0.9"/>
+            <path d="M65 75 L69 79 L76 71" stroke="var(--v-surface)" stroke-width="2.5"/>
+          </svg>
+        </div>
+        <div class="v-empty-title">还没有保存的上下文</div>
+        <div class="v-empty-desc">点击上方按钮，保存当前所有标签页</div>
+        <!-- NameThatUI 空态 CTA（第三段：行动按钮，与 Bridge .v-empty-cta 同族） -->
+        <a href="#saveBtn" class="v-empty-cta primary-btn" aria-label="保存当前上下文">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+            <polyline points="17 21 17 13 7 13 7 21"/>
+            <polyline points="7 3 7 8 15 8"/>
+          </svg>
+          立即保存
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <div id="toastContainer" class="v-toast-container" aria-live="polite"></div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

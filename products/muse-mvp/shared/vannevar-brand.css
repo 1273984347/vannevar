@@ -1,0 +1,151 @@
+/* ============================================================
+   Vannevar · Muse — 共享设计令牌
+   供 popup / dashboard / options 三个扩展页面 @import 或 <link> 引入。
+   MV3 扩展页面同源可访问，避免三处复制粘贴导致 token 漂移。
+   ============================================================ */
+
+/* ---------- 设计令牌 ---------- */
+:root {
+  /* 品牌主色 — orange + amber 暖橙色系 */
+  --v-primary: #c2410c;          /* orange-700 */
+  --v-primary-dark: #9a3412;     /* orange-800 */
+  --v-primary-light: #f97316;    /* orange-500 */
+  --v-accent: #b45309;           /* amber-700 */
+  /* 渐变升级：135deg 立体感，混合 orange-700 + amber-700 */
+  --v-gradient: linear-gradient(135deg, #c2410c, #b45309);
+  /* 按钮渐变 — 更深一档作立体阴影投射 */
+  --v-gradient-btn: linear-gradient(135deg, #c2410c, #9a3412);
+  /* 卡片顶部装饰渐变线（橙→琥珀） */
+  --v-gradient-accent: linear-gradient(90deg, #c2410c, #f59e0b);
+  /* 页面背景径向渐变 — 顶部聚光 */
+  --v-bg-gradient: radial-gradient(circle at 50% 0%, #fffbeb, #fff7ed);
+
+  /* 语义色 */
+  --v-success: #10b981;
+  --v-success-bg: #ecfdf5;
+  --v-warning: #f59e0b;
+  --v-warning-bg: #fffbeb;
+  --v-danger: #ef4444;
+  --v-danger-bg: #fef2f2;
+
+  /* 中性色 — stone 系 */
+  --v-bg: #fff7ed;               /* orange-50 */
+  --v-surface: #ffffff;
+  --v-border: #ffedd5;           /* orange-100 */
+  --v-text: #292524;             /* stone-800 */
+  --v-text-secondary: #44403c;   /* stone-700 */
+  --v-text-muted: #78716c;       /* stone-500 */
+  --v-text-label: #a8a29e;       /* stone-400 */
+
+  /* 圆角升级 — 更柔和现代 */
+  --v-radius-sm: 8px;
+  --v-radius: 14px;
+  --v-radius-lg: 20px;
+
+  /* 阴影系统 — 多层柔和 + 暖色调品牌阴影 */
+  --v-shadow-sm: 0 1px 2px rgba(194,65,12,0.04), 0 1px 3px rgba(194,65,12,0.06);
+  --v-shadow: 0 2px 4px rgba(194,65,12,0.04), 0 4px 8px rgba(194,65,12,0.06);
+  --v-shadow-md: 0 4px 8px rgba(194,65,12,0.06), 0 8px 16px rgba(194,65,12,0.08);
+  --v-shadow-lg: 0 8px 24px rgba(194,65,12,0.10), 0 16px 48px rgba(194,65,12,0.12);
+  /* hover 时品牌色阴影 — amber 色调发光 */
+  --v-shadow-hover: 0 8px 24px -4px rgba(217,119,6,0.20), 0 4px 12px rgba(194,65,12,0.08);
+  /* 按钮专属阴影 — 暖橙发光 */
+  --v-shadow-btn: 0 4px 12px rgba(194,65,12,0.28);
+  --v-shadow-btn-hover: 0 8px 24px -4px rgba(217,119,6,0.40);
+
+  /* 过渡 — 弹性 cubic-bezier */
+  --v-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --v-transition: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --v-transition-fast: 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* 品牌衍生 — 柔和背景层 */
+  --v-primary-soft: #fff7ed;     /* orange-50 */
+  --v-accent-soft: #fffbeb;      /* amber-50 */
+
+  /* 字重层次 */
+  --v-weight-regular: 400;
+  --v-weight-medium: 500;
+  --v-weight-semibold: 600;
+  --v-weight-bold: 700;
+
+  /* 玻璃态 token */
+  --v-glass-bg: rgba(255, 247, 237, 0.72);
+  --v-glass-border: rgba(255, 237, 213, 0.5);
+}
+
+/* ---------- 分层小标题 ---------- */
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #a8a29e;                /* stone-400 */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ---------- Skip link ---------- */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  z-index: 10001;
+  padding: 8px 16px;
+  background: var(--v-primary);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 var(--v-radius-sm) 0;
+  transition: top var(--v-transition);
+}
+
+.skip-link:focus {
+  top: 0;
+  outline: 2px solid #ffffff;
+  outline-offset: -2px;
+}
+
+/* ---------- 深色模式 ---------- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --v-bg: #1a120b;
+    --v-surface: #241a12;
+    --v-border: #3a2a1c;
+    --v-text: #f5ead8;
+    --v-text-secondary: #c4b59e;
+    --v-text-muted: #a89b85;
+    --v-accent: #f59e0b;
+    /* 深色模式阴影加深 — 多层柔和保留 */
+    --v-shadow-sm: 0 1px 2px rgba(0,0,0,0.24), 0 1px 3px rgba(0,0,0,0.32);
+    --v-shadow: 0 2px 4px rgba(0,0,0,0.32), 0 4px 8px rgba(0,0,0,0.28);
+    --v-shadow-md: 0 4px 8px rgba(0,0,0,0.40), 0 8px 16px rgba(0,0,0,0.32);
+    --v-shadow-lg: 0 8px 24px rgba(0,0,0,0.50), 0 16px 48px rgba(0,0,0,0.40);
+    /* 深色模式 hover 阴影 — 更强 amber 发光 */
+    --v-shadow-hover: 0 8px 24px -4px rgba(245,158,11,0.28), 0 4px 12px rgba(0,0,0,0.32);
+    --v-shadow-btn: 0 4px 12px rgba(0,0,0,0.50);
+    --v-shadow-btn-hover: 0 8px 24px -4px rgba(245,158,11,0.48);
+    /* 深色模式背景 — 顶部聚光径向渐变（更暖） */
+    --v-bg-gradient: radial-gradient(circle at 50% 0%, #2a1a0e, #1a120b);
+    /* 深色模式玻璃态 */
+    --v-glass-bg: rgba(26, 18, 11, 0.72);
+    --v-glass-border: rgba(245, 234, 216, 0.06);
+    --v-primary-soft: #451a03;   /* orange-950 */
+    --v-accent-soft: #451a03;    /* amber-950 类似 */
+    --v-success-bg: #052e2b;
+    --v-warning-bg: #451a03;
+    --v-danger-bg: #450a0a;
+  }
+}
+
+/* ---------- 卡片表面深色模式微边框（提升表面分离感） ---------- */
+@media (prefers-color-scheme: dark) {
+  .card,
+  .capture-card,
+  .recent-section,
+  .resume-panel,
+  .v-toast,
+  .mood-row,
+  .shortcut-item {
+    border: 1px solid rgba(245,234,216,0.05);
+  }
+}

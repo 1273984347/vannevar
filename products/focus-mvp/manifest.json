@@ -1,0 +1,64 @@
+{
+  "manifest_version": 3,
+  "name": "Vannevar · Focus MVP",
+  "version": "0.1.0",
+  "description": "一键保存并恢复浏览器工作上下文",
+  "minimum_chrome_version": "102",
+  "_comment_v9_csp": "V9 限制：content_security_policy 的 connect-src 允许任意 HTTPS，未收紧是因为需支持用户自定义 AI 端点（任意 HTTPS API URL）。未来可通过 activeTab 权限或动态 host_permissions 细化。",
+  "browser_specific_settings": {
+    "edge": {
+      "browser_specific_settings": true
+    }
+  },
+  "permissions": [
+    "tabs",
+    "storage",
+    "unlimitedStorage",
+    "activeTab",
+    "windows",
+    "alarms",
+    "notifications"
+  ],
+  "optional_permissions": [
+    "contextMenus"
+  ],
+  "host_permissions": [],
+  "commands": {
+    "save-context": {
+      "suggested_key": {
+        "default": "Alt+Shift+S",
+        "mac": "Alt+Shift+S"
+      },
+      "description": "保存当前上下文"
+    },
+    "restore-last": {
+      "suggested_key": {
+        "default": "Alt+Shift+R",
+        "mac": "Alt+Shift+R"
+      },
+      "description": "恢复最近一次上下文"
+    }
+  },
+  "options_page": "options.html",
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "Vannevar · Focus"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; base-uri 'self'; form-action 'self'"
+  }
+}

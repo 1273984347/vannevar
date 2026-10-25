@@ -1,0 +1,60 @@
+{
+  "manifest_version": 3,
+  "name": "Vannevar · Muse MVP",
+  "version": "0.1.0",
+  "description": "捕捉创作灵感现场：网页、文字片段与氛围标签",
+  "_comment_v9_csp": "V9 限制：content_security_policy 的 connect-src 允许任意 HTTPS，未收紧是因为需支持用户自定义 AI 端点（任意 HTTPS API URL）。未来可通过 activeTab 权限或动态 host_permissions 细化。",
+  "_comment_v13_host_perms": "V13 限制：optional_host_permissions 包含 https://*/*，未移除是因为 captureInspiration 功能需读取任意页面内容。用户安装时按需手动授权，非默认启用。",
+  "browser_specific_settings": {
+    "edge": {
+      "browser_specific_settings": true
+    }
+  },
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "activeTab",
+    "scripting",
+    "contextMenus",
+    "alarms",
+    "notifications"
+  ],
+  "optional_permissions": [
+    "tabs"
+  ],
+  "host_permissions": [],
+  "optional_host_permissions": [
+    "https://*/*"
+  ],
+  "commands": {
+    "capture-inspiration": {
+      "suggested_key": {
+        "default": "Alt+Shift+M",
+        "mac": "Alt+Shift+M"
+      },
+      "description": "一键捕获当前页面为灵感"
+    }
+  },
+  "options_page": "options/options.html",
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "Vannevar · Muse"
+  },
+  "background": {
+    "service_worker": "core/background.js",
+    "type": "module"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; base-uri 'self'; form-action 'self'"
+  }
+}

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#fff7ed" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1a120b" media="(prefers-color-scheme: dark)">
+  <title>Vannevar · Muse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/notosanssc/v36/k3kCo84MPvpLmixcA63oeAL7Iqp5IZJF9bmaG9_FnYxNbPzS5CHYo3zVmQ-HbA.woff2">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/vannevar-brand.css">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <a href="#main" class="skip-link">跳转到主要内容</a>
+  <div class="container" id="main">
+    <header class="header">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M3 4L12 20L21 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1 translate="no">
+            Muse
+            <span class="scene-icon" aria-hidden="true" title="生活娱乐 · 灵感捕捉">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 12h20"/>
+                <path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/>
+                <path d="M12 2v10"/>
+              </svg>
+            </span>
+          </h1>
+          <p translate="no">Vannevar · 灵感捕捉</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- 阶段2.1: Agent 主动建议 -->
+    <section id="agentSection" class="agent-section" hidden aria-label="Agent 建议">
+      <div class="agent-header">
+        <span class="agent-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v1a3 3 0 0 0-3 3v1a3 3 0 0 0 0 6v1a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3v-1a3 3 0 0 0 0-6V9a3 3 0 0 0-3-3V5a3 3 0 0 0-3-3z"/>
+          </svg>
+        </span>
+        <span class="agent-title">智能建议</span>
+      </div>
+      <ul id="agentSuggestionList" class="agent-suggestion-list"></ul>
+    </section>
+
+    <section class="capture-card">
+      <div class="page-info">
+        <div class="page-title" id="pageTitle">一键捕捉当前页面的灵感</div>
+        <div class="page-url" id="pageUrl"></div>
+      </div>
+
+      <div class="selection-hint" id="selectionHint">
+        <svg class="selection-hint-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 7V5a2 2 0 0 1 2-2h2"/><path d="M16 3h2a2 2 0 0 1 2 2v2"/><path d="M20 17v2a2 2 0 0 1-2 2h-2"/><path d="M8 21H6a2 2 0 0 1-2-2v-2"/>
+          <path d="M9 9h6v6H9z" opacity="0.3"/>
+        </svg>
+        <span>选中网页文字后保存，可自动捕捉精彩片段</span>
+      </div>
+      <div class="selected-text" id="selectedTextBox" style="display: none;" aria-live="polite">
+        <span class="selected-text-label" id="selectedTextLabel">选中片段</span>
+        <p id="selectedText" aria-labelledby="selectedTextLabel"></p>
+      </div>
+
+      <!-- Phase 4.2: Media Session 检测提示 -->
+      <div class="media-box" id="mediaBox" style="display: none;" aria-live="polite">
+        <div class="media-box-icon" aria-hidden="true">🎵</div>
+        <div class="media-box-body">
+          <span class="media-box-label">检测到媒体会话</span>
+          <span class="media-box-title" id="mediaBoxTitle"></span>
+          <span class="media-box-sub" id="mediaBoxSub"></span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="noteInput">灵感备注</label>
+        <textarea id="noteInput" rows="2" placeholder="记录此刻的想法、氛围或用途…"></textarea>
+      </div>
+
+      <fieldset class="field mood-field">
+        <legend class="field-label">氛围标签</legend>
+        <div class="mood-tags" id="moodTags" role="group" aria-label="氛围标签"></div>
+      </fieldset>
+
+      <button id="saveBtn" class="primary-btn" type="button">
+        <span class="btn-spinner" aria-hidden="true"></span>
+        <span class="btn-icon" aria-hidden="true">✦</span>
+        <span class="btn-label">保存灵感</span>
+      </button>
+    </section>
+
+    <section class="recent-section" aria-label="最近灵感" aria-live="polite">
+      <div class="section-header">
+        <div class="section-title">最近灵感</div>
+        <input id="recentSearchInput" type="search" placeholder="搜索灵感…" aria-label="搜索灵感" class="recent-search" autocomplete="off">
+      </div>
+      <ul id="recentList" class="recent-list"></ul>
+      <div id="recentEmpty" class="recent-empty">
+        <div class="empty-illustration">
+          <div class="empty-glow"></div>
+          <svg class="empty-icon" viewBox="0 0 120 120" width="80" height="80" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <!-- NameThatUI SVG 令牌化：硬编码颜色改为 var(--v-*)，与 Muse 橙色令牌系统对齐 -->
+            <path d="M60 30 C45 30 35 42 35 55 C35 65 42 72 48 78 L48 85 L72 85 L72 78 C78 72 85 65 85 55 C85 42 75 30 60 30 Z" fill="var(--v-bg)" stroke="var(--v-primary)"/>
+            <line x1="50" y1="90" x2="70" y2="90" stroke="var(--v-primary)"/>
+            <line x1="52" y1="95" x2="68" y2="95" stroke="var(--v-primary)"/>
+            <circle cx="60" cy="55" r="3" fill="var(--v-primary-light)" stroke="none"/>
+            <path d="M60 45 L60 40" stroke="var(--v-primary-light)" opacity="0.6"/>
+            <path d="M50 55 L45 55" stroke="var(--v-primary-light)" opacity="0.6"/>
+            <path d="M70 55 L75 55" stroke="var(--v-primary-light)" opacity="0.6"/>
+          </svg>
+        </div>
+        <div class="v-empty-title">还没有灵感记录</div>
+        <ol class="empty-steps">
+          <li>在网页中选中一段精彩文字</li>
+          <li>点击工具栏的 <strong translate="no">Muse</strong> 图标</li>
+          <li>添加备注和氛围标签，保存灵感</li>
+        </ol>
+        <a href="../dashboard/dashboard.html" class="v-empty-cta">查看全部灵感 →</a>
+      </div>
+      <a href="../dashboard/dashboard.html" target="_blank" id="viewAllLink" class="view-all-link">查看全部 →</a>
+    </section>
+
+    <div id="status" class="status" aria-live="polite" aria-atomic="true"></div>
+
+    <footer class="footer">
+      <a href="../dashboard/dashboard.html" target="_blank" id="openDashboard" class="dashboard-link">打开灵感博物馆 →</a>
+    </footer>
+  </div>
+
+  <div class="v-toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
