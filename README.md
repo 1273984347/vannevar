@@ -1,5 +1,6 @@
 # Vannevar
 
+[![CI](https://github.com/1273984347/vannevar/actions/workflows/ci.yml/badge.svg)](https://github.com/1273984347/vannevar/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f.svg)](LICENSE)
 [![Chrome MV3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4.svg)](products/focus-mvp/manifest.json)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB.svg)](products/bridge-mvp/requirements.txt)
