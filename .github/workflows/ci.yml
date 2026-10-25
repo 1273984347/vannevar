@@ -34,7 +34,7 @@ jobs:
         working-directory: products/bridge-mvp
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
@@ -79,7 +79,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node 22
         uses: actions/setup-node@v4
@@ -114,7 +114,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node 22
         uses: actions/setup-node@v4
@@ -161,7 +161,7 @@ jobs:
         shell: bash
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Check relative links in markdown
         # 检查仓库源码树中 markdown 的相对链接是否指向真实文件。
@@ -207,7 +207,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: "Build image (push: false)"
         # 只验证 products/bridge-mvp/Dockerfile 能构建成功，不推送任何镜像。
