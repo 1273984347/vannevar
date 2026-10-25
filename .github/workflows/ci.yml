@@ -213,7 +213,7 @@ jobs:
         # 只验证 products/bridge-mvp/Dockerfile 能构建成功，不推送任何镜像。
         # Dockerfile 为多阶段构建（builder 编译 bcrypt/libffi → runtime 精简镜像），
         # 构建需要拉取 python:3.12.10-slim 基础镜像并访问 apt/pip 源。
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: products/bridge-mvp
           file: products/bridge-mvp/Dockerfile
