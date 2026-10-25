@@ -13,7 +13,7 @@
 
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 // Node 18+ 已有 globalThis.crypto（含 subtle / getRandomValues），无需注入
 
@@ -47,8 +47,13 @@ if (typeof globalThis.atob !== 'function') {
 }
 
 // 动态加载被测模块（crypto.js 是 ES module）
+// 跨平台：用 fileURLToPath(import.meta.url) 还原模块所在目录。
+// 不要用 `new URL(import.meta.url).pathname` —— 那是 Windows-only 写法：
+// pathname 在 Windows 上是 '/C:/...'（需手工剥前导 /），在 Linux 上则是
+// 绝对路径（剥掉前导 / 就变成相对路径，path.resolve 会按 cwd 二次拼接，
+// 导致 Linux 上找不到模块）。
 const cryptoModulePath = pathToFileURL(
-  path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\//, '')), '..', 'crypto.js')
+  path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'crypto.js')
 ).href;
 const {
   isCryptoEnabled,

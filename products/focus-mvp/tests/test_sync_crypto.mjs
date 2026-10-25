@@ -14,7 +14,7 @@
 
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 // ---------- 1. mock globalThis.chrome.storage.local ----------
 const _storage = new Map();
@@ -61,7 +61,10 @@ if (typeof globalThis.atob !== 'function') {
 
 // ---------- 3. 加载被测模块 ----------
 // loader.mjs 已通过 --import 注册 resolver，sync.js 的 ./auth.js / ./db.js 会重定向到 mocks/
-const baseDir = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\//, '')), '..');
+// 跨平台：用 fileURLToPath(import.meta.url) 还原模块所在目录（不要用
+// `new URL(import.meta.url).pathname`——那是 Windows-only 写法，剥掉前导
+// / 后在 Linux 上会变成相对路径并被 path.resolve 按 cwd 二次拼接）。
+const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const syncUrl = pathToFileURL(path.join(baseDir, 'sync.js')).href;
 const cryptoUrl = pathToFileURL(path.join(baseDir, 'crypto.js')).href;
 const mocksAuthUrl = pathToFileURL(path.join(baseDir, 'tests', 'mocks', 'auth.js')).href;
