@@ -2,7 +2,7 @@
 # V6 修复：测试依赖已移至 requirements-dev.txt，生产镜像不再包含 pytest
 fastapi==0.159.1
 uvicorn[standard]==0.46.0
-sqlalchemy==2.0.50
+sqlalchemy==2.1.6
 pydantic==2.14.1
 jinja2==3.1.6
 qrcode[pil]==8.2
