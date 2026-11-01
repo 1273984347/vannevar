@@ -16,4 +16,4 @@ python-jose[cryptography]==3.3.0
 email-validator==2.3.0
 
 # 阶段2.2 Agent 定时扫描（P1-10 修复：补充缺失依赖）
-apscheduler==3.10.4
+apscheduler==3.11.3
