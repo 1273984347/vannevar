@@ -370,6 +370,8 @@ Code size (measured, source files per product directory): focus-mvp 37 files / 1
 
 Contributions are welcome. See **[CONTRIBUTING.md](CONTRIBUTING.md)** for process, environment setup and commit conventions, and **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** for community agreements.
 
+Where the project is heading is tracked in the public **[roadmap](docs/roadmap.md)** (Now / Next / Later); swap experiences and ideas in **[Discussions](https://github.com/1273984347/vannevar/discussions)**, or file product feedback via the [feedback template](https://github.com/1273984347/vannevar/issues/new?template=feedback.yml).
+
 Repository working conventions for AI agents and collaborators are written in **[AGENTS.md](AGENTS.md)**.
 
 To understand "why it's designed this way" — the reasoning, **costs** and blast radius of every technical trade-off — see **[docs/architecture-decisions.md](docs/architecture-decisions.md)** (architecture decision records). When changing an existing decision, append to its "decision change log" instead of rewriting history.

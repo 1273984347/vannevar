@@ -372,6 +372,8 @@ Vannevar/
 
 欢迎参与。流程、环境准备与提交规范见 **[CONTRIBUTING.md](CONTRIBUTING.md)**；参与社区的共同约定见 **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)**。
 
+项目走向见公开**[路线图](docs/roadmap.md)**（Now / Next / Later）；使用心得与想法交流请到**[讨论区](https://github.com/1273984347/vannevar/discussions)**，产品反馈可用 [反馈模板](https://github.com/1273984347/vannevar/issues/new?template=feedback.yml)。
+
 给后续 AI Agent 与协作者的仓库工作约定写在 **[AGENTS.md](AGENTS.md)**。
 
 想了解「为什么这么设计」——每个技术取舍的理由、**代价**与影响面，见 **[docs/architecture-decisions.md](docs/architecture-decisions.md)**（架构决策记录）。改动既有决策时请在该文件的「决策变更日志」里追加，而不是直接改写历史。

@@ -1,9 +1,12 @@
-# Issue 模板配置 —— 允许自由格式 Issue，并给出贡献 / 安全入口
+# Issue 模板配置 —— 允许自由格式 Issue，并给出贡献 / 讨论 / 安全入口
 #
 # 仓库坐标：`1273984347/vannevar`
-# 若日后 fork 或改仓库名，请同步替换下面两条 url 中的 `1273984347/vannevar`。
+# 若日后 fork 或改仓库名，请同步替换下面三条 url 中的 `1273984347/vannevar`。
 blank_issues_enabled: true
 contact_links:
+  - name: 讨论区 / Discussions
+    url: https://github.com/1273984347/vannevar/discussions
+    about: 使用心得、开放性问题与想法交流请到讨论区，不必开 Issue。
   - name: 贡献指南 / Contributing Guide
     url: https://github.com/1273984347/vannevar/blob/main/CONTRIBUTING.md
     about: 提交代码前请先阅读贡献指南（分支命名、提交规范、PR 流程）。

@@ -1,0 +1,58 @@
+# 产品反馈表单 —— GitHub Issue Form
+# 语法参考：https://docs.github.com/issues/using-templates/creating-issue-forms
+# 与 bug_report.yml 的区别：反馈聚焦「场景与体验」，不是缺陷报告。
+name: 产品反馈 / Product Feedback
+description: 分享使用场景、体验好坏与改进想法（不是缺陷报告）
+title: "[Feedback] "
+labels: ["feedback"]
+body:
+  - type: dropdown
+    id: product
+    attributes:
+      label: 涉及产品 / Affected product
+      description: 反馈主要关于哪个产品？
+      options:
+        - focus —— Focus MVP 扩展（Chrome MV3）
+        - muse —— Muse MVP 扩展（Chrome MV3）
+        - bridge —— Bridge MVP 服务（FastAPI + SQLite）
+        - 整体 / Whole family（三个产品的整体体验与定位）
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 反馈类型 / Feedback kind
+      options:
+        - 场景契合 / Scenario fit —— 它适合（或不适合）我的某个真实场景
+        - 体验亮点 / What works well —— 值得保留或放大的设计
+        - 体验摩擦 / What feels off —— 说不上是 bug，但就是别扭
+        - 功能期待 / Feature wish —— 希望未来有这样的能力
+    validations:
+      required: true
+
+  - type: textarea
+    id: scenario
+    attributes:
+      label: 使用场景 / Your scenario
+      description: 你在什么真实场景下接触/使用它？（一两句话即可）
+      placeholder: 例：每周六在公益组织做志愿者交接，想用 Bridge 管理换班……
+    validations:
+      required: true
+
+  - type: textarea
+    id: detail
+    attributes:
+      label: 具体反馈 / Details
+      description: 哪里好、哪里别扭、或者你期待什么。具体一点对迭代最有帮助。
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: 隐私提醒 / Privacy reminder
+      description: Vannevar 默认本地优先，但请勿在反馈中粘贴密码、密钥、个人身份信息等敏感内容。
+      options:
+        - label: 我确认反馈中不含敏感信息 / My feedback contains no sensitive data
+          required: true
