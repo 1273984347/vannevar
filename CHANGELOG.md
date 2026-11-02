@@ -9,6 +9,11 @@
 
 ### Added
 
+- **Chrome Web Store 上架套件（T-11）**：新增 `docs/webstore/`（提交步骤清单 + Focus / Muse 双语 listing 材料：短描述、详述、单一用途声明、逐权限理由、数据披露），上架最终步骤（开发者账号与上传）为发布负责人手动动作。
+- **Bridge 公开截图重制（T-11）**：`screenshots/bridge-*.png` 四张以官方演示数据集 + playwright 实拍更新，移除旧图中的「截图测试项目」字样并首次反映当前档案纸感 UI；过程脚本记录见 T-11 报告。
+
+### Fixed
+
 - **端侧 AI 增强层（Focus / Muse，T-10）**：新增共享适配层 `vannevar-builtin-ai.js`（双副本字节一致，入 STRICT 门禁），接入 Chrome 内置 Prompt API（`LanguageModel`）。降级链升级为：**已配置的云端 API 优先（尊重显式选择）→ 未配置云端时尝试端侧 AI（零配置、零上传，模型由 Chrome 管理）→ 本地规则引擎**。可用性判定采取保守策略：仅在模型已就绪（`available`）时启用，`downloadable`/`downloading` 状态不静默触发数百 MB 的模型下载；端侧输出经宽松 JSON 提取后走与云端一致的结果解析路径；任何失败静默降级，不阻断主流程。既有 WebLLM 本地层（600MB、默认关闭、无调用方）保持现状，后续评估合并。
 
 ### Fixed
