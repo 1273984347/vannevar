@@ -58,6 +58,15 @@ STRICT_GROUPS = [
         "note": "T-09 单源化：随隐私政策页一起进入 Bridge static，保证其样式引用可达且不漂移",
     },
     {
+        "name": "端侧 AI 适配层",
+        "source": "shared/vannevar-builtin-ai.js",
+        "copies": [
+            "products/focus-mvp/lib/vannevar-builtin-ai.js",
+            "products/muse-mvp/shared/vannevar-builtin-ai.js",
+        ],
+        "note": "T-10：Chrome 内置 AI（Prompt API）适配层，Focus 与 Muse 共用；副本漂移 = 两端 AI 行为分叉",
+    },
+    {
         "name": "共享运行时（扩展对）",
         "source": "products/focus-mvp/shared/vannevar-shared.js",
         "copies": ["products/muse-mvp/shared/vannevar-shared.js"],

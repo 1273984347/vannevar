@@ -127,11 +127,13 @@ User triggers an AI feature
       │                                       success ─┴─ failure/timeout
       │                                         │              │
       │                                     return result    degrade ↓
-      └─ not configured ──────────────────────────────────────▶ local rule engine
+      ├─ not configured ─▶ Chrome built-in AI ready? ──yes──▶ on-device inference (zero config, zero upload)
+      │                                         │no/failure
+      └─ none of the above ──────────────────────────────────▶ local rule engine
                                                                (zero external dependencies)
 ```
 
-- **Focus / Muse**: fill in the API Base URL, API Key and model name in the "AI enhancement (optional)" area of the extension **Options page**. The API Key is stored only in local `chrome.storage.local` and never uploaded to any server; without a key the built-in rule engine is used (Muse's mood tagging is frequency-based statistics, not model recommendations).
+- **Focus / Muse**: fill in the API Base URL, API Key and model name in the "AI enhancement (optional)" area of the extension **Options page**. The API Key is stored only in local `chrome.storage.local` and never uploaded to any server. When no cloud API is configured, the extensions first try **Chrome's built-in on-device AI** (the Prompt API: zero config, zero upload, model managed by Chrome; enabled only when the model is already ready — model downloads are never triggered silently), and fall back to the local rule engine when on-device AI is unavailable (Muse's rule-engine mood tagging is frequency-based statistics, not model recommendations).
 - **Bridge**: configured via environment variables.
 
 | Variable | Purpose | Example |

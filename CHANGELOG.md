@@ -7,6 +7,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- **端侧 AI 增强层（Focus / Muse，T-10）**：新增共享适配层 `vannevar-builtin-ai.js`（双副本字节一致，入 STRICT 门禁），接入 Chrome 内置 Prompt API（`LanguageModel`）。降级链升级为：**已配置的云端 API 优先（尊重显式选择）→ 未配置云端时尝试端侧 AI（零配置、零上传，模型由 Chrome 管理）→ 本地规则引擎**。可用性判定采取保守策略：仅在模型已就绪（`available`）时启用，`downloadable`/`downloading` 状态不静默触发数百 MB 的模型下载；端侧输出经宽松 JSON 提取后走与云端一致的结果解析路径；任何失败静默降级，不阻断主流程。既有 WebLLM 本地层（600MB、默认关闭、无调用方）保持现状，后续评估合并。
+
 ### Fixed
 
 - **退出登录现在会真正撤销服务端 token（Focus / Muse）**：扩展此前 logout 只清除本地凭据，Bridge 端已签发 JWT 在到期前仍然有效。现 logout 先尽力调用 `POST /api/auth/logout`（携带 Bearer 与 `X-CSRF-Token`，即 JWT 的 `csrf_jti`）触发服务端 `token_revoked_at` 撤销并失效缓存，再清除本地状态；服务端不可达时不阻塞本地登出（此时旧 token 只能等自然过期，属无状态 JWT 的固有限制）。Bridge 端撤销与缓存失效机制此前已有测试覆盖，本批补齐的是调用侧。
@@ -18,7 +22,8 @@
 
 ### Testing
 
-- 新增 Focus / Muse 镜像用例 `tests/test_logout_revoke.mjs`（各 7 条，无需 loader）：撤销请求头完整性（Bearer + `csrf_jti`）、网络失败容忍、未登录零请求；salt-mismatch 通知、24h 节流、成功复位、其余 reason 静默。测试基线变为：Focus 16 + 14 + **7**；Muse 24 + 16 + 18 + **7**；Bridge 449 / 9（本批未改 Bridge 代码）。
+- 新增 Focus / Muse 镜像用例 `tests/test_logout_revoke.mjs`（各 7 条，无需 loader）：撤销请求头完整性（Bearer + `csrf_jti`）、网络失败容忍、未登录零请求；salt-mismatch 通知、24h 节流、成功复位、其余 reason 静默。
+- 新增 Focus / Muse 镜像用例 `tests/test_builtin_ai.mjs`（Focus 8 条 / Muse 9 条，无需 loader）：端侧 JSON 采纳、围栏输出宽松提取、`unavailable`/`downloadable` 不可用、首次 `create()` 抛错静默、云端配置优先且端侧零调用、流式一次性回调、mood 推荐数组解析（Muse）。测试基线：Focus 16 + 14 + 7 + **8**；Muse 24 + 16 + 18 + 7 + **9**；Bridge 449 / 9（未改 Bridge 代码）。
 
 ## [0.2.0] - 2026-11-03
 

@@ -1,12 +1,29 @@
 // core/ai.js — AI 增强模块（可选，灵感场景）
 // 无 API key 时所有生成函数返回 null，调用方降级到规则引擎。
+// T-10：未配置云端 API 时，先尝试 Chrome 端侧 AI（vannevar-builtin-ai.js 适配层），
+//       端侧也不可用才降级到规则引擎。显式配置的云端 API 优先于端侧（尊重用户选择）。
 // 通过 chrome.storage.local 存储 API key，不硬编码任何凭据。
+
+import { createBuiltinAI } from '../shared/vannevar-builtin-ai.js';
 
 const STORAGE_KEY_API = 'vannevar_ai_config';
 const STORAGE_KEY_DEMO = 'demoMode';
 
 // AI 请求超时时间（与 Focus 统一架构）：30s 后中止并降级到规则引擎
 const AI_REQUEST_TIMEOUT_MS = 30000;
+
+// 端侧 AI 适配层单例（T-10）：Chrome 内置 Prompt API，零配置零上传
+const _builtinAI = createBuiltinAI({ timeoutMs: AI_REQUEST_TIMEOUT_MS });
+
+// 宽松 JSON 提取：端侧模型可能输出 markdown 围栏或前后缀说明，
+// 取首个 '{' 到最后一个 '}' 之间的内容尝试解析；失败返回 null
+function _extractJson(text) {
+  try { return JSON.parse(text); } catch (_) { /* 继续宽松提取 */ }
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start === -1 || end <= start) return null;
+  try { return JSON.parse(text.slice(start, end + 1)); } catch (_) { return null; }
+}
 
 // 演示模式预设结果：无需 API Key 即可展示 AI 增强效果
 const DEMO_SUMMARY = {
@@ -117,22 +134,16 @@ export async function generateAISummary(inspirations) {
     return DEMO_SUMMARY;
   }
 
-  const config = await getAIConfig();
-  if (!config || !config.apiKey || !config.baseUrl) {
-    return null; // 降级到规则引擎
-  }
+  // T-10：提示词构造提前（云端与端侧共用同一 prompt）
+  const items = inspirations.slice(0, 40).map(it => ({
+    title: it.title,
+    url: it.url,
+    note: it.note,
+    mood: it.mood,
+    selectedText: it.selectedText
+  }));
 
-  const { signal, cancelTimer } = createTimeoutController();
-  try {
-    const items = inspirations.slice(0, 40).map(it => ({
-      title: it.title,
-      url: it.url,
-      note: it.note,
-      mood: it.mood,
-      selectedText: it.selectedText
-    }));
-
-    const prompt = `你是一位善于洞察的阅读者与策展人。请深入分析以下灵感记录，生成一份有洞见的灵感回顾摘要。
+  const prompt = `你是一位善于洞察的阅读者与策展人。请深入分析以下灵感记录，生成一份有洞见的灵感回顾摘要。
 
 每条灵感包含：网页标题、来源 URL、用户备注、氛围标签、选中的原文片段。
 
@@ -156,6 +167,19 @@ ${JSON.stringify(items, null, 2)}
   "recommendedMoods": ["推荐氛围1", "推荐氛围2", "推荐氛围3"]
 }`;
 
+  const config = await getAIConfig();
+  if (!config || !config.apiKey || !config.baseUrl) {
+    // T-10 端侧层：未配置云端 API 时，先尝试 Chrome 内置 AI（零配置、零上传）
+    const builtinOut = await _builtinAI.prompt(prompt);
+    if (builtinOut) {
+      const parsed = _extractJson(builtinOut);
+      if (parsed) return parsed;
+    }
+    return null; // 降级到规则引擎
+  }
+
+  const { signal, cancelTimer } = createTimeoutController();
+  try {
     const response = await fetch(config.baseUrl, {
       method: 'POST',
       headers: {
@@ -198,14 +222,8 @@ export async function recommendMoodTags(pageInfo) {
     return DEMO_MOOD_TAGS;
   }
 
-  const config = await getAIConfig();
-  if (!config || !config.apiKey || !config.baseUrl) {
-    return null; // 降级，调用方使用默认标签
-  }
-
-  const { signal, cancelTimer } = createTimeoutController();
-  try {
-    const prompt = `基于以下网页信息，推荐 3-5 个氛围标签，用于标记这条灵感记录。
+  // T-10：提示词构造提前（云端与端侧共用同一 prompt）
+  const prompt = `基于以下网页信息，推荐 3-5 个氛围标签，用于标记这条灵感记录。
 
 网页信息：
 ${JSON.stringify({ title: pageInfo.title, url: pageInfo.url, selectedText: (pageInfo.selectedText || '').slice(0, 500), note: pageInfo.note }, null, 2)}
@@ -218,6 +236,19 @@ ${JSON.stringify({ title: pageInfo.title, url: pageInfo.url, selectedText: (page
 请严格用 JSON 格式返回：
 {"moods": ["标签1", "标签2", "标签3"]}`;
 
+  const config = await getAIConfig();
+  if (!config || !config.apiKey || !config.baseUrl) {
+    // T-10 端侧层：未配置云端 API 时，先尝试 Chrome 内置 AI（零配置、零上传）
+    const builtinOut = await _builtinAI.prompt(prompt);
+    if (builtinOut) {
+      const parsed = _extractJson(builtinOut);
+      if (parsed && Array.isArray(parsed.moods)) return parsed.moods.slice(0, 5);
+    }
+    return null; // 降级，调用方使用默认标签
+  }
+
+  const { signal, cancelTimer } = createTimeoutController();
+  try {
     const response = await fetch(config.baseUrl, {
       method: 'POST',
       headers: {
@@ -268,23 +299,30 @@ export async function generateAISummaryStream(inspirations, onChunk) {
     return DEMO_SUMMARY;
   }
 
-  const config = await getAIConfig();
-  if (!config || !config.apiKey || !config.baseUrl) {
-    return null; // 降级到规则引擎
-  }
-
-  const { signal, cancelTimer } = createTimeoutController();
-  try {
-    const items = inspirations.slice(0, 40).map(it => ({
-      title: it.title, url: it.url, note: it.note, mood: it.mood, selectedText: it.selectedText
-    }));
-    const prompt = `你是一位善于洞察的阅读者与策展人。请深入分析以下灵感记录，生成一份有洞见的灵感回顾摘要（2-3 句话）。
+  // T-10：提示词构造提前（云端与端侧共用同一 prompt）
+  const items = inspirations.slice(0, 40).map(it => ({
+    title: it.title, url: it.url, note: it.note, mood: it.mood, selectedText: it.selectedText
+  }));
+  const prompt = `你是一位善于洞察的阅读者与策展人。请深入分析以下灵感记录，生成一份有洞见的灵感回顾摘要（2-3 句话）。
 
 灵感列表：
 ${JSON.stringify(items, null, 2)}
 
 请用纯文本输出概述，不要 JSON 包装。`;
 
+  const config = await getAIConfig();
+  if (!config || !config.apiKey || !config.baseUrl) {
+    // T-10 端侧层：未配置云端 API 时，先尝试 Chrome 内置 AI（整段生成后一次性回调）
+    const builtinOut = await _builtinAI.prompt(prompt);
+    if (builtinOut) {
+      if (typeof onChunk === 'function') onChunk(builtinOut);
+      return builtinOut;
+    }
+    return null; // 降级到规则引擎
+  }
+
+  const { signal, cancelTimer } = createTimeoutController();
+  try {
     const response = await fetch(config.baseUrl, {
       method: 'POST',
       headers: {

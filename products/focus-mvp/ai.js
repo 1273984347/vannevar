@@ -1,12 +1,29 @@
 // ai.js — AI 增强模块（可选）
 // 无 API key 时所有生成函数返回 null，调用方降级到规则引擎。
+// T-10：未配置云端 API 时，先尝试 Chrome 端侧 AI（vannevar-builtin-ai.js 适配层），
+//       端侧也不可用才降级到规则引擎。显式配置的云端 API 优先于端侧（尊重用户选择）。
 // 通过 chrome.storage.local 存储 API key，不硬编码任何凭据。
+
+import { createBuiltinAI } from './lib/vannevar-builtin-ai.js';
 
 const STORAGE_KEY_API = 'vannevar_ai_config';
 const STORAGE_KEY_DEMO = 'demoMode';
 
 // AI 请求超时时间（F-PERF-01）：30s 后中止并降级到规则引擎
 const AI_REQUEST_TIMEOUT_MS = 30000;
+
+// 端侧 AI 适配层单例（T-10）：Chrome 内置 Prompt API，零配置零上传
+const _builtinAI = createBuiltinAI({ timeoutMs: AI_REQUEST_TIMEOUT_MS });
+
+// 宽松 JSON 提取：端侧模型可能输出 markdown 围栏或前后缀说明，
+// 取首个 '{' 到最后一个 '}' 之间的内容尝试解析；失败返回 null
+function _extractJson(text) {
+  try { return JSON.parse(text); } catch (_) { /* 继续宽松提取 */ }
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start === -1 || end <= start) return null;
+  try { return JSON.parse(text.slice(start, end + 1)); } catch (_) { return null; }
+}
 
 // 演示模式预设结果：无需 API Key 即可展示 AI 增强效果
 const DEMO_SUMMARY = {
@@ -115,19 +132,13 @@ export async function generateAISummary(tabs) {
     return DEMO_SUMMARY;
   }
 
-  const config = await getAIConfig();
-  if (!config || !config.apiKey || !config.baseUrl) {
-    return null; // 降级到规则引擎
-  }
+  // T-10：提示词构造提前（云端与端侧共用同一 prompt）
+  const tabInfo = tabs.slice(0, 30).map(t => ({
+    title: t.title,
+    url: t.url
+  }));
 
-  const { signal, cancelTimer } = createTimeoutController();
-  try {
-    const tabInfo = tabs.slice(0, 30).map(t => ({
-      title: t.title,
-      url: t.url
-    }));
-
-    const prompt = `分析以下浏览器标签页，生成工作上下文摘要。
+  const prompt = `分析以下浏览器标签页，生成工作上下文摘要。
 标签页列表：
 ${JSON.stringify(tabInfo, null, 2)}
 
@@ -140,6 +151,19 @@ ${JSON.stringify(tabInfo, null, 2)}
   "contextTags": ["上下文标签：1-3 个，从以下维度选取——工作强度（如：深度专注/多线并行）、紧急程度（如：需尽快处理/可暂缓）、协作状态（如：独立工作/待协作）、认知类型（如：创造性/审查性/学习性）"]
 }`;
 
+  const config = await getAIConfig();
+  if (!config || !config.apiKey || !config.baseUrl) {
+    // T-10 端侧层：未配置云端 API 时，先尝试 Chrome 内置 AI（零配置、零上传）
+    const builtinOut = await _builtinAI.prompt(prompt);
+    if (builtinOut) {
+      const parsed = _extractJson(builtinOut);
+      if (parsed) return parsed;
+    }
+    return null; // 降级到规则引擎
+  }
+
+  const { signal, cancelTimer } = createTimeoutController();
+  try {
     const response = await fetch(config.baseUrl, {
       method: 'POST',
       headers: {
@@ -191,20 +215,27 @@ export async function generateAISummaryStream(tabs, onChunk) {
     return DEMO_SUMMARY;
   }
 
-  const config = await getAIConfig();
-  if (!config || !config.apiKey || !config.baseUrl) {
-    return null; // 降级到规则引擎
-  }
-
-  const { signal, cancelTimer } = createTimeoutController();
-  try {
-    const tabInfo = tabs.slice(0, 30).map(t => ({ title: t.title, url: t.url }));
-    const prompt = `分析以下浏览器标签页，生成工作上下文摘要。
+  // T-10：提示词构造提前（云端与端侧共用同一 prompt）
+  const tabInfo = tabs.slice(0, 30).map(t => ({ title: t.title, url: t.url }));
+  const prompt = `分析以下浏览器标签页，生成工作上下文摘要。
 标签页列表：
 ${JSON.stringify(tabInfo, null, 2)}
 
 请用纯文本输出 2-3 句话概述当前工作内容，不要 JSON 包装。`;
 
+  const config = await getAIConfig();
+  if (!config || !config.apiKey || !config.baseUrl) {
+    // T-10 端侧层：未配置云端 API 时，先尝试 Chrome 内置 AI（整段生成后一次性回调）
+    const builtinOut = await _builtinAI.prompt(prompt);
+    if (builtinOut) {
+      if (typeof onChunk === 'function') onChunk(builtinOut);
+      return builtinOut;
+    }
+    return null; // 降级到规则引擎
+  }
+
+  const { signal, cancelTimer } = createTimeoutController();
+  try {
     const response = await fetch(config.baseUrl, {
       method: 'POST',
       headers: {
