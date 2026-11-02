@@ -16,7 +16,7 @@
 3. 关闭这些网页 → 再点 Focus 图标 → 选刚才的记录 → 「恢复」→ 网页全部重新打开
 4. 点「详情」查看 AI 生成的上下文摘要（无 API key 时显示规则引擎摘要）
 
-**截图**：`screenshots/vannevar-focus-screenshot.png`
+**截图**：`screenshots/focus-popup-expanded.png`
 
 ---
 
@@ -30,7 +30,7 @@
 3. 输入备注、选氛围标签 → 「保存灵感」
 4. 点 popup 中「打开灵感博物馆」→ 查看时间线、氛围分布图、来源域名聚合
 
-**截图**：`screenshots/vannevar-muse-screenshot.png`
+**截图**：`screenshots/muse-dashboard.png`
 
 ---
 
@@ -92,7 +92,7 @@ python main.py
 4. 访问「统计仪表盘」查看任务分布、趋势、贡献榜
 5. 项目详情页二维码扫码或 `/p/{token}` 体验志愿者视角
 
-**截图**：`screenshots/vannevar-bridge-screenshot.png`
+**截图**：`screenshots/bridge-stats.png`
 
 ---
 
