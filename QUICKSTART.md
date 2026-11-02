@@ -49,9 +49,9 @@ Bridge 在**非调试模式**下必须同时设置 `BRIDGE_JWT_SECRET` 与 `BRID
 # Windows PowerShell
 cd products/bridge-mvp
 py -m pip install -r requirements.txt
-$env:BRIDGE_JWT_SECRET = python -c "import secrets; print(secrets.token_hex(32))"
+$env:BRIDGE_JWT_SECRET = py -c "import secrets; print(secrets.token_hex(32))"
 $env:BRIDGE_ADMIN_PASS = "改成你的密码"
-python main.py
+py main.py
 ```
 
 ```bash
@@ -70,7 +70,7 @@ python main.py
 cd products/bridge-mvp
 py -m pip install -r requirements.txt
 $env:BRIDGE_DEBUG = "1"
-python main.py
+py main.py
 # 启动后终端（stderr）会打印 [BRIDGE] Dev admin password: xxxx
 ```
 

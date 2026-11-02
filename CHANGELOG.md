@@ -35,14 +35,15 @@
 
 ### Testing
 
-- 新增 `products/muse-mvp/tests/test_crypto.mjs`（24 条，含两个独立模块实例互解的跨设备用例）、`products/muse-mvp/tests/test_sync_crypto.mjs`（14 条）、`products/bridge-mvp/tests/test_crypto_profile.py`（12 条）。
+- 新增 `products/muse-mvp/tests/test_crypto.mjs`（24 条，含两个独立模块实例互解的跨设备用例）、`products/muse-mvp/tests/test_sync_crypto.mjs`（16 条）、`products/bridge-mvp/tests/test_crypto_profile.py`（12 条）。
 - 新增门禁 `scripts/check_shared_sync.py`（共享层副本一致性，已接入 `scripts/qa_all.py`，强约束副本组漂移即阻断）。
-- 测试基线：Bridge **447 passed / 9 skipped / 0 failed**；Focus 16 + 12；Muse 24 + 14 + 18。
+- 测试基线：Bridge **449 passed / 9 skipped / 0 failed**；Focus 16 + 14；Muse 24 + 16 + 18。
 
 ### Documentation
 
 - 根 `README.md` 补齐跨设备解密说明、加密档案的安全边界、修正后的测试基线与代码体量统计。
 - `products/muse-mvp/README.md` 与 `products/focus-mvp/README.md` 补齐 E2E 加密与跨设备解密章节。
+- 根 `README.md` 的测试一节补齐 `requirements-dev.txt` 安装前提（pytest 属测试依赖，不随运行时安装），新用户照文档跑测试不再卡在 `No module named pytest`；`QUICKSTART.md` 的 Windows 命令统一为 `py`；根 `README.md` / `AGENTS.md` 测试基线数字校准为实测值（T-03 新用户首航自测发现，F-1/F-2/F-3）。
 
 ## [0.1.0] - 2026-10-25
 

@@ -244,8 +244,10 @@ Focus 与 Muse 的同步数据在离开浏览器前即加密：
 ```bash
 # Bridge：全量单元/集成测试（不跑 e2e）
 cd products/bridge-mvp
+python -m pip install -r requirements.txt        # 运行时依赖
+python -m pip install -r requirements-dev.txt    # 测试依赖：pytest 在这里，跑测试必装
 py -m pytest tests/ -q --ignore=tests/e2e
-# 基线：447 passed / 9 skipped / 0 failed（用例数随新功能递增）
+# 基线：449 passed / 9 skipped / 0 failed（用例数随新功能递增）
 
 # Focus：端到端加密
 cd products/focus-mvp
@@ -254,7 +256,7 @@ node tests/test_crypto.mjs
 
 # Focus：同步链路加密
 node --import ./tests/loader.mjs tests/test_sync_crypto.mjs
-# 结果：12 通过 / 0 失败
+# 结果：14 通过 / 0 失败
 
 # Muse：端到端加密
 cd products/muse-mvp
@@ -263,7 +265,7 @@ node tests/test_crypto.mjs
 
 # Muse：同步链路加密
 node --import ./tests/loader.mjs tests/test_sync_crypto.mjs
-# 结果：14 通过 / 0 失败
+# 结果：16 通过 / 0 失败
 
 # Muse：媒体会话
 node --import ./tests/loader.mjs tests/test_media_session.mjs
