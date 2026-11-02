@@ -25,7 +25,6 @@
 
 | 事项 | 说明 | 来源 |
 |---|---|---|
-| 共享层单源化 | `privacy-policy.html` 四副本收敛为单一源（STRICT 门禁）；设计令牌与 Bridge 侧运行时副本漂移评估处置 | T-02/T-05 遗留 |
 | Bridge 一键部署 | `docker-compose.yml` + 最小配置示例，降低自托管门槛 | 部署反馈预期 |
 | 演示素材重制 | 重造干净演示数据后重截 `bridge-detail/home` 等截图；重录品牌视频（去参赛痕迹） | T-01 R-05 / T-05 |
 | QUICKSTART / deploy-guide 英文化 | 文档层双语覆盖第二梯队 | v0.2.0 后评估 |
@@ -44,6 +43,7 @@
 | 2026-10-25 | **v0.1.0** 三产品完整开源发布（修复 Bridge 恢复缺陷、补 CI、发布卫生） |
 | 2026-11-03 | **v0.2.0** Muse 端到端加密补齐 + 跨设备解密（加密档案 salt 上云）+ 依赖升级 + 展示面打磨 + 英文 README；新用户首航自测通过（详见 [CHANGELOG](../CHANGELOG.md) 与 docs/opensource/ 报告） |
 | 2026-11-03 | 反馈回路建立（Discussions + feedback 模板 + 本路线图） |
+| 2026-11-03 | 清账：logout 服务端 token 撤销 + salt-mismatch 用户提示（T-08）；共享层单源化与门禁收紧至 STRICT 5 组（T-09） |
 
 ---
 

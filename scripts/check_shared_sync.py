@@ -36,16 +36,6 @@ STRICT_GROUPS = [
         ],
         "note": "Focus 与 Muse 共用同一份加密实现；副本漂移 = 两端加密行为分叉",
     },
-]
-
-# REPORT 组：历史遗留漂移，只报告不阻断
-REPORT_GROUPS = [
-    {
-        "name": "设计令牌",
-        "source": "shared/vannevar-brand.css",
-        "copies": ["products/muse-mvp/shared/vannevar-brand.css"],
-        "note": "shared/ 供海报生成使用，产品目录副本供扩展实际加载，两者是不同用途的演进版本",
-    },
     {
         "name": "Context Card 格式",
         "source": "shared/vannevar-context-card.js",
@@ -53,16 +43,41 @@ REPORT_GROUPS = [
             "products/focus-mvp/lib/vannevar-context-card.js",
             "products/muse-mvp/shared/vannevar-context-card.js",
         ],
-        "note": "三产品交换格式，漂移会导致跨产品传递失败",
+        "note": "三产品交换格式，漂移会导致跨产品传递失败（T-09 起升为 STRICT；当前三副本字节一致）",
     },
     {
-        "name": "共享运行时",
+        "name": "隐私政策",
+        "source": "shared/privacy-policy.html",
+        "copies": ["products/bridge-mvp/static/privacy-policy.html"],
+        "note": "T-09 单源化：两副本字节一致，含 vannevar-brand.css 相对样式引用（Bridge static 已带该文件）",
+    },
+    {
+        "name": "Bridge 静态设计令牌",
+        "source": "shared/vannevar-brand.css",
+        "copies": ["products/bridge-mvp/static/vannevar-brand.css"],
+        "note": "T-09 单源化：随隐私政策页一起进入 Bridge static，保证其样式引用可达且不漂移",
+    },
+    {
+        "name": "共享运行时（扩展对）",
         "source": "products/focus-mvp/shared/vannevar-shared.js",
-        "copies": [
-            "products/muse-mvp/shared/vannevar-shared.js",
-            "products/bridge-mvp/static/shared/vannevar-shared.js",
-        ],
-        "note": "Bridge 侧是 Web 运行时变体，与扩展侧本就不是同一份",
+        "copies": ["products/muse-mvp/shared/vannevar-shared.js"],
+        "note": "T-09 拆分：Focus 与 Muse 扩展侧副本必须一致（当前字节一致）",
+    },
+]
+
+# REPORT 组：历史遗留漂移，只报告不阻断
+REPORT_GROUPS = [
+    {
+        "name": "设计令牌（海报源 vs 扩展副本）",
+        "source": "shared/vannevar-brand.css",
+        "copies": ["products/muse-mvp/shared/vannevar-brand.css"],
+        "note": "shared/ 供海报生成使用，产品目录副本供扩展实际加载，两者是不同用途的演进版本（刻意分叉，非漂移缺陷）",
+    },
+    {
+        "name": "共享运行时（Bridge Web 变体）",
+        "source": "products/focus-mvp/shared/vannevar-shared.js",
+        "copies": ["products/bridge-mvp/static/shared/vannevar-shared.js"],
+        "note": "Bridge 侧是 Web 运行时变体，与扩展侧本就不是同一份（刻意分叉，非漂移缺陷）",
     },
 ]
 

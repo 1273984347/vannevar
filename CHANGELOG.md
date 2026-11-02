@@ -12,6 +12,10 @@
 - **退出登录现在会真正撤销服务端 token（Focus / Muse）**：扩展此前 logout 只清除本地凭据，Bridge 端已签发 JWT 在到期前仍然有效。现 logout 先尽力调用 `POST /api/auth/logout`（携带 Bearer 与 `X-CSRF-Token`，即 JWT 的 `csrf_jti`）触发服务端 `token_revoked_at` 撤销并失效缓存，再清除本地状态；服务端不可达时不阻塞本地登出（此时旧 token 只能等自然过期，属无状态 JWT 的固有限制）。Bridge 端撤销与缓存失效机制此前已有测试覆盖，本批补齐的是调用侧。
 - **跨设备口令不一致不再静默（Focus / Muse）**：自动同步遇到「云端加密档案的 salt 与本机不一致」时，此前返回值被静默丢弃（T-02 P2-1），用户无从得知为何另一台设备解不开。现统一弹出系统通知（24 小时节流防打扰），说明「未覆盖云端档案，请到设置页解锁或采用云端档案」；档案恢复一致后自动复位。手动解锁路径的报错提示此前已存在，本批补齐的是自动同步路径。
 
+### Changed
+
+- **共享层副本门禁收紧（T-09）**：`privacy-policy.html` 单源化（shared/ 为唯一源，Bridge static 副本字节一致并随之获得样式引用），Bridge static 新增 `vannevar-brand.css` 副本随政策页使用；`check_shared_sync.py` 门禁扩为 **STRICT 5 组**（加密核心、Context Card、隐私政策、Bridge 静态令牌、扩展运行时对，漂移即阻断），Context Card 与扩展运行时对自 REPORT 升入 STRICT（当前字节一致，升级零成本）；设计令牌（海报源 vs 扩展副本）与 Bridge Web 运行时变体明确标注为「刻意分叉」，留在 REPORT 如实报告。T-01 遗留 R-10（隐私政策多副本漂移）就此关闭。
+
 ### Testing
 
 - 新增 Focus / Muse 镜像用例 `tests/test_logout_revoke.mjs`（各 7 条，无需 loader）：撤销请求头完整性（Bearer + `csrf_jti`）、网络失败容忍、未登录零请求；salt-mismatch 通知、24h 节流、成功复位、其余 reason 静默。测试基线变为：Focus 16 + 14 + **7**；Muse 24 + 16 + 18 + **7**；Bridge 449 / 9（本批未改 Bridge 代码）。

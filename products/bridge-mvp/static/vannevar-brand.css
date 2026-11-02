@@ -1,0 +1,200 @@
+/* ============================================================
+   Vannevar Design System — 统一品牌共享层
+   三个产品（Focus / Muse / Bridge）共用：
+   仅保留跨产品通用组件与结构，不强制具体品牌色。
+   各产品在自己的 CSS 中定义 --v-primary / --v-gradient / --v-shadow-* 等令牌。
+   ============================================================ */
+
+/* ---------- 结构性令牌（无颜色偏好） ---------- */
+:root {
+  /* 圆角 — 三个产品统一 8/14/20 现代规格 */
+  --v-radius-sm: 8px;
+  --v-radius: 14px;
+  --v-radius-lg: 20px;
+
+  /* 过渡曲线 — 统一弹性 cubic-bezier */
+  --v-transition: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --v-transition-fast: 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ---------- 焦点环 ---------- */
+*:focus-visible {
+  outline: 2px solid var(--v-primary);
+  outline-offset: 2px;
+}
+
+/* ---------- Skip link ---------- */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  z-index: 10001;
+  padding: 8px 16px;
+  background: var(--v-primary);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 var(--v-radius-sm) 0;
+  transition: top var(--v-transition);
+}
+.skip-link:focus,
+.skip-link:focus-visible {
+  top: 0;
+}
+
+/* ---------- Vannevar Logo ---------- */
+.v-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--v-radius-sm);
+  background: var(--v-gradient);
+  color: white;
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.5px;
+  flex-shrink: 0;
+  box-shadow: var(--v-shadow-sm);
+  transition: transform var(--v-transition), box-shadow var(--v-transition);
+}
+.v-logo:hover {
+  transform: translateY(-1px) rotate(-2deg);
+  box-shadow: var(--v-shadow-md);
+}
+.v-logo svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ---------- Toast 组件 ---------- */
+.v-toast-container {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.v-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--v-radius);
+  background: var(--v-surface);
+  box-shadow: var(--v-shadow-lg);
+  border: 1px solid var(--v-border);
+  font-size: 14px;
+  color: var(--v-text);
+  max-width: 360px;
+  animation: v-toast-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.v-toast.v-toast-out {
+  animation: v-toast-out 0.2s ease forwards;
+}
+
+.v-toast--success { border-left: 3px solid var(--v-success); }
+.v-toast--error   { border-left: 3px solid var(--v-danger); }
+.v-toast--info    { border-left: 3px solid var(--v-primary); }
+
+.v-toast-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+@keyframes v-toast-in {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes v-toast-out {
+  to { opacity: 0; transform: translateX(40px); }
+}
+
+/* ---------- 通用按钮 ---------- */
+.v-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--v-radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--v-transition), color var(--v-transition), box-shadow var(--v-transition), transform var(--v-transition);
+  white-space: nowrap;
+}
+
+.v-btn--primary {
+  background: var(--v-gradient);
+  color: white;
+  box-shadow: var(--v-shadow-sm);
+}
+.v-btn--primary:hover { box-shadow: var(--v-shadow-md); transform: translateY(-1px); }
+.v-btn--primary:active { transform: scale(0.98); }
+
+.v-btn--ghost {
+  background: transparent;
+  color: var(--v-text-secondary);
+  border: 1px solid var(--v-border);
+}
+.v-btn--ghost:hover { background: var(--v-bg); color: var(--v-text); }
+
+.v-btn--danger {
+  background: var(--v-danger-bg);
+  color: var(--v-danger);
+}
+.v-btn--danger:hover { background: var(--v-danger); color: white; }
+
+/* ---------- 空状态 ---------- */
+.v-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--v-text-muted);
+}
+.v-empty-icon {
+  width: 72px;
+  height: 72px;
+  margin-bottom: 16px;
+  opacity: 0.35;
+}
+.v-empty-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--v-text-secondary);
+  margin-bottom: 4px;
+}
+.v-empty-desc {
+  font-size: 13px;
+  color: var(--v-text-muted);
+}
+
+/* ---------- 入场动画 ---------- */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- 动效偏好 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
