@@ -33,6 +33,10 @@
 
 - Muse 同步内容由明文改为密文上行，消除「用户以为数据已加密、实际服务端可直接读取」的隐私缺口；此前状态违反 `AGENTS.md` §2.3「同步内容必须经端到端加密」。
 
+### Dependencies
+
+- Bridge 依赖随 dependabot 升级，每条均经 CI 全量验证、合并后叠加组合再经本地全新环境实测（449 passed / 9 skipped / 0 failed）：`fastapi` 0.159.1 → 0.162.0、`sqlalchemy` 2.0.50 → 2.1.6、`python-jose[cryptography]` 3.3.0 → 3.5.0、`apscheduler` 3.10.4 → 3.11.3；测试依赖 `pytest` 8.4.2 → 9.2.0（#10 ~ #14）。
+
 ### Testing
 
 - 新增 `products/muse-mvp/tests/test_crypto.mjs`（24 条，含两个独立模块实例互解的跨设备用例）、`products/muse-mvp/tests/test_sync_crypto.mjs`（16 条）、`products/bridge-mvp/tests/test_crypto_profile.py`（12 条）。
