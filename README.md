@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/1273984347/vannevar/actions/workflows/ci.yml/badge.svg)](https://github.com/1273984347/vannevar/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/1273984347/vannevar)](https://github.com/1273984347/vannevar/releases)
 [![Chrome MV3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4.svg)](products/focus-mvp/manifest.json)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB.svg)](products/bridge-mvp/requirements.txt)
 [![Node](https://img.shields.io/badge/Node-24-5FA04E.svg)](products/focus-mvp/manifest.json)
@@ -17,12 +18,6 @@ Vannevar 是一套 **上下文管理（Context Management）产品族**，致敬
 | **Focus** | 一键保存、恢复浏览器的完整工作现场，AI 自动打上下文标签 | 捕捉 |
 | **Muse** | 捕获网页选中片段，用「氛围」而不是文件夹组织灵感，Dashboard 时间线回顾 | 整理 |
 | **Bridge** | 公益项目看板 + AI 交接摘要 + 二维码扫码接力，让协作不断档 | 交接 |
-
-<!--
-徽章说明：以上为静态徽章，均不指向 CI 服务。
-CI 徽章请在 GitHub Actions 首次成功运行后，从 Actions 页面复制真实徽章 URL 补入此处，
-不要预先写入任何尚未启用的工作流地址。
--->
 
 ---
 
@@ -47,6 +42,14 @@ CI 徽章请在 GitHub Actions 首次成功运行后，从 Actions 页面复制�
 | **Focus** | Chrome MV3 扩展 | 深度工作、多线并行研究、临时中断恢复 | 标签页快照与恢复、AI 上下文标签、本地加密同步到 Bridge | [`products/focus-mvp/`](products/focus-mvp/) |
 | **Muse** | Chrome MV3 扩展 | 灵感捕捉、素材归档、创作回顾 | 选中片段捕获、氛围标签与分组、Dashboard 时间线、媒体元数据、端到端加密同步 | [`products/muse-mvp/`](products/muse-mvp/) |
 | **Bridge** | FastAPI Web 服务 | 公益团队协作、志愿者交接、跨人接力 | 项目看板与任务、Basic Auth + RBAC、AI 交接摘要、SSE 实时推送、扫码接力 | [`products/bridge-mvp/`](products/bridge-mvp/) |
+
+<table>
+  <tr>
+    <td align="center" width="25%"><img src="screenshots/focus-popup-expanded.png" alt="Focus 弹窗：已保存的上下文与 AI 摘要" width="210"><br><b>Focus</b> · 快照 / 恢复 / AI 标签</td>
+    <td align="center" width="37.5%"><img src="screenshots/muse-dashboard.png" alt="Muse 仪表盘：氛围分布与灵感时间线" width="300"><br><b>Muse</b> · 氛围标签 / 时间线回顾</td>
+    <td align="center" width="37.5%"><img src="screenshots/bridge-stats.png" alt="Bridge 统计仪表盘：任务趋势与状态分布" width="300"><br><b>Bridge</b> · 看板 / 交接 / 统计</td>
+  </tr>
+</table>
 
 技术形态一览：
 
