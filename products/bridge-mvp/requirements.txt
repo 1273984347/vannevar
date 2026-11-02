@@ -12,7 +12,7 @@ httpx==0.28.1  # AI 增强模块（可选，未配置 BRIDGE_AI_* 环境变量�
 # 直接使用 bcrypt 库，不再依赖 passlib —— passlib 1.7.4 读取
 # bcrypt.__about__.__version__ 探测版本，而 bcrypt 5.0 已移除该模块。
 bcrypt==5.0.0
-python-jose[cryptography]==3.3.0
+python-jose[cryptography]==3.5.0
 email-validator==2.3.0
 
 # 阶段2.2 Agent 定时扫描（P1-10 修复：补充缺失依赖）
