@@ -7,6 +7,10 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-03
+
+> 发布说明与可下载产物：<https://github.com/1273984347/vannevar/releases/tag/v0.2.0>
+
 ### Added
 
 **共享层**
@@ -49,6 +53,7 @@
 - `products/muse-mvp/README.md` 与 `products/focus-mvp/README.md` 补齐 E2E 加密与跨设备解密章节。
 - 根 `README.md` 的测试一节补齐 `requirements-dev.txt` 安装前提（pytest 属测试依赖，不随运行时安装），新用户照文档跑测试不再卡在 `No module named pytest`；`QUICKSTART.md` 的 Windows 命令统一为 `py`；根 `README.md` / `AGENTS.md` 测试基线数字校准为实测值（T-03 新用户首航自测发现，F-1/F-2/F-3）。
 - 展示面打磨（T-05）：根 `README.md` 首屏新增三产品真实 UI 截图卡并校准徽章区（新增 Release 徽章、移除过时的静态徽章注释）；`QUICKSTART.md` 截图改指真实产品 UI；移除 3 张带「TRAE AI 创造力大赛」烙印的旧提案海报（`screenshots/vannevar-*-screenshot.png`，参赛烙印清除）。
+- 新增英文版根 README（`README.en.md`，内容与中文版对应当前状态），两版首行互设双语切换入口。
 
 ## [0.1.0] - 2026-10-25
 

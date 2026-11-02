@@ -1,5 +1,7 @@
 # Vannevar
 
+<p align="right">中文 · <a href="README.en.md">English</a></p>
+
 [![CI](https://github.com/1273984347/vannevar/actions/workflows/ci.yml/badge.svg)](https://github.com/1273984347/vannevar/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/1273984347/vannevar)](https://github.com/1273984347/vannevar/releases)
