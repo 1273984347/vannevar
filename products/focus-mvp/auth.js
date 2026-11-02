@@ -152,8 +152,24 @@ export async function register(email, password, displayName = '') {
   return tokenData;
 }
 
-// 登出：清除本地 token
+// 登出：先尽力通知服务端撤销已签发 JWT（Bridge 端 token_revoked_at 机制，
+// T-08 清账：修复「只清本地、服务端 token 到期前仍有效」的缺口），
+// 再清除本地状态。
+// - JWT 路径写端点要求 X-CSRF-Token == JWT 的 csrf_jti（见 getCsrfToken），必须携带；
+// - 尽力而为语义：服务端不可达时不阻塞本地登出；此时旧 token 只能等自然过期（无状态 JWT 的固有限制）。
 export async function logout() {
+  try {
+    const data = await getAuthToken();
+    if (data && data.token) {
+      const base = await getBridgeUrl();
+      const headers = { 'Authorization': `Bearer ${data.token}` };
+      const csrf = await getCsrfToken();
+      if (csrf) headers['X-CSRF-Token'] = csrf;
+      await fetch(`${base}/api/auth/logout`, { method: 'POST', headers });
+    }
+  } catch (_) {
+    // 网络失败 / 未配置 Bridge：仍完成本地登出
+  }
   await clearAuthToken();
 }
 

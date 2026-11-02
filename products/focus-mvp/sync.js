@@ -12,7 +12,7 @@ import {
   decryptData,
   isEncryptedData,
 } from './crypto.js';
-import { ensureRemoteProfile } from './crypto-profile.js';
+import { ensureRemoteProfile, handleProfileSyncResult } from './crypto-profile.js';
 
 const SYNC_APP = 'focus';
 const SYNC_ITEM_TYPE = 'snapshot';
@@ -104,7 +104,7 @@ export async function pushSync() {
     // 这里（及正常推送路径）是自动补齐的时机 —— 否则没有数据变化，档案永远补不上。
     if (cryptoEnabled) {
       try {
-        await ensureRemoteProfile();
+        handleProfileSyncResult(await ensureRemoteProfile());
       } catch (_) { /* 档案同步失败不影响同步结果 */ }
     }
     return { pushed: 0, created: 0, updated: 0, skipped: 0 };
@@ -174,7 +174,7 @@ export async function pushSync() {
   // 失败不阻断本次同步——加解密本身不依赖这一步。
   if (cryptoEnabled) {
     try {
-      await ensureRemoteProfile();
+      handleProfileSyncResult(await ensureRemoteProfile());
     } catch (_) { /* 档案同步失败不影响同步结果 */ }
   }
   return result;
@@ -300,7 +300,7 @@ export async function pullSync() {
   // 跨设备支持：确保云端存在与本地一致的加密档案
   if (await isCryptoEnabled()) {
     try {
-      await ensureRemoteProfile();
+      handleProfileSyncResult(await ensureRemoteProfile());
     } catch (_) { /* 档案同步失败不影响同步结果 */ }
   }
   return { pulled: remoteItems.length, imported };
